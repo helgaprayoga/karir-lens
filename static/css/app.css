@@ -1,0 +1,52 @@
+/* Kerangka gaya. Token dan komponen final dibangun pada PRD-01 mengikuti docs/design-system.md. */
+
+:root {
+  --sheet: #ffffff;
+  --ink: #101215;
+  --ink-2: #4a515b;
+  --line: #eef0f3;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}
+
+main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.site-header,
+.site-footer {
+  border-bottom: 1px solid var(--line);
+  padding: 1rem;
+}
+
+.site-footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+}
+
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+  background: var(--sheet);
+  padding: 0.5rem;
+}

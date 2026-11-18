@@ -1,0 +1,26 @@
+# KarirLens — dependensi Python
+# Setiap kelompok diberi alasan agar mudah ditinjau (acuan PRD-10 §10).
+
+# --- Aplikasi web -----------------------------------------------------------
+Flask>=3.0                  # kerangka aplikasi web
+Flask-WTF>=1.2              # CSRF untuk seluruh form (R-01-11)
+Flask-Login>=0.6            # sesi pengguna dan decorator login_required
+python-dotenv>=1.0          # memuat .env saat pengembangan lokal
+
+# --- Database ---------------------------------------------------------------
+supabase>=2.0               # client PostgREST ke Supabase (PRD §10.3)
+
+# --- Pipeline data ----------------------------------------------------------
+requests>=2.31              # HTTP ke sumber lowongan dan DeepSeek
+beautifulsoup4>=4.12        # parsing HTML sumber (PRD-02)
+lxml>=5.0                   # parser cepat untuk BeautifulSoup
+pandas>=2.1                 # agregasi data sebelum clustering
+numpy>=1.26                 # operasi statistik gaji (median, P25, P75)
+scikit-learn>=1.4           # TF-IDF, PCA, KMeans (PRD-05)
+
+# --- Ekstraksi CV -----------------------------------------------------------
+pypdf>=4.0                  # teks dari berkas PDF (PRD-07)
+python-docx>=1.1            # teks dari berkas DOCX (PRD-07)
+
+# --- Pengujian --------------------------------------------------------------
+pytest>=8.0                 # kerangka pengujian

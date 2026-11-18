@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Terjadi kesalahan — KarirLens{% endblock %}
+
+{% block content %}
+  <h1>Terjadi kesalahan</h1>
+  <p>Kami tidak dapat memproses permintaan Anda saat ini. Silakan coba lagi.</p>
+  <p><a href="{{ url_for('main.index') }}">Kembali ke beranda</a></p>
+{% endblock %}

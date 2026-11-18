@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Kamus skill KarirLens. 'skills' berisi bentuk baku; 'aliases' memetakan sinonim ke bentuk baku. Diisi lengkap pada PRD-03 dan dipakai ulang PRD-07.",
+  "skills": [],
+  "aliases": {}
+}

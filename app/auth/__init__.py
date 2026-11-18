@@ -1,0 +1,9 @@
+"""Blueprint autentikasi: registrasi, login, logout (PRD-01, PRD-06)."""
+
+from __future__ import annotations
+
+from flask import Blueprint
+
+bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+from . import routes  # noqa: E402,F401

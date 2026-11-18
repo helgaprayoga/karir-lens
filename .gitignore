@@ -1,0 +1,27 @@
+# Environment dan secret
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Supabase lokal
+supabase/.branches/
+supabase/.temp/
+
+# Editor dan OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Command Code Agent
+.commandcode/

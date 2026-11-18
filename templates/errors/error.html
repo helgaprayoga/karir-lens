@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error.code }} — KarirLens{% endblock %}
+
+{% block content %}
+  <h1>{{ error.code }}</h1>
+  <p>{{ error.message }}</p>
+  <p><a href="{{ url_for('main.index') }}">Kembali ke beranda</a></p>
+{% endblock %}

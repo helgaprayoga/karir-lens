@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Halaman tidak ditemukan — KarirLens{% endblock %}
+
+{% block content %}
+  <h1>Halaman tidak ditemukan</h1>
+  <p>Alamat yang Anda buka tidak tersedia atau sudah dipindahkan.</p>
+  <p><a href="{{ url_for('main.index') }}">Kembali ke beranda</a></p>
+{% endblock %}

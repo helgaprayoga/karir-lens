@@ -1,0 +1,36 @@
+{#
+  Kerangka layout. Struktur, token, dan komponen final dibangun pada PRD-01
+  mengikuti docs/design-system.md. Berkas ini sengaja minimal agar skeleton
+  dapat dirender sebelum PRD-01 dikerjakan.
+#}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}KarirLens{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#konten">Lompat ke konten</a>
+  <header class="site-header">
+    <a href="{{ url_for('main.index') }}">KarirLens</a>
+  </header>
+  <main id="konten">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash">
+          {% for category, message in messages %}
+            <li class="flash-{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>KarirLens — agregator lowongan kerja.</p>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
