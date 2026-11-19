@@ -175,6 +175,29 @@ def cv() -> dict:
     return _load("cv") or {}
 
 
+def saved() -> list[dict]:
+    """Lowongan tersimpan contoh, bentuk ``job`` yang sama dengan katalog."""
+    data = _load("saved") or {}
+    return data.get("items", []) if isinstance(data, dict) else data
+
+
+def saved_page(page: int = 1, per_page: int = 4) -> dict:
+    """``{"items", "meta"}`` untuk halaman tersimpan."""
+    items = saved()
+    total = len(items)
+    page = max(1, int(page or 1))
+    mulai = (page - 1) * per_page
+    return {
+        "items": items[mulai : mulai + per_page],
+        "meta": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "has_next": mulai + per_page < total,
+        },
+    }
+
+
 def runs() -> list[dict]:
     return _load("runs") or []
 

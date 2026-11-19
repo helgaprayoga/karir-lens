@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% from "components/job_card.html" import job_card %}
+{% from "components/empty_state.html" import empty_state %}
+{% from "components/pagination.html" import pagination %}
+
+{% block title %}Lowongan tersimpan — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Lowongan tersimpan</h1>
+        <p class="company-sub">Disimpan dari katalog KarirLens</p>
+      </div>
+    </div>
+
+    {# Kartu memakai partial yang sama dengan katalog (R-F03-06): anatomi tidak
+       boleh berbeda antara dua tempat yang menampilkan lowongan. #}
+    {%- if items -%}
+      <div class="section-head">
+        <h2>{{ meta.total }} Lowongan</h2>
+        <span class="sub">Klik kartu untuk membuka detail</span>
+      </div>
+      <div class="cards">
+        {%- for job in items -%}
+          {{ job_card(job, href=url_for("preview.job_detail", job_id=job.id)) }}
+        {%- endfor -%}
+      </div>
+      {%- if meta.has_next or meta.page > 1 -%}
+        {{ pagination(meta, "preview.saved", params=url_params) }}
+      {%- endif -%}
+    {%- else -%}
+      {{ empty_state(
+           "Belum ada lowongan tersimpan",
+           "Simpan lowongan dari katalog untuk melihatnya di sini nanti.",
+           "Jelajahi lowongan",
+           url_for("preview.jobs")) }}
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Ringkasan tersimpan">
+    <div class="hint">
+      <span>Lowongan tersimpan dipakai untuk membandingkan sebelum melamar.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}

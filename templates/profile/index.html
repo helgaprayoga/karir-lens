@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% from "components/icons.html" import icon_bookmark, icon_arrow_out %}
+{% from "components/empty_state.html" import empty_state %}
+
+{% block title %}Profil — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>{{ profile.name or "Profil" }}</h1>
+        <p class="company-sub">
+          {{ profile.email }}
+          {%- if profile.joined_at %} · Bergabung {{ profile.joined_at|tanggal_relatif }}{% endif %}
+        </p>
+      </div>
+    </div>
+
+    {# Hanya angka yang punya tabel sumber: `user_skills` dan `saved_jobs`.
+       Tidak ada persentase kelengkapan profil (R-F03-11). #}
+    <div class="metric-grid profile-metrics">
+      <div class="metric-cell">
+        <div class="big"><span>{{ summary.skill_count or 0 }}</span></div>
+        <div class="cap">Skill terkonfirmasi</div>
+      </div>
+      <div class="metric-cell">
+        <div class="big"><span>{{ summary.saved_count or 0 }}</span></div>
+        <div class="cap">Lowongan tersimpan</div>
+      </div>
+    </div>
+
+    <div class="section-head profile-head">
+      <h2>Skill terkonfirmasi</h2>
+      <span class="sub">Dipakai untuk menghitung rekomendasi</span>
+    </div>
+
+    {%- if skills -%}
+      <ul class="skill-list">
+        {%- for skill in skills -%}
+          <li class="skill-row" data-skill-id="{{ skill.id }}">
+            <span class="skill-name">{{ skill.skill }}</span>
+            <span class="skill-source" data-source="{{ skill.source }}">
+              {{- "Dari CV" if skill.source == "cv" else "Ditambahkan manual" -}}
+            </span>
+            <button type="button" class="skill-remove"
+                    aria-label="Hapus skill {{ skill.skill }}"
+                    data-remove-skill="{{ skill.id }}">
+              Hapus
+            </button>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- else -%}
+      {{ empty_state(
+           "Belum ada skill terkonfirmasi",
+           "Unggah CV atau tambahkan skill secara manual agar rekomendasi dapat dihitung.") }}
+    {%- endif -%}
+
+    <p class="profile-links">
+      <a class="btn btn-line" href="{{ url_for('preview.saved') }}">
+        {{ icon_bookmark(False) }} Lihat lowongan tersimpan
+      </a>
+      <a class="btn btn-ghost" href="{{ url_for('preview.jobs') }}">
+        {{ icon_arrow_out() }} Jelajahi lowongan
+      </a>
+    </p>
+  </main>
+
+  <aside class="rail" aria-label="Ringkasan akun">
+    <div class="hint">
+      <span>Skill yang Anda konfirmasi menentukan lowongan yang direkomendasikan.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}

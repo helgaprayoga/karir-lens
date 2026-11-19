@@ -8,7 +8,7 @@
 | Prioritas | P0 |
 | Dependensi | PRD-F01 |
 | Task yang bergantung | PRD-F06 |
-| Status | Belum dimulai |
+| Status | Selesai (Track A, fixture) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Backend pasangan | [PRD-06](./PRD-06-akun-bookmark.md) |
 | Design system | [Design System KarirLens](../design-system.md) |
@@ -80,16 +80,20 @@ Halaman tersimpan memakai `JobCard` yang sama dengan katalog (PRD-F02), tanpa an
 
 ## 5. Acceptance Criteria
 
-- [ ] Form registrasi dan login menampilkan pesan error di dekat field yang salah.
-- [ ] `aria-invalid` dan `aria-describedby` terpasang saat validasi gagal.
-- [ ] Tombol submit disabled dan menampilkan loading saat dikirim.
-- [ ] `/profile` menampilkan identitas, skill terkonfirmasi, dan ringkasan.
-- [ ] Setiap skill menampilkan sumber dan tombol hapus.
-- [ ] `/saved` memakai `JobCard` dengan anatomi identik katalog.
-- [ ] `/saved` kosong memakai `EmptyState`.
-- [ ] Simpan/hapus bookmark menampilkan `Toast` yang terbaca pembaca layar.
-- [ ] Tidak ada metrik kelengkapan profil atau status lamaran di layar.
-- [ ] Layout tidak rusak pada 360, 768, 1024, 1280 px.
+- [x] Form registrasi dan login menampilkan pesan error di dekat field yang salah.
+- [x] `aria-invalid` dan `aria-describedby` terpasang saat validasi gagal.
+- [x] Tombol submit disabled dan menampilkan loading saat dikirim.
+- [x] `/profile` menampilkan identitas, skill terkonfirmasi, dan ringkasan.
+- [x] Setiap skill menampilkan sumber dan tombol hapus.
+- [x] `/saved` memakai `JobCard` dengan anatomi identik katalog.
+- [x] `/saved` kosong memakai `EmptyState`.
+- [x] Simpan/hapus bookmark menampilkan `Toast` yang terbaca pembaca layar.
+- [x] Tidak ada metrik kelengkapan profil atau status lamaran di layar.
+- [x] Layout tidak rusak pada 360, 768, 1024, 1280 px.
+
+Catatan kejujuran: pada Track A halaman profil dan tersimpan berada di
+`/preview/profile` dan `/preview/saved`, bukan `/profile` dan `/saved`. Route
+produksi tetap kosong sampai PRD-06 menyediakan data pengguna sungguhan.
 
 ## 6. Dependensi
 
@@ -157,3 +161,56 @@ Halaman tersimpan memakai `JobCard` yang sama dengan katalog (PRD-F02), tanpa an
 - Test otomatis pada §7.1 lulus.
 - Profil dan halaman tersimpan dapat ditinjau di browser dengan fixture.
 - Kontrak template pada §4.1 tertulis dan dipakai PRD-06.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `templates/components/form_field.html` | Macro `form_field` (label, input, error, aria) dan `button_loading` |
+| `templates/profile/index.html` | Identitas, ringkasan, daftar skill dengan sumber dan tombol hapus |
+| `templates/profile/saved.html` | Daftar `JobCard` dan `EmptyState` |
+| `templates/auth/login.html`, `register.html` | Ditulis ulang memakai `form_field` |
+| `templates/base.html` | Toast, toggle simpan, hapus skill, state submit |
+| `app/preview/routes.py` | Route `profile` dan `saved` |
+| `app/navigation.py` | Tautan pratinjau dan perhitungan menu aktif |
+| `tests/fixtures/ui/profile.json` | Bentuk skill `{id, skill, source, is_confirmed, created_at}` |
+| `tests/fixtures/ui/saved.json` | 3 lowongan tersimpan, bentuk `job` yang sama |
+| `tests/unit/test_profile_ui.py` | 22 test untuk §7.1 |
+
+### 12.2 Keputusan
+
+**`form_field` dibuat sebagai macro, bukan markup per field.** `aria-describedby` harus menunjuk id yang benar-benar ada. Bila id ditulis manual di tiap template, cepat atau lambat ada yang salah ketik dan pesan errornya tidak pernah terbaca pembaca layar.
+
+**Rujukan `aria-describedby` memilih error lebih dulu, baru hint.** Hanya satu yang boleh ditunjuk pada satu waktu; menunjuk keduanya membuat pembaca layar membacakan petunjuk di tengah pesan kesalahan.
+
+**Toast dipusatkan di `base.html`.** Sebelumnya logika toast hanya hidup di `/styleguide`, sehingga simpan/hapus di halaman lain tidak memberi umpan balik. Sekarang satu fungsi `showToast()` melayani `data-toast`, tombol simpan, dan hapus skill.
+
+**Skill yang belum dikonfirmasi disembunyikan dari daftar skill pengguna.** Fixture memuat `docker` dengan `is_confirmed: false`; ia tidak dihitung untuk rekomendasi, jadi menampilkannya sebagai skill pengguna akan melebihkan angka ringkasan.
+
+**Hapus skill menurunkan angka ringkasan.** Tanpa itu layar menampilkan "5 Skill terkonfirmasi" di atas empat baris — angka yang tidak lagi cocok dengan isinya.
+
+### 12.3 Dua Bug yang Ditemukan Saat Audit Browser
+
+**Tiga menu menyala serentak.** Ketiga tautan pratinjau (`Lowongan`, `Profil`, `Tersimpan`) semuanya milik blueprint `preview`, sementara `base.html` menandai aktif bila nama blueprint cocok. Akibatnya `aria-current="page"` terpasang di ketiganya. Perbaikan: `active` dihitung di `navigation.py`, dan kecocokan nama blueprint hanya dipakai bila satu blueprint punya satu menu.
+
+**Halaman detail dan perusahaan tidak menyorot menu apa pun.** Aturan "cocok persis" yang menggantikan aturan sebelumnya terlalu ketat: `preview.job_detail` dan `preview.company_detail` tidak punya tautan sendiri. Diperbaiki dengan peta `PARENT` yang memetakan endpoint anak ke menu induknya.
+
+Keduanya lolos dari test lama karena test hanya memeriksa keberadaan tautan, bukan menu mana yang menyala. Dua test baru: `test_nav_marks_exactly_one_active` dan `test_production_nav_hides_preview_links`.
+
+### 12.4 Verifikasi Terukur
+
+| Pemeriksaan | Hasil |
+|---|---|
+| Skill rows di `/preview/profile` | 5 (hanya `is_confirmed`) |
+| Sumber per baris | 3 "Dari CV", 2 "Ditambahkan manual" |
+| Tombol hapus | 50×44px — memenuhi target sentuh §5 |
+| Klik hapus | 5 baris → 4, angka 5 → 4, toast "python dihapus" |
+| Toggle simpan di `/preview/saved` | `aria-pressed` true → false, tanpa navigasi |
+| Menu aktif per halaman | Tepat satu di kelima halaman diuji |
+| 360px | `scrollWidth` 360 = viewport, sejajar 18px |
+
+Total test setelah task ini: **199 lulus** (174 → 199).

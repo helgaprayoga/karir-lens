@@ -1157,6 +1157,126 @@ button.chip:hover {
   color: var(--ink-2);
 }
 
+/* --- Tombol submit state loading (R-F03-03) ------------------------------ */
+
+.btn[aria-busy="true"] {
+  position: relative;
+  color: transparent;
+  cursor: progress;
+}
+
+.btn[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  color: var(--sheet);
+  animation: spin 720ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Profil: daftar skill (R-F03-05) ------------------------------------ */
+
+.profile-metrics {
+  margin-bottom: var(--space-5);
+}
+
+.profile-head {
+  margin-top: var(--space-5);
+}
+
+.skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--pad-panel);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-label);
+}
+
+.skill-row:last-child {
+  border-bottom: 0;
+}
+
+.skill-name {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* Sumber menempel pada skillnya, bukan didorong ke ujung kanan baris: jarak
+   jauh membuat mata harus melompat untuk tahu skill mana berasal dari mana. */
+.skill-source {
+  padding: 2px 8px;
+  border-radius: var(--r-chip);
+  background: var(--sunken);
+  font-size: var(--text-micro);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.skill-source[data-source="cv"] {
+  background: var(--info-bg);
+  color: var(--hint-ink);
+}
+
+.skill-remove {
+  margin-left: auto;
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--r-chip);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: var(--text-micro);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.skill-remove:hover {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
+.skill-remove.is-confirm:hover {
+  background: var(--success-bg);
+  color: var(--green);
+}
+
+.skill-remove:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.profile-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.profile-links .btn svg {
+  width: 13px;
+  height: 13px;
+}
+
 /* --- AlertBanner (§4.18) ------------------------------------------------- */
 
 .banner {

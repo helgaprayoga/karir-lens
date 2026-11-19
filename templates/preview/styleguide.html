@@ -398,27 +398,8 @@
     if (!isNaN(tinggi)) bar.style.height = tinggi + "px";
   });
 
-  var toast = document.getElementById("toast");
-  var toastText = document.getElementById("toast-text");
-  var timer = null;
-
-  function show(message) {
-    if (!toast) return;
-    toastText.textContent = message;
-    toast.hidden = false;
-    toast.classList.add("is-visible");
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      toast.classList.remove("is-visible");
-      setTimeout(function () { toast.hidden = true; }, 200);
-    }, 2200);
-  }
-
-  document.querySelectorAll("[data-toast]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      show(btn.getAttribute("data-toast"));
-    });
-  });
+  /* Toast ditangani base.html lewat atribut data-toast, supaya perilakunya
+     sama dengan halaman lain. Di sini tidak ada salinan logika toast. */
 })();
 </script>
 {% endblock %}

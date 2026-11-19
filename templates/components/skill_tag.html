@@ -9,10 +9,13 @@
 #}
 
 {% macro skill_tag(skill, href=None) -%}
+  {# Terima string maupun dict `{id, skill, source, is_confirmed}` dari
+     `user_skills` (R-03-06). Tanpa normalisasi ini, dict tercetak mentah. #}
+  {%- set label = skill.skill if skill is mapping else skill -%}
   {%- if href -%}
-    <a class="tag" href="{{ href }}">{{ skill }}</a>
+    <a class="tag" href="{{ href }}">{{ label }}</a>
   {%- else -%}
-    <span class="tag">{{ skill }}</span>
+    <span class="tag">{{ label }}</span>
   {%- endif -%}
 {%- endmacro %}
 

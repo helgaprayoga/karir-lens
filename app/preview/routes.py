@@ -183,3 +183,41 @@ def home():
         latest=data.get("latest", []),
         categories=data.get("categories", []),
     )
+
+
+@bp.get("/profile")
+def profile():
+    """Profil pengguna (PRD-F03 R-F03-04, R-F03-05, R-F03-11).
+
+    ``skills`` hanya berisi yang ``is_confirmed`` — skill yang belum
+    dikonfirmasi belum dihitung untuk rekomendasi, jadi tidak ditampilkan
+    sebagai skill milik pengguna.
+    """
+    data = fixtures.profile()
+    skills = [s for s in data.get("skills", []) if s.get("is_confirmed")]
+    return render_template(
+        "profile/index.html",
+        profile=data.get("user", {}),
+        skills=skills,
+        summary=data.get("summary", {}),
+    )
+
+
+@bp.get("/saved")
+def saved():
+    """Lowongan tersimpan (PRD-F03 R-F03-06, R-F03-07)."""
+    halaman = request.args.get("page", type=int) or 1
+    kosong = request.args.get("empty") == "1"
+
+    page = (
+        {"items": [], "meta": {"page": 1, "per_page": PER_PAGE, "total": 0, "has_next": False}}
+        if kosong
+        else fixtures.saved_page(halaman, PER_PAGE)
+    )
+
+    return render_template(
+        "profile/saved.html",
+        items=page["items"],
+        meta=page["meta"],
+        url_params={},
+    )

@@ -43,12 +43,10 @@
 
       <nav aria-label="Navigasi utama">
         <ul class="nav-pill">
-          {% set current = request.endpoint or '' %}
-          {% set current_root = current.split('.')[0] %}
           {% for link in nav_links %}
             <li>
               <a href="{{ url_for(link.endpoint) }}"
-                 {% if current == link.endpoint or current_root == link.endpoint.split('.')[0] %}aria-current="page"{% endif %}>
+                 {% if link.active %}aria-current="page"{% endif %}>
                 {{ link.label }}
               </a>
             </li>
@@ -110,19 +108,80 @@
   </div>
 
   <script>
-  /* Tombol simpan hanya mengubah state lokal sampai PRD-06 menyediakan
-     backend (PRD-F02 §9). Dipasang di shell karena tombol ini muncul di
-     katalog maupun halaman detail. */
-  document.addEventListener("click", function (event) {
-    var button = event.target.closest(".save-btn");
-    if (!button || button.disabled) return;
-    event.preventDefault();
-    var aktif = button.getAttribute("aria-pressed") === "true";
-    button.setAttribute("aria-pressed", aktif ? "false" : "true");
-    button.setAttribute("aria-label", aktif ? "Simpan lowongan" : "Hapus dari tersimpan");
-    var svg = button.querySelector("svg");
-    if (svg) svg.setAttribute("fill", aktif ? "none" : "currentColor");
-  });
+  (function () {
+    "use strict";
+
+    /* --- Toast (R-F03-08): role=status + aria-live=polite di markup ------ */
+    var toast = document.getElementById("toast");
+    var toastText = document.getElementById("toast-text");
+    var timer = null;
+
+    function showToast(message) {
+      if (!toast || !toastText) return;
+      toastText.textContent = message;
+      toast.hidden = false;
+      // Dipaksa reflow agar transisi tetap berjalan untuk pesan beruntun.
+      void toast.offsetWidth;
+      toast.classList.add("is-visible");
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        toast.classList.remove("is-visible");
+        setTimeout(function () { toast.hidden = true; }, 200);
+      }, 2200);
+    }
+
+    document.querySelectorAll("[data-toast]").forEach(function (trigger) {
+      trigger.addEventListener("click", function () {
+        showToast(trigger.getAttribute("data-toast"));
+      });
+    });
+
+    /* --- Tombol simpan (R-F03-09) --------------------------------------- */
+    /* State lokal sampai PRD-06 menyediakan persistence. Umpan baliknya toast,
+       bukan diam, karena tombol tanpa reaksi terbaca sebagai tombol rusak. */
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest(".save-btn");
+      if (!button || button.disabled) return;
+      event.preventDefault();
+      var aktif = button.getAttribute("aria-pressed") === "true";
+      button.setAttribute("aria-pressed", aktif ? "false" : "true");
+      button.setAttribute("aria-label", aktif ? "Simpan lowongan" : "Hapus dari tersimpan");
+      var svg = button.querySelector("svg");
+      if (svg) svg.setAttribute("fill", aktif ? "none" : "currentColor");
+      showToast(aktif ? "Dihapus dari tersimpan" : "Lowongan disimpan");
+    });
+
+    /* --- Hapus skill (R-F03-05) ----------------------------------------- */
+    /* State lokal sampai PRD-06 menyediakan persistence. Angka ringkasan ikut
+       diturunkan supaya layar tidak menampilkan "5 skill" di atas 4 baris. */
+    document.addEventListener("click", function (event) {
+      var tombol = event.target.closest("[data-remove-skill]");
+      if (!tombol) return;
+      var baris = tombol.closest(".skill-row");
+      if (!baris) return;
+      var nama = baris.querySelector(".skill-name");
+      baris.remove();
+      var hitungan = document.querySelector(".profile-metrics .metric-cell .big span");
+      if (hitungan) {
+        var sisa = parseInt(hitungan.textContent, 10);
+        if (!isNaN(sisa) && sisa > 0) hitungan.textContent = sisa - 1;
+      }
+      showToast((nama ? nama.textContent : "Skill") + " dihapus");
+    });
+
+    /* --- Submit form: loading + disabled (R-F03-03) ---------------------- */
+    document.querySelectorAll("form").forEach(function (form) {
+      form.addEventListener("submit", function () {
+        var submit = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (!submit) return;
+        var label = submit.getAttribute("data-loading-label");
+        submit.setAttribute("aria-busy", "true");
+        submit.disabled = true;
+        if (label && submit.tagName === "BUTTON") submit.textContent = label;
+        if (label && submit.tagName === "INPUT") submit.value = label;
+      });
+    });
+  })();
   </script>
 
   {% block scripts %}{% endblock %}

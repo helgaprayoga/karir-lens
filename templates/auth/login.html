@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% from "components/form_field.html" import form_field, button_loading %}
+
 {% block title %}Masuk — KarirLens{% endblock %}
 
 {% block content %}
@@ -11,38 +13,15 @@
     <form method="post" action="{{ url_for('auth.login') }}" novalidate>
       {{ form.hidden_tag() }}
 
-      <div class="field">
-        {{ form.email.label }}
-        {{ form.email(
-            type="email",
-            autocomplete="email",
-            autofocus=true,
-            aria_invalid="true" if form.email.errors else "false",
-            aria_describedby="email-error" if form.email.errors else ""
-        ) }}
-        {% if form.email.errors %}
-          <p class="field-error" id="email-error">{{ form.email.errors[0] }}</p>
-        {% endif %}
-      </div>
-
-      <div class="field">
-        {{ form.password.label }}
-        {{ form.password(
-            autocomplete="current-password",
-            aria_invalid="true" if form.password.errors else "false",
-            aria_describedby="password-error" if form.password.errors else ""
-        ) }}
-        {% if form.password.errors %}
-          <p class="field-error" id="password-error">{{ form.password.errors[0] }}</p>
-        {% endif %}
-      </div>
+      {{ form_field(form.email, autocomplete="email", type="email", autofocus=true) }}
+      {{ form_field(form.password, autocomplete="current-password", type="password") }}
 
       <div class="field field-inline">
         {{ form.remember() }}
         {{ form.remember.label }}
       </div>
 
-      {{ form.submit(class="btn btn-primary btn-block") }}
+      {{ button_loading(form.submit, "Memeriksa…") }}
     </form>
 
     <p class="auth-switch">
