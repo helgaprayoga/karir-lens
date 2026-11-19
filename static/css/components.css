@@ -1,6 +1,6 @@
-/* Komponen KarirLens — docs/design-system.md §4.
+﻿/* Komponen KarirLens â€” docs/design-system.md Â§4.
    Semua nilai berasal dari tokens.css. Tidak ada hex, px radius, atau px
-   padding lepas di berkas ini maupun di template (R-F01-01, §7). */
+   padding lepas di berkas ini maupun di template (R-F01-01, Â§7). */
 
 /* --- Dasar ---------------------------------------------------------------- */
 
@@ -78,7 +78,7 @@ img {
   border-radius: var(--r-sm);
 }
 
-/* Target sentuh minimum untuk semua kontrol ikon (design-system §5). */
+/* Target sentuh minimum untuk semua kontrol ikon (design-system Â§5). */
 .icon-control {
   min-width: var(--touch-min);
   min-height: var(--touch-min);
@@ -104,7 +104,7 @@ img {
   border: 0;
 }
 
-/* --- Shell (§3.4) --------------------------------------------------------- */
+/* --- Shell (Â§3.4) --------------------------------------------------------- */
 
 .shell {
   width: 100%;
@@ -140,7 +140,7 @@ img {
   left: var(--gutter-sheet);
 }
 
-/* --- Header (§4.17 NavPill) ---------------------------------------------- */
+/* --- Header (Â§4.17 NavPill) ---------------------------------------------- */
 
 .top {
   display: flex;
@@ -231,6 +231,13 @@ img {
   color: var(--sheet);
 }
 
+/* Navpill sebelumnya hanya punya state aktif, tanpa focus ring — kontrol yang
+   dapat difokus tanpa penanda fokus melanggar R-F06-06. */
+.nav-pill a:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
 .top-actions {
   margin-left: auto;
   display: flex;
@@ -290,23 +297,129 @@ img {
   letter-spacing: 0.02em;
 }
 
-.who {
+/* --- Menu pengguna (pojok kanan atas setelah masuk) ---------------------- */
+
+.user-menu {
+  position: relative;
+}
+
+/* <summary> adalah kontrol; tampil sebagai avatar bulat saja. */
+.user-menu > summary {
+  display: grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border-radius: 50%;
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.user-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.user-menu > summary:hover {
+  background: var(--sunken);
+}
+
+.user-menu > summary:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.av-lg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, var(--avatar-head-from), var(--avatar-head-to));
+  color: var(--ink);
+  font-size: var(--text-meta);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.user-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: 232px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--sheet);
+  box-shadow: var(--shadow-toast);
+}
+
+.user-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.user-name {
+  font-size: var(--text-label);
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role {
+  font-size: var(--text-micro);
+  color: var(--ink-3);
+}
+
+.user-links {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+}
+
+.user-links a {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
   font-size: var(--text-label);
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.user-links a:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.user-links a:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: -2px;
+}
+
+.user-logout {
+  width: 100%;
+  /* Sejajar dengan tautan di atasnya, bukan terpusat seperti tombol biasa. */
+  justify-content: flex-start;
+  padding: 0 var(--space-2);
+  height: 36px;
+  color: var(--ink-3);
   font-weight: 500;
-  padding-left: 4px;
 }
 
-.who .av {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(140deg, var(--avatar-head-from), var(--avatar-head-to));
+.user-logout:hover {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
 }
 
-/* --- AI action (§3.1 gradien) -------------------------------------------- */
+/* --- AI action (Â§3.1 gradien) -------------------------------------------- */
 
 .ask-ai {
   display: inline-flex;
@@ -369,7 +482,7 @@ img {
   padding: 22px var(--gutter-sheet) 0;
 }
 
-/* --- Shell layout dua kolom (§3.4) --------------------------------------- */
+/* --- Shell layout dua kolom (Â§3.4) --------------------------------------- */
 
 /* Padding kiri HANYA di .layout. .feed dan .rail mewarisinya. */
 .layout {
@@ -426,7 +539,7 @@ img {
   color: var(--ink-3);
 }
 
-/* --- JobCard (§4.1) ----------------------------------------------------- */
+/* --- JobCard (Â§4.1) ----------------------------------------------------- */
 
 .cards {
   display: grid;
@@ -438,7 +551,7 @@ img {
   display: flex;
   flex-direction: column;
   /* `height: 100%` benar di dalam grid .cards (agar satu baris sejajar), tetapi
-     merusak di luar grid — pada halaman detail kartu memanjang mengisi sisa
+     merusak di luar grid â€” pada halaman detail kartu memanjang mengisi sisa
      tinggi .feed. Grid yang menetapkan tinggi, bukan kartunya. */
   padding: var(--pad-card-y) var(--pad-card-x);
   background: var(--sheet);
@@ -575,7 +688,7 @@ img {
   color: var(--ink-4);
   cursor: pointer;
   padding: 0;
-  /* Area sentuh 44px tetap memenuhi §5, tetapi tingginya tidak boleh
+  /* Area sentuh 44px tetap memenuhi Â§5, tetapi tingginya tidak boleh
      menggelembungkan baris atas kartu. Margin negatif menariknya keluar dari
      alur visual, sehingga .card-top kembali setinggi teksnya. */
   margin-block: calc((var(--touch-min) - 20px) / -2);
@@ -628,7 +741,7 @@ img {
   padding-top: 2px;
 }
 
-/* --- SalaryRange (§4.7) -------------------------------------------------- */
+/* --- SalaryRange (Â§4.7) -------------------------------------------------- */
 
 .pay .amount {
   font-size: var(--text-card);
@@ -651,7 +764,7 @@ img {
   color: var(--ink-3);
 }
 
-/* --- SourceBadge (§4.2) -------------------------------------------------- */
+/* --- SourceBadge (Â§4.2) -------------------------------------------------- */
 
 .source-badge {
   display: inline-flex;
@@ -687,7 +800,7 @@ img {
   background: var(--source-remotive);
 }
 
-/* --- EmploymentTypeBadge (§4.3) ------------------------------------------ */
+/* --- EmploymentTypeBadge (Â§4.3) ------------------------------------------ */
 
 .type-badge {
   display: inline-flex;
@@ -702,7 +815,7 @@ img {
   white-space: nowrap;
 }
 
-/* --- SkillTag (§4.4) ----------------------------------------------------- */
+/* --- SkillTag (Â§4.4) ----------------------------------------------------- */
 
 .tag {
   padding: 4px 9px;
@@ -723,7 +836,7 @@ a.tag:hover {
   color: var(--ink-3);
 }
 
-/* --- MatchBadge (§4.5) --------------------------------------------------- */
+/* --- MatchBadge (Â§4.5) --------------------------------------------------- */
 
 .match {
   display: inline-flex;
@@ -776,7 +889,7 @@ a.tag:hover {
   font-weight: 600;
 }
 
-/* --- FilterChip (§4.6) --------------------------------------------------- */
+/* --- FilterChip (Â§4.6) --------------------------------------------------- */
 
 .filters {
   display: flex;
@@ -815,6 +928,11 @@ button.chip:hover {
   border-color: var(--line-3);
 }
 
+.chip:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
 .chip:active {
   transform: scale(0.98);
 }
@@ -832,7 +950,7 @@ button.chip:hover {
   color: var(--ink-3);
 }
 
-/* --- SortControl (§4.6, dipisah dari filter) ----------------------------- */
+/* --- SortControl (Â§4.6, dipisah dari filter) ----------------------------- */
 
 .sort-group {
   margin-left: auto;
@@ -915,7 +1033,7 @@ button.chip:hover {
   box-shadow: var(--focus-ring);
 }
 
-/* --- SearchField (§4, R-04-01) ------------------------------------------- */
+/* --- SearchField (Â§4, R-04-01) ------------------------------------------- */
 
 .search-field {
   position: relative;
@@ -978,7 +1096,7 @@ button.chip:hover {
   padding: 2px 5px;
 }
 
-/* --- Button (§4.16) ----------------------------------------------------- */
+/* --- Button (Â§4.16) ----------------------------------------------------- */
 
 .btn {
   display: inline-flex;
@@ -997,11 +1115,29 @@ button.chip:hover {
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out), transform var(--dur-instant) var(--ease-out);
+
+  /* Bootstrap memasang `:not(.btn-check)+.btn:active` dengan
+     `--bs-btn-active-bg: #0a58ca`. Spesifisitasnya menang atas `.btn-primary`,
+     sehingga setiap tombol berubah BIRU saat ditekan. Variabel itu diisi ulang
+     per varian (lihat di bawah) dengan warna tombol itu sendiri.
+     Catatan: `inherit` TIDAK bisa dipakai di sini â€” custom property menjadi
+     kosong, deklarasinya gugur, dan tombol berubah transparan. */
+  --bs-btn-active-bg: var(--sunken);
+  --bs-btn-active-color: var(--ink);
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-focus-box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn svg {
   width: 13px;
   height: 13px;
+}
+
+/* Latar hover untuk tombol tanpa varian warna sendiri. Varian di bawah
+   menimpanya dengan warna yang lebih spesifik. */
+.btn:hover {
+  background: var(--sunken);
 }
 
 .btn:focus-visible {
@@ -1012,13 +1148,33 @@ button.chip:hover {
   transform: scale(0.98);
 }
 
+/* Bootstrap memasang `:not(.btn-check)+.btn:active` dengan variabel
+   `--bs-btn-active-bg: #0a58ca`. Spesifisitasnya menang atas `.btn-primary`,
+   sehingga setiap tombol berubah BIRU saat ditekan. Variabelnya dinetralkan di
+   blok `.btn` di atas supaya warna aktif mengikuti warna tombol itu sendiri. */
+
 .btn-primary {
   background: var(--action);
   color: var(--sheet);
+  /* Tekan tetap gelap, tidak pernah biru. */
+  --bs-btn-active-bg: var(--action);
+  --bs-btn-active-color: var(--sheet);
 }
 
 .btn-primary:hover {
   background: var(--line-strong);
+}
+
+/* Tekan pada tombol gelap: tetap gelap, hanya sedikit menurun. */
+.btn-primary:active {
+  background: var(--action);
+  filter: brightness(0.92);
+}
+
+.btn-line:active,
+.btn-soft:active,
+.btn-ghost:active {
+  background: var(--line);
 }
 
 .btn .count {
@@ -1035,6 +1191,8 @@ button.chip:hover {
   background: var(--sheet);
   border-color: var(--line-2);
   color: var(--ink);
+  --bs-btn-active-bg: var(--sunken);
+  --bs-btn-active-color: var(--ink);
 }
 
 .btn-line:hover {
@@ -1044,6 +1202,8 @@ button.chip:hover {
 .btn-soft {
   background: var(--sunken);
   color: var(--ink);
+  --bs-btn-active-bg: var(--line);
+  --bs-btn-active-color: var(--ink);
 }
 
 .btn-soft:hover {
@@ -1053,6 +1213,8 @@ button.chip:hover {
 .btn-ghost {
   background: transparent;
   color: var(--ink-2);
+  --bs-btn-active-bg: var(--sunken);
+  --bs-btn-active-color: var(--ink);
 }
 
 .btn-ghost:hover {
@@ -1063,6 +1225,12 @@ button.chip:hover {
 .btn-danger {
   background: var(--danger);
   color: var(--sheet);
+  --bs-btn-active-bg: var(--danger-ink);
+  --bs-btn-active-color: var(--sheet);
+}
+
+.btn-danger:hover {
+  background: var(--danger-ink);
 }
 
 .btn[disabled],
@@ -1296,7 +1464,7 @@ button.chip:hover {
   height: 13px;
 }
 
-/* --- UploadZone (PRD-F04 §4.1) ------------------------------------------ */
+/* --- UploadZone (PRD-F04 Â§4.1) ------------------------------------------ */
 
 .upload {
   padding: var(--pad-card-y) var(--pad-card-x);
@@ -1377,8 +1545,8 @@ button.chip:hover {
   font-variant-numeric: tabular-nums;
 }
 
-/* Progress bar: satu dari dua tempat yang boleh memakai --r-full (§3.5),
-   karena bentuknya membawa makna — isian terhadap wadahnya. */
+/* Progress bar: satu dari dua tempat yang boleh memakai --r-full (Â§3.5),
+   karena bentuknya membawa makna â€” isian terhadap wadahnya. */
 .upload-progress {
   height: 4px;
   margin-top: var(--space-2);
@@ -1757,7 +1925,7 @@ button.chip:hover {
   border: 0;
 }
 
-/* --- AlertBanner (§4.18) ------------------------------------------------- */
+/* --- AlertBanner (Â§4.18) ------------------------------------------------- */
 
 .banner {
   display: flex;
@@ -1797,7 +1965,7 @@ button.chip:hover {
   color: var(--green);
 }
 
-/* --- EmptyState (§4.10) -------------------------------------------------- */
+/* --- EmptyState (Â§4.10) -------------------------------------------------- */
 
 .empty {
   padding: 48px var(--space-6);
@@ -1833,7 +2001,7 @@ button.chip:hover {
   color: var(--ink-2);
 }
 
-/* --- Pagination (§4.9) --------------------------------------------------- */
+/* --- Pagination (Â§4.9) --------------------------------------------------- */
 
 .pager {
   display: flex;
@@ -1958,11 +2126,11 @@ button.chip:hover {
   color: var(--ink-3);
 }
 
-/* --- MetricCell (§4.8) --------------------------------------------------- */
+/* --- MetricCell (Â§4.8) --------------------------------------------------- */
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(104px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -2050,7 +2218,7 @@ button.chip:hover {
   background: var(--spark-3);
 }
 
-/* --- StatTile (§4.8) ----------------------------------------------------- */
+/* --- StatTile (Â§4.8) ----------------------------------------------------- */
 
 .stat-grid {
   display: grid;
@@ -2089,7 +2257,7 @@ button.chip:hover {
   color: var(--ink-3);
 }
 
-/* --- InsightCard (§4.12) ------------------------------------------------- */
+/* --- InsightCard (Â§4.12) ------------------------------------------------- */
 
 .insights {
   display: flex;
@@ -2196,7 +2364,7 @@ a.insight:hover {
   color: var(--blue);
 }
 
-/* --- StatusPill (§4.11) -------------------------------------------------- */
+/* --- StatusPill (Â§4.11) -------------------------------------------------- */
 
 .status-pill {
   display: inline-flex;
@@ -2255,7 +2423,7 @@ a.insight:hover {
   background: var(--ink-3);
 }
 
-/* --- SkillPanel (§4.13) -------------------------------------------------- */
+/* --- SkillPanel (Â§4.13) -------------------------------------------------- */
 
 .person {
   display: flex;
@@ -2285,7 +2453,7 @@ a.insight:hover {
   color: var(--ink-3);
 }
 
-/* --- SkeletonCard (§4.14) ------------------------------------------------ */
+/* --- SkeletonCard (Â§4.14) ------------------------------------------------ */
 
 .skeleton-card {
   display: flex;
@@ -2363,7 +2531,7 @@ a.insight:hover {
   margin-top: auto;
 }
 
-/* --- Toast (§4.15) ------------------------------------------------------- */
+/* --- Toast (Â§4.15) ------------------------------------------------------- */
 
 .toast {
   position: fixed;
@@ -2397,7 +2565,7 @@ a.insight:hover {
   height: 13px;
 }
 
-/* --- DataTable (§4, admin) ----------------------------------------------- */
+/* --- DataTable (Â§4, admin) ----------------------------------------------- */
 
 .table-wrap {
   border: 1px solid var(--line);
@@ -2441,7 +2609,7 @@ a.insight:hover {
   font-size: var(--text-micro);
 }
 
-/* --- ChartCard (§4.8) ---------------------------------------------------- */
+/* --- ChartCard (Â§4.8) ---------------------------------------------------- */
 
 .chart-card {
   padding: var(--pad-panel);
@@ -2487,7 +2655,7 @@ a.insight:hover {
   margin-top: var(--space-5);
 }
 
-/* Alternatif tekstual grafik (§9): <details> agar angka tetap terbaca pembaca
+/* Alternatif tekstual grafik (Â§9): <details> agar angka tetap terbaca pembaca
    layar dan dapat disalin tanpa harus membaca kanvas. */
 .chart-alt {
   margin-top: var(--space-2);
@@ -2666,7 +2834,7 @@ a.insight:hover {
   color: var(--ink-4);
 }
 
-/* Baris tabel yang difokus keyboard harus terlihat (§5). */
+/* Baris tabel yang difokus keyboard harus terlihat (Â§5). */
 .data-table:focus-visible {
   outline: 2px solid var(--action);
   outline-offset: 2px;
@@ -2703,15 +2871,6 @@ a.insight:hover {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-}
-
-.btn-danger {
-  background: var(--danger);
-  color: var(--sheet);
-}
-
-.btn-danger:hover {
-  background: var(--danger-ink);
 }
 
 /* --- Page, footer, styleguide -------------------------------------------- */
@@ -2761,7 +2920,7 @@ a.insight:hover {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: var(--space-3);
 }
 
@@ -2836,7 +2995,7 @@ a.insight:hover {
 
 /* Tombol simpan di pojok kanan atas kartu (bukan di baris aksi).
    Spesifisitas .job-card dinaikkan agar menang atas `margin-block` negatif
-   milik .save-btn — di sini tombolnya sudah keluar dari alur karena absolute. */
+   milik .save-btn â€” di sini tombolnya sudah keluar dari alur karena absolute. */
 .job-card .detail-save {
   position: absolute;
   top: 12px;
@@ -2924,7 +3083,7 @@ a.insight:hover {
   height: 13px;
 }
 
-/* Panel perusahaan: rapatkan jarak person → tombol. */
+/* Panel perusahaan: rapatkan jarak person â†’ tombol. */
 .panel-company .person {
   margin-bottom: 0;
   align-items: center;
@@ -2943,7 +3102,7 @@ a.insight:hover {
   align-items: flex-start;
 }
 
-/* Jarak h1 → subjudul berlaku di SEMUA halaman yang memakainya, bukan hanya
+/* Jarak h1 â†’ subjudul berlaku di SEMUA halaman yang memakainya, bukan hanya
    halaman perusahaan. Sebelumnya aturan ini menempel pada `.company-head h1`,
    sehingga profil, tersimpan, CV, dan asisten tampil dengan jarak 0.
    10px: h1 berukuran 38px dengan line-height 1.05, jadi 6px masih terbaca
@@ -2956,7 +3115,7 @@ a.insight:hover {
 
 .company-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
   gap: 10px;
   margin-bottom: var(--space-4);
 }
@@ -2976,7 +3135,7 @@ a.insight:hover {
 
 .styleguide-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: var(--space-4);
 }
 
@@ -2990,7 +3149,7 @@ a.insight:hover {
 }
 
 /* -------------------------------------------------------------------------
-   Motion. Hanya untuk memperjelas perubahan state (design-system §3.7).
+   Motion. Hanya untuk memperjelas perubahan state (design-system Â§3.7).
    ------------------------------------------------------------------------- */
 
 @keyframes pop {
@@ -3062,7 +3221,7 @@ a.insight:hover {
 }
 
 /* -------------------------------------------------------------------------
-   Responsif (design-system §3.6). Gutter menyusut bertahap; .feed selalu
+   Responsif (design-system Â§3.6). Gutter menyusut bertahap; .feed selalu
    padding-left 0 agar tepi kiri sejajar dengan header.
    ------------------------------------------------------------------------- */
 
@@ -3156,8 +3315,9 @@ a.insight:hover {
     gap: var(--space-2);
   }
 
-  .who span:not(.av) {
-    display: none;
+  .user-panel {
+    /* Di layar sempit panel menempel ke tepi kanan viewport, bukan ke avatar. */
+    right: -4px;
   }
 
   .sort-group {

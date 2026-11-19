@@ -58,21 +58,41 @@
       </nav>
 
       <div class="top-actions">
-        {%- if preview_ui -%}
-          <a class="ask-ai" href="{{ url_for('preview.styleguide') }}">
+        {# Satu-satunya pintu masuk AI. Sebelumnya ada tautan "Asisten" di
+           navpill sekaligus tombol ini (dua pintu, nama berbeda — dilarang
+           design system §6), dan tombol ini pun keliru menuju /styleguide. #}
+        {%- if ai_href -%}
+          <a class="ask-ai" href="{{ ai_href }}">
             {{ icon_ai() }} Asisten AI
           </a>
         {%- endif -%}
 
         {% if current_user.is_authenticated %}
-          <span class="who">
-            <span class="av" aria-hidden="true"></span>
-            <span>{{ current_user.display_name }}</span>
-          </span>
-          <form method="post" action="{{ url_for('auth.logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-line btn-sm">Keluar</button>
-          </form>
+          {# Profil pindah ke pojok kanan atas sebagai avatar bulat. Tombol
+             Masuk/Daftar hilang saat sesi aktif, digantikan menu akun ini. #}
+          <details class="user-menu" data-user-menu>
+            <summary aria-label="Menu akun {{ current_user.display_name }}">
+              <span class="av av-lg" aria-hidden="true">{{ current_user.display_name[:1]|upper }}</span>
+            </summary>
+            <div class="user-panel">
+              <div class="user-id">
+                <span class="user-name">{{ current_user.display_name }}</span>
+                <span class="user-role">{{ "Admin" if current_user.is_admin else "Pengguna" }}</span>
+              </div>
+              <ul class="user-links">
+                <li><a href="{{ profile_href }}">Profil</a></li>
+                <li><a href="{{ saved_href }}">Lowongan tersimpan</a></li>
+                <li><a href="{{ cv_href }}">CV dan rekomendasi</a></li>
+                {%- if current_user.is_admin and admin_href %}
+                  <li><a href="{{ admin_href }}">Panel admin</a></li>
+                {%- endif %}
+              </ul>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-ghost btn-sm user-logout">Keluar</button>
+              </form>
+            </div>
+          </details>
         {% else %}
           <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.login') }}">Masuk</a>
           <a class="btn btn-primary btn-sm" href="{{ url_for('auth.register') }}">Daftar</a>

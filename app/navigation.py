@@ -25,16 +25,28 @@ USER_LINKS = (
 
 ADMIN_LINKS = (("admin.index", "Admin"),)
 
-# Tautan pratinjau: hanya muncul saat PREVIEW_UI=true, karena endpoint-nya
-# memang tidak terdaftar di produksi. Profil dan tersimpan pada Track A hidup
-# di blueprint preview, bukan blueprint produksi (PRD-F03 §6).
+# Penjelajahan publik pada Track A.
+#
+# Yang TIDAK ada di sini:
+#   - Profil. Profil adalah halaman akun, bukan bagian penjelajahan. Ia tinggal
+#     di menu pengguna pada pojok kanan atas setelah masuk.
+#   - Asisten. Hanya ada SATU pintu masuk AI (design system §6: "dua pintu masuk
+#     AI dengan nama berbeda" dilarang). Pintunya tombol "Asisten AI" di header.
 PREVIEW_LINKS = (
     ("preview.jobs", "Lowongan"),
     ("preview.insights", "Insight"),
-    ("preview.profile", "Profil"),
+)
+
+# Tautan yang hanya masuk akal setelah pengguna punya akun. Tamu tidak melihat
+# "Tersimpan", "CV", atau "Admin" — sebelumnya ketiganya ikut tampil karena
+# seluruh daftar pratinjau dipasang tanpa memandang status sesi.
+#
+# "Admin" sengaja di sini tanpa memeriksa peran: pada Track A belum ada kolom
+# `users.role`, jadi seluruh pengguna pratinjau memang melihatnya. PRD-09 yang
+# menambahkan pengecekan peran sungguhan.
+PREVIEW_USER_LINKS = (
     ("preview.saved", "Tersimpan"),
     ("preview.cv", "CV"),
-    ("preview.assistant", "Asisten"),
     ("preview.admin_index", "Admin"),
 )
 
@@ -77,13 +89,18 @@ def nav_links() -> list[dict[str, str]]:
     from flask import request
     from flask_login import current_user
 
-    if "preview.styleguide" in current_app.view_functions:
+    pratinjau = "preview.styleguide" in current_app.view_functions
+    if pratinjau:
         links = _available(PREVIEW_LINKS)
 
     if current_user.is_authenticated:
-        links.extend(_available(USER_LINKS))
-        if getattr(current_user, "is_admin", False):
-            links.extend(_available(ADMIN_LINKS))
+        if pratinjau:
+            # Daftar pratinjau sudah memuat Admin; jangan ditambah lagi.
+            links.extend(_available(PREVIEW_USER_LINKS))
+        else:
+            links.extend(_available(USER_LINKS))
+            if getattr(current_user, "is_admin", False):
+                links.extend(_available(ADMIN_LINKS))
 
     endpoint = request.endpoint or ""
     target = PARENT.get(endpoint, endpoint)
@@ -104,3 +121,33 @@ def nav_links() -> list[dict[str, str]]:
             link["active"] = False
 
     return links
+
+
+def _href(kandidat: tuple[str, ...]) -> str | None:
+    """URL endpoint pertama yang benar-benar terdaftar, atau None.
+
+    Track A dan Track B memakai nama endpoint berbeda untuk halaman yang sama
+    (``preview.profile`` vs ``profile.index``). Memanggil ``url_for`` untuk
+    endpoint yang tidak ada akan melempar BuildError, jadi kandidat disaring
+    terhadap ``app.view_functions`` lebih dulu.
+    """
+    from flask import url_for
+
+    for endpoint in kandidat:
+        if endpoint in current_app.view_functions:
+            return url_for(endpoint)
+    return None
+
+
+def header_hrefs() -> dict[str, str | None]:
+    """URL untuk menu header: AI, profil, tersimpan, CV, dan admin.
+
+    Dihitung di sini agar template tidak perlu tahu blueprint mana yang aktif.
+    """
+    return {
+        "ai_href": _href(("preview.assistant", "assistant.index")),
+        "profile_href": _href(("preview.profile", "profile.index")),
+        "saved_href": _href(("preview.saved", "profile.saved")),
+        "cv_href": _href(("preview.cv", "cv.index")),
+        "admin_href": _href(("preview.admin_index", "admin.index")),
+    }

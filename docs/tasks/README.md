@@ -104,7 +104,7 @@ Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan pre
 
 ## Status
 
-- **Track A**: PRD-F01 s.d. PRD-F05 **selesai**. PRD-F06 **Belum dimulai**.
+- **Track A**: PRD-F01 s.d. PRD-F06 **selesai**. Track A siap menerima Track B.
 - **Track B**: PRD-01 **selesai** kecuali eksekusi migrasi ke Supabase. PRD-02 s.d. PRD-10 **Belum dimulai**.
 
 ## Referensi Proyek Sebelumnya

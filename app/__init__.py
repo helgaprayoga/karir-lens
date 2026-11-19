@@ -111,7 +111,7 @@ def _register_security_headers(app: Flask) -> None:
 
 def _register_context(app: Flask) -> None:
     """Variabel template yang dipakai semua halaman (pola context processor)."""
-    from .navigation import nav_links
+    from .navigation import header_hrefs, nav_links
     from .template_filters import FILTERS
 
     app.jinja_env.filters.update(FILTERS)
@@ -125,6 +125,7 @@ def _register_context(app: Flask) -> None:
         return {
             "nav_links": nav_links(),
             "preview_ui": "preview.styleguide" in app.view_functions,
+            **header_hrefs(),
         }
 
 

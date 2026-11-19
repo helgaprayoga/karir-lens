@@ -9,6 +9,10 @@
   template, cepat atau lambat ada yang salah ketik dan pesan errornya tidak
   pernah terbaca pembaca layar.
 
+  Catatan render: `autofocus=false` akan menjadi atribut `autofocus="false"`
+  yang justru MENYALAKAN autofocus (kehadiran atribut sudah cukup). Karena itu
+  atribut hanya ditambahkan saat benar-benar diminta.
+
   Parameter:
     field       objek WTForms
     hint        string|null   petunjuk tetap (dipakai saat tidak ada error)
@@ -21,16 +25,17 @@
   {%- set hint_id = field.name ~ "-hint" -%}
   {#- Error lebih dulu: bila keduanya ada, pembaca layar membacakan yang salah. #}
   {%- set deskripsi = error_id if punya_error else (hint_id if hint else None) -%}
+  {%- set atribut = {
+      "type": type or field.type|lower,
+      "aria-invalid": "true" if punya_error else "false",
+  } -%}
+  {%- if autocomplete -%}{%- set _ = atribut.update({"autocomplete": autocomplete}) -%}{%- endif -%}
+  {%- if deskripsi -%}{%- set _ = atribut.update({"aria-describedby": deskripsi}) -%}{%- endif -%}
+  {%- if autofocus -%}{%- set _ = atribut.update({"autofocus": "autofocus"}) -%}{%- endif -%}
 
   <div class="field">
     {{ field.label }}
-    {{ field(
-        type=type or field.type|lower,
-        autocomplete=autocomplete,
-        autofocus=(true if autofocus else None),
-        aria_invalid=("true" if punya_error else "false"),
-        aria_describedby=(deskripsi or None)
-    ) }}
+    {{ field(**atribut) }}
     {%- if punya_error -%}
       <p class="field-error" id="{{ error_id }}">{{ field.errors[0] }}</p>
     {%- elif hint -%}

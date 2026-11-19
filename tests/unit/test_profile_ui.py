@@ -240,22 +240,36 @@ def test_personal_pages_have_nav_links(uiClient) -> None:
 def test_nav_marks_exactly_one_active(uiClient) -> None:
     """Setiap halaman menyorot tepat satu menu, termasuk halaman anak.
 
-    Tiga menu pratinjau semuanya milik blueprint ``preview``; tanpa peta
-    endpoint-induk, halaman detail dan perusahaan tidak menyorot apa pun, dan
-    aturan longgar akan menyalakan ketiganya sekaligus.
+    Profil tidak lagi punya menu di navpill — ia halaman akun dan tinggal di
+    menu pengguna pojok kanan atas — sehingga halaman profil tidak menyorot
+    menu penjelajahan mana pun.
     """
     harapan = {
         "/preview/jobs": "Lowongan",
         "/preview/jobs/1": "Lowongan",
         "/preview/companies/novatech-labs": "Lowongan",
-        "/preview/profile": "Profil",
-        "/preview/saved": "Tersimpan",
     }
     for path, menu in harapan.items():
         body = _html(uiClient.get(path))
         nav = re.search(r'<ul class="nav-pill">(.*?)</ul>', body, re.S).group(1)
         aktif = re.findall(r'<a[^>]*aria-current="page"[^>]*>\s*([A-Za-z]+)\s*</a>', nav)
         assert aktif == [menu], f"{path} menyorot {aktif}, seharusnya {[menu]}"
+
+    # Halaman profil tidak menyorot menu penjelajahan apa pun.
+    body = _html(uiClient.get("/preview/profile"))
+    nav = re.search(r'<ul class="nav-pill">(.*?)</ul>', body, re.S).group(1)
+    assert 'aria-current="page"' not in nav
+
+
+def test_guest_sees_only_public_nav(uiClient) -> None:
+    """Tamu hanya melihat menu penjelajahan, tanpa Tersimpan/CV/Admin."""
+    body = _html(uiClient.get("/preview/jobs"))
+    nav = re.search(r'<ul class="nav-pill">(.*?)</ul>', body, re.S).group(1)
+    tautan = re.findall(r">\s*([A-Za-z]+)\s*</a>", nav)
+
+    assert tautan == ["Lowongan", "Insight"]
+    assert "Masuk" in body and "Daftar" in body
+    assert 'class="user-menu"' not in body
 
 
 def test_production_nav_hides_preview_links() -> None:

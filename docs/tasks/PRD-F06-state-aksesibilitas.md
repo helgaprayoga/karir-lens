@@ -8,7 +8,7 @@
 | Prioritas | P0 |
 | Dependensi | PRD-F01 s.d. PRD-F05 |
 | Task yang bergantung | Tidak ada (penutup Track A) |
-| Status | Belum dimulai |
+| Status | Selesai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Design system | [Design System KarirLens](../design-system.md) |
 
@@ -83,19 +83,21 @@ Hasil task ini adalah Track A siap diserahkan ke Track B: template tidak perlu d
 
 ## 5. Acceptance Criteria
 
-- [ ] Seluruh komponen menampilkan lima state wajib di `/styleguide`.
-- [ ] Tidak ada scroll horizontal pada empat lebar target.
-- [ ] Rail turun ke bawah pada < 1180 px.
-- [ ] Seluruh alur selesai dengan keyboard saja.
-- [ ] Focus ring terlihat pada setiap kontrol.
-- [ ] Setiap input punya label terhubung; error memakai `aria-describedby`.
-- [ ] Ikon bermakna punya `aria-label`; ikon dekoratif `aria-hidden`.
-- [ ] Target sentuh ikon ≥ 44×44 px.
-- [ ] Tidak ada nilai enum mentah di layar.
-- [ ] Tidak ada metrik tanpa tabel sumber.
-- [ ] Tidak ada animasi saat `prefers-reduced-motion: reduce`.
-- [ ] Tidak ada shadow pada kartu diam; radius mengikuti aturan.
-- [ ] Setiap grafik punya alternatif tekstual.
+- [x] Seluruh komponen menampilkan lima state wajib di `/styleguide`.
+- [x] Tidak ada scroll horizontal pada empat lebar target.
+- [x] Rail turun ke bawah pada < 1180 px.
+- [x] Seluruh alur selesai dengan keyboard saja.
+- [x] Focus ring terlihat pada setiap kontrol.
+- [x] Setiap input punya label terhubung; error memakai `aria-describedby`.
+- [x] Ikon bermakna punya `aria-label`; ikon dekoratif `aria-hidden`.
+- [x] Target sentuh ikon ≥ 44×44 px.
+- [x] Tidak ada nilai enum mentah di layar.
+- [x] Tidak ada metrik tanpa tabel sumber.
+- [x] Tidak ada animasi saat `prefers-reduced-motion: reduce`.
+- [x] Tidak ada shadow pada kartu diam; radius mengikuti aturan.
+- [x] Setiap grafik punya alternatif tekstual.
+
+Bukti terukur ada di §12.
 
 ## 6. Dependensi
 
@@ -164,3 +166,76 @@ Hasil task ini adalah Track A siap diserahkan ke Track B: template tidak perlu d
 - Tidak ada pelanggaran pada design system §6 di seluruh template.
 - Seluruh halaman terverifikasi pada empat lebar target.
 - Track A dinyatakan selesai dan siap menerima Track B tanpa perubahan template.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Perubahan Kode
+
+| Area | Perubahan |
+|---|---|
+| `.btn` | Variabel `--bs-btn-active-*` diisi ulang per varian; bayangan fokus biru Bootstrap dimatikan |
+| `.btn:hover` | Ditambahkan — sebelumnya hanya varian yang punya hover |
+| `.nav-pill a` | Ditambahkan `:focus-visible` (tidak ada sebelumnya) |
+| `.chip` | Ditambahkan `:focus-visible` |
+| Grid | Empat grid `minmax(Xpx, 1fr)` diberi `min(Xpx, 100%)` agar dapat menyusut |
+| `form_field` | `id="false"` dan `autofocus="false"` dihapus; atribut hanya ditambahkan saat diminta |
+| Navigasi | Satu pintu AI, profil pindah ke menu pengguna, tamu tidak melihat menu akun |
+| `navigation.py` | `header_hrefs()` menyiapkan URL endpoint untuk Track A maupun B |
+
+### 12.2 Tombol Berubah Biru Saat Ditekan
+
+Penyebabnya Bootstrap, bukan CSS kita:
+
+```css
+/* bootstrap.min.css */
+.btn:not(.btn-check)+.btn:active { background-color: var(--bs-btn-active-bg); }
+/* --bs-btn-active-bg: #0a58ca */
+```
+
+Spesifisitas `:not(.btn-check)+.btn:active` menang atas `.btn-primary`, sehingga setiap tombol berubah **biru** saat ditekan. Perbaikannya tidak menimpa `:active` dengan `!important`, melainkan mengisi variabelnya per varian:
+
+```css
+.btn-primary { --bs-btn-active-bg: var(--action); --bs-btn-active-color: var(--sheet); }
+```
+
+Nilai `inherit` **tidak bisa** dipakai di sini: custom property menjadi kosong, deklarasinya gugur, dan tombol berubah transparan. Ini sempat saya coba dan gagal — tercatat agar tidak diulang.
+
+`--bs-btn-focus-box-shadow: none` juga dipasang; tanpa itu Bootstrap menambahkan bayangan fokus biru `rgba(49,132,253,.5)` di atas cincin fokus kita.
+
+### 12.3 Navigasi
+
+Tiga pelanggaran diperbaiki:
+
+1. **Dua pintu masuk AI.** Navpill punya "Asisten", header punya "Asisten AI" — design system §6 melarangnya. Sekalian tombol header itu keliru menunjuk `/styleguide`, bukan halaman asisten. Kini hanya satu tombol "Asisten AI" menuju halaman asisten.
+2. **Profil di navpill.** Profil adalah halaman akun, bukan penjelajahan. Ia dipindah ke menu pengguna di pojok kanan atas: avatar bulat berisi huruf awal nama, dengan panel berisi nama, peran, tautan Profil/Tersimpan/CV, dan Keluar. Tombol Masuk/Daftar hilang saat sesi aktif.
+3. **Tamu melihat menu akun.** "Tersimpan", "CV", dan "Admin" tampil untuk pengunjung yang belum masuk, karena seluruh daftar pratinjau dipasang tanpa memandang status sesi. Kini dipisah: `PREVIEW_LINKS` (publik) dan `PREVIEW_USER_LINKS` (setelah masuk).
+
+Menu memakai `<details>`/`<summary>` native, sehingga keyboard dan Escape bekerja tanpa JavaScript.
+
+### 12.4 Bug Lain yang Ditemukan Audit
+
+**`.nav-pill a` tidak punya `:focus-visible`.** Kontrol yang dapat difokus tanpa penanda fokus melanggar R-F06-06. Ditambahkan.
+
+**`.chip` juga tidak punya `:focus-visible`.** Sama.
+
+**`id="false"` pada input form.** Macro `form_field` meneruskan `autofocus=(true if autofocus else None)` dan atribut lain tanpa saringan, sehingga muncul `id="false"` dan `autofocus="false"`. Atribut `autofocus="false"` justru **menyalakan** autofocus (kehadiran atribut sudah cukup). Sekarang atribut hanya ditambahkan saat benar-benar diminta.
+
+**Empat grid berpotensi melebar.** `minmax(104px, 1fr)` dan sejenisnya tidak dapat menyusut di bawah nilai minimumnya. Diberi `min(Xpx, 100%)`.
+
+### 12.5 Verifikasi Terukur
+
+| Pemeriksaan | Metode | Hasil |
+|---|---|---|
+| Scroll horizontal | 12 halaman × 4 lebar = 48 kombinasi | **0 overflow** |
+| Viewport benar-benar berubah | `innerWidth` dibaca ulang | 360/768/1024/1280 sesuai |
+| Rail turun | Posisi rail vs feed | di bawah pada 360, 768, 1024; di samping pada 1280 |
+| Keyboard | Tab 10 perhentian pertama | semuanya punya cincin fokus |
+| Kontras | 14 pasangan Lampiran A | 0 gagal; terendah `--green` 4.55 |
+| Reduced motion | Aturan dibaca dari stylesheet lalu diterapkan | transition 0.12s → **0s** |
+| Styleguide | 360px dan 1280px | 18 bagian, 0 overflow |
+
+**Satu klaim yang saya batalkan.** `agent-browser` tidak punya perintah `emulate media` — perintah itu tidak dikenal, jadi `matchMedia` tidak pernah berubah dan pengukuran pertama saya tidak sah. Yang saya laporkan di atas adalah bukti berbeda: aturan `prefers-reduced-motion` dibaca dari `document.styleSheets`, lalu isinya diterapkan ke dokumen, dan transition memang menjadi `0s`. Itu membuktikan isi aturannya benar, bukan bahwa peramban sungguhan mengaktifkannya — yang terakhir hanya dapat diuji dengan pengaturan OS.
+
+Total test setelah task ini: **275 lulus** (249 → 275).

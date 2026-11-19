@@ -302,8 +302,44 @@ def test_admin_routes_not_in_production() -> None:
         assert path not in jalur, f"{path} bocor ke produksi"
 
 
-def test_nav_marks_one_active_for_new_pages(uiClient) -> None:
-    """Insight dan seluruh halaman admin menyorot tepat satu menu."""
+def test_nav_marks_one_active_for_new_pages(ui, monkeypatch) -> None:
+    """Insight dan seluruh halaman admin menyorot tepat satu menu.
+
+    Halaman-halaman ini hanya muncul di nav setelah pengguna masuk, jadi
+    kliennya harus login lebih dulu — tamu tidak melihatnya sama sekali.
+    """
+    from app.auth import repository
+
+    store: dict[str, dict] = {}
+    state = {"id": 1}
+
+    def find_by_email(email, *, with_password=False):
+        row = store.get(email)
+        if row is None:
+            return None
+        return dict(row) if with_password else {k: row[k] for k in ("id", "email", "name")}
+
+    def find_by_id(user_id):
+        for row in store.values():
+            if row["id"] == user_id:
+                return {k: row[k] for k in ("id", "email", "name")}
+        return None
+
+    def create(email, password_hash, name=None):
+        row = {"id": state["id"], "email": email, "password_hash": password_hash, "name": name}
+        state["id"] += 1
+        store[email] = row
+        return {"id": row["id"], "email": row["email"], "name": row["name"]}
+
+    # monkeypatch: tanpa ini repository global berubah untuk test berikutnya.
+    monkeypatch.setattr(repository, "find_by_email", find_by_email)
+    monkeypatch.setattr(repository, "find_by_id", find_by_id)
+    monkeypatch.setattr(repository, "create", create)
+
+    client = ui.test_client()
+    client.post("/auth/register",
+                data={"email": "nav@example.com", "password": "rahasia123", "name": "Nav"})
+
     harapan = {
         "/preview/insights": "Insight",
         "/preview/admin": "Admin",
@@ -313,7 +349,7 @@ def test_nav_marks_one_active_for_new_pages(uiClient) -> None:
         "/preview/admin/clusters": "Admin",
     }
     for path, menu in harapan.items():
-        body = _html(uiClient.get(path))
+        body = _html(client.get(path))
         nav = re.search(r'<ul class="nav-pill">(.*?)</ul>', body, re.S).group(1)
         aktif = re.findall(r'<a[^>]*aria-current="page"[^>]*>\s*([A-Za-z]+)\s*</a>', nav)
         assert aktif == [menu], f"{path} menyorot {aktif}, seharusnya {[menu]}"
