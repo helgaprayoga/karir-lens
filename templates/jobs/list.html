@@ -1,0 +1,116 @@
+{#
+  Daftar lowongan — design system §4, PRD-F02 R-F02-01.
+
+  Kontrak template (PRD-F02 §4.1): items, meta, filters, options, is_loading.
+  Route menyiapkan tautan toggle filter (options.*.href) sehingga chip dapat
+  menghapus filter yang aktif tanpa template perlu tahu aturannya.
+#}
+{% extends "base.html" %}
+
+{% from "components/job_card.html" import job_card %}
+{% from "components/filter_chip.html" import sort_control %}
+{% from "components/search_field.html" import search_field %}
+{% from "components/pagination.html" import pagination %}
+{% from "components/empty_state.html" import empty_state %}
+{% from "components/skeleton_card.html" import skeleton_card %}
+{% from "components/icons.html" import icon_filter, icon_arrow_out %}
+
+{% block title %}{{ meta.total }} Lowongan — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <h1>Cari Lowongan</h1>
+      <div class="page-actions">
+        {{ search_field(name="q", value=filters.q, action=url_for("preview.jobs"),
+                        placeholder="Posisi, perusahaan, skill...") }}
+        <button class="btn btn-primary" type="button" aria-expanded="false" aria-controls="filter-panel">
+          {{ icon_filter() }} Filter <span class="count">{{ active_count }}</span>
+        </button>
+      </div>
+    </div>
+
+    {# ── Bar filter ────────────────────────────────────────────────────────
+       Chip adalah tautan: klik = toggle filter di URL (R-F02-06, R-F02-10). #}
+    <div class="filters">
+      {%- for chip in options.cities -%}
+        <a class="chip" href="{{ chip.href }}" aria-pressed="{{ 'true' if chip.active else 'false' }}"
+           data-filter="city" data-value="{{ chip.value }}">
+          {{ chip.label }}{% if chip.active %}<span class="remove" aria-hidden="true">×</span>{% endif %}
+        </a>
+      {%- endfor -%}
+
+      {%- for chip in options.employment_types -%}
+        <a class="chip" href="{{ chip.href }}" aria-pressed="{{ 'true' if chip.active else 'false' }}"
+           data-filter="employment_type" data-value="{{ chip.value }}">
+          {{ chip.label }}{% if chip.active %}<span class="remove" aria-hidden="true">×</span>{% endif %}
+        </a>
+      {%- endfor -%}
+
+      {%- for chip in options.sources -%}
+        <a class="chip" href="{{ chip.href }}" aria-pressed="{{ 'true' if chip.active else 'false' }}"
+           data-filter="source" data-value="{{ chip.value }}">
+          {{ chip.label }}{% if chip.active %}<span class="remove" aria-hidden="true">×</span>{% endif %}
+        </a>
+      {%- endfor -%}
+
+      {{ sort_control(sort=filters.sort, smart=True) }}
+    </div>
+
+    {# ── Hasil ──────────────────────────────────────────────────────────── #}
+    <div class="section-head">
+      <h2>{{ meta.total }} Lowongan</h2>
+      <span class="sub">Dari Dealls, Kalibrr, dan Remotive</span>
+    </div>
+
+    {%- if is_loading -%}
+      <div class="cards" aria-busy="true">
+        {%- for _ in range(meta.per_page) -%}{{ skeleton_card() }}{%- endfor -%}
+      </div>
+    {%- elif items -%}
+      <div class="cards">
+        {%- for job in items -%}
+          {{ job_card(job, href=url_for("preview.job_detail", job_id=job.id)) }}
+        {%- endfor -%}
+      </div>
+      {{ pagination(meta, "preview.jobs", params=url_params) }}
+    {%- else -%}
+      {{ empty_state(
+           "Tidak ada lowongan yang cocok",
+           "Tidak ada hasil untuk pencarian atau filter yang dipilih. Coba hapus sebagian filter.",
+           "Hapus semua filter",
+           url_for("preview.jobs")) }}
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Ringkasan">
+    <div class="hint">
+      <span><b>{{ meta.total }} lowongan</b> tersedia dari Dealls, Kalibrr, dan Remotive.</span>
+    </div>
+
+    {%- if categories -%}
+      <section class="panel">
+        <h4>Kategori</h4>
+        <div class="insights">
+          {%- for kategori in categories -%}
+            <a class="insight" href="{{ url_for('preview.jobs', q=kategori.label) }}">
+              <div class="ico" aria-hidden="true">{{ icon_arrow_out() }}</div>
+              <div class="body">
+                <div class="txt"><b>{{ kategori.job_count }} lowongan</b> di {{ kategori.label }}</div>
+                <div class="meta"><span class="when">{{ kategori.keywords|join(" · ") }}</span></div>
+              </div>
+            </a>
+          {%- endfor -%}
+        </div>
+      </section>
+    {%- endif -%}
+
+    <section class="panel">
+      <h4>Butuh rekomendasi?</h4>
+      <p class="field-hint">Masuk dan konfirmasi skill dari CV untuk mendapat rekomendasi yang relevan.</p>
+      <a class="btn btn-soft" href="{{ url_for('auth.login') }}">Masuk</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

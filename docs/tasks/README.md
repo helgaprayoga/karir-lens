@@ -104,7 +104,7 @@ Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan pre
 
 ## Status
 
-- **Track A**: PRD-F01 **selesai**. PRD-F02 s.d. PRD-F06 **Belum dimulai**. Design system (token, komponen, shell, `/styleguide`) sudah tersedia sebagai fondasi halaman berikutnya.
+- **Track A**: PRD-F01, PRD-F02 **selesai**. PRD-F03 s.d. PRD-F06 **Belum dimulai**.
 - **Track B**: PRD-01 **selesai** kecuali eksekusi migrasi ke Supabase. PRD-02 s.d. PRD-10 **Belum dimulai**.
 
 ## Referensi Proyek Sebelumnya

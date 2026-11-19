@@ -1,0 +1,102 @@
+{#
+  Beranda katalog — PRD-F02 §4.1 (stats, latest, categories).
+  Sama isinya dengan `/` produksi, tetapi memakai data fixture di Track A.
+#}
+{% extends "base.html" %}
+
+{% from "components/job_card.html" import job_card %}
+{% from "components/alert_banner.html" import alert_banner %}
+{% from "components/icons.html" import icon_arrow_out, icon_search %}
+
+{% block title %}KarirLens — Lowongan dari tiga sumber, satu pencarian{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <h1>Lowongan dari tiga sumber, satu pencarian</h1>
+    </div>
+
+    <p class="field-hint">
+      KarirLens mengumpulkan lowongan dari Dealls, Kalibrr, dan Remotive, lalu
+      menampilkannya dalam satu daftar yang dapat dicari dan disaring.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{ url_for('preview.jobs') }}">
+        {{ icon_search() }} Mulai cari lowongan
+      </a>
+      <a class="btn btn-line" href="{{ url_for('auth.register') }}">Buat akun</a>
+    </div>
+
+    <div class="stat-grid home-stats">
+      <div class="stat-tile">
+        <div class="value">{{ stats.total_jobs|angka }}</div>
+        <div class="label">Lowongan aktif</div>
+      </div>
+      <div class="stat-tile">
+        <div class="value">{{ stats.total_companies|angka }}</div>
+        <div class="label">Perusahaan</div>
+      </div>
+      <div class="stat-tile">
+        <div class="value">{{ stats.total_categories|angka }}</div>
+        <div class="label">Kategori</div>
+      </div>
+    </div>
+
+    <div class="section-head home-section">
+      <h2>Lowongan terbaru</h2>
+      <a class="sub" href="{{ url_for('preview.jobs') }}">Lihat semua</a>
+    </div>
+    <div class="cards">
+      {%- for job in latest -%}
+        {{ job_card(job, href=url_for("preview.job_detail", job_id=job.id)) }}
+      {%- endfor -%}
+    </div>
+
+    <div class="section-head home-section">
+      <h2>Pintasan kategori</h2>
+      <span class="sub">{{ categories|length }} kategori terdeteksi otomatis</span>
+    </div>
+    <div class="category-grid">
+      {%- for kategori in categories -%}
+        <a class="category-card" href="{{ url_for('preview.jobs', q=kategori.label) }}">
+          <span class="category-count">{{ kategori.job_count|angka }}</span>
+          <span class="category-label">{{ kategori.label }}</span>
+          <span class="category-keys">{{ kategori.keywords|join(" · ") }}</span>
+        </a>
+      {%- endfor -%}
+    </div>
+  </main>
+
+  <aside class="rail" aria-label="Ringkasan">
+    <div class="hint">
+      <span><b>{{ stats.total_jobs|angka }} lowongan</b> dari {{ stats.total_companies|angka }} perusahaan.</span>
+    </div>
+
+    <section class="panel">
+      <h4>Baru di sini?</h4>
+      <p class="field-hint">
+        Buat akun untuk menyimpan lowongan, mengunggah CV, dan menerima
+        rekomendasi berdasarkan skill yang Anda konfirmasi.
+      </p>
+      <a class="btn btn-primary" href="{{ url_for('auth.register') }}">Buat akun</a>
+    </section>
+
+    <section class="panel">
+      <h4>Kategori</h4>
+      <div class="insights">
+        {%- for kategori in categories[:4] -%}
+          <a class="insight" href="{{ url_for('preview.jobs', q=kategori.label) }}">
+            <div class="ico" aria-hidden="true">{{ icon_arrow_out() }}</div>
+            <div class="body">
+              <div class="txt">{{ kategori.label }}</div>
+              <div class="meta"><span class="when">{{ kategori.job_count }} lowongan</span></div>
+            </div>
+          </a>
+        {%- endfor -%}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

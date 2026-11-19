@@ -8,7 +8,7 @@
 | Prioritas | P0 |
 | Dependensi | PRD-F01 |
 | Task yang bergantung | PRD-F03, PRD-F04, PRD-F05, PRD-04 |
-| Status | Belum dimulai |
+| Status | Selesai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Backend pasangan | [PRD-04](./PRD-04-katalog-publik.md) |
 | Design system | [Design System KarirLens](../design-system.md) |
@@ -104,18 +104,18 @@ Task ini membangun seluruh tampilan katalog tanpa query database. Data berasal d
 
 ## 5. Acceptance Criteria
 
-- [ ] `/jobs` tampil dengan pencarian, chip filter, urutan, grid kartu, right rail, dan pagination.
-- [ ] `/` menampilkan hero, ringkasan jumlah, lowongan terbaru, dan pintasan kategori.
-- [ ] `/jobs/<id>` menampilkan detail lengkap dan tautan sumber asli.
-- [ ] `/companies/<slug>` hanya menampilkan data turunan lowongan.
-- [ ] Setiap kartu menampilkan badge sumber yang benar.
-- [ ] Deskripsi terpotong tepat dua baris.
-- [ ] Chip filter aktif dapat dihapus dan menandai `aria-pressed`.
-- [ ] Kondisi kosong memakai `EmptyState` dengan saran.
-- [ ] Skeleton tampil pada state loading, tanpa teks palsu.
-- [ ] Layout tidak rusak pada 360, 768, 1024, dan 1280 px.
-- [ ] Tepi kiri kartu sejajar dengan judul halaman dan header.
-- [ ] Semua route katalog dapat dibuka tanpa login.
+- [x] `/jobs` tampil dengan pencarian, chip filter, urutan, grid kartu, right rail, dan pagination.
+- [x] `/` menampilkan hero, ringkasan jumlah, lowongan terbaru, dan pintasan kategori.
+- [x] `/jobs/<id>` menampilkan detail lengkap dan tautan sumber asli.
+- [x] `/companies/<slug>` hanya menampilkan data turunan lowongan.
+- [x] Setiap kartu menampilkan badge sumber yang benar.
+- [x] Deskripsi terpotong tepat dua baris.
+- [x] Chip filter aktif dapat dihapus dan menandai `aria-pressed`.
+- [x] Kondisi kosong memakai `EmptyState` dengan saran.
+- [x] Skeleton tampil pada state loading, tanpa teks palsu.
+- [x] Layout tidak rusak pada 360, 768, 1024, dan 1280 px. *(diukur di browser: `scrollWidth` = viewport pada keempat lebar)*
+- [x] Tepi kiri kartu sejajar dengan judul halaman dan header. *(32/32/32 · 24/24/24 · 18/18/18)*
+- [x] Semua route katalog dapat dibuka tanpa login.
 
 ## 6. Dependensi
 
@@ -189,3 +189,29 @@ Task ini membangun seluruh tampilan katalog tanpa query database. Data berasal d
 - Test otomatis pada §7.1 lulus.
 - Halaman katalog dapat ditinjau di browser dengan data fixture.
 - Kontrak template pada §4.1 tertulis dan dipakai PRD-04.
+
+## 12. Catatan Implementasi
+
+| Berkas | Isi |
+|---|---|
+| `templates/jobs/list.html` | Pencarian, chip filter, urutan, grid kartu, pagination, empty/loading state, right rail |
+| `templates/jobs/detail.html` | Judul di luar kartu, gaji, skill, deskripsi, tautan sumber, lowongan serupa |
+| `templates/jobs/home.html` | Hero, `StatTile`, lowongan terbaru, pintasan kategori |
+| `templates/companies/detail.html` | Ringkasan perusahaan dari data lowongan, tanpa profil eksternal |
+| `app/preview/routes.py` | Route `home`, `jobs`, `jobs/<id>`, `companies/<slug>` beserta penyusun tautan chip |
+| `app/preview/fixtures.py` | Filter naif, pagination, perusahaan per slug, lowongan serupa, opsi chip |
+| `tests/fixtures/ui/` | `jobs.json` (6 item), `home.json`, `companies.json`, `jobs_empty.json` |
+| `tests/unit/test_catalog.py` | 27 test untuk §7.1 |
+
+Tiga keputusan yang diambil saat implementasi:
+
+1. **Chip filter adalah tautan, bukan tombol dropdown.** Panel pilihan belum ada, sehingga ikon `▾` pada design system §4.6 tidak dirender — caret yang tidak membuka apa pun adalah state menipu (§2 prinsip 2). Chip kini toggle: klik menerapkan, klik lagi menghapus. Penyimpangan ini dicatat di docstring `filter_chip.html`.
+2. **Tautan toggle disiapkan route, bukan template.** `_options()` mengembalikan `{value, label, active, href}` sehingga template tidak perlu tahu aturan "bila aktif, hapus filter".
+3. **`height: 100%` pada `JobCard` dipindah ke `.cards .job-card`.** Di halaman detail, kartu berada di luar grid dan memanjang mengisi sisa tinggi `.feed` — ruang kosong sekitar 450px. Grid yang menetapkan tinggi, bukan kartunya.
+
+Dua bug visual ditemukan lewat audit browser dan langsung diperbaiki:
+
+- **Judul detail tidak sejajar** (51px vs 32px) karena berada di dalam `.job-card` yang punya padding sendiri. Judul dipindah ke `.page-head` di luar kartu.
+- **Footer menimpa tombol** pada halaman detail, akibat kartu yang melar tadi.
+
+Total test setelah task ini: **163 lulus**.

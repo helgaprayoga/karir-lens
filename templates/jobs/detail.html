@@ -1,0 +1,115 @@
+{# Detail lowongan — PRD-F02 R-F02-11 / R-F02-12. #}
+{% extends "base.html" %}
+
+{% from "components/job_card.html" import job_card %}
+{% from "components/source_badge.html" import source_badge %}
+{% from "components/skill_tag.html" import skill_tags %}
+{% from "components/salary_range.html" import salary_range %}
+{% from "components/employment_type_badge.html" import employment_type_badge %}
+{% from "components/icons.html" import icon_arrow_out, icon_bookmark %}
+
+{% block title %}{{ job.title }} — {{ job.company_name }} — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <p class="field-hint">
+      <a href="{{ url_for('preview.jobs') }}">← Kembali ke daftar lowongan</a>
+    </p>
+
+    {# Judul berada di luar kartu agar tepi kirinya sejajar dengan header dan
+       kartu lain — satu level padding (design system §3.4). #}
+    <div class="page-head detail-head">
+      <div>
+        <h1>{{ job.title }}</h1>
+        <p class="detail-sub">
+          {{ job.company_name }}
+          {%- if job.location %} · {{ job.location }}{% endif %}
+          {%- if job.posted_at %} · {{ job.posted_at|tanggal_relatif }}{% endif %}
+        </p>
+      </div>
+      <div class="detail-badges">
+        {{ source_badge(job.source) }}
+        {{ employment_type_badge(job.employment_type) }}
+      </div>
+    </div>
+
+    <article class="job-card detail-card">
+      {{ salary_range(job.salary_min, job.salary_max, job.salary_currency, job.salary_period) }}
+
+      {%- if job.skills -%}
+        <div class="tags detail-tags">{{ skill_tags(job.skills, limit=99) }}</div>
+      {%- endif -%}
+
+      <div class="detail-body">
+        <h2>Deskripsi pekerjaan</h2>
+        <p>{{ job.description }}</p>
+      </div>
+
+      <div class="detail-actions">
+        <a class="btn btn-primary" href="{{ job.source_url }}" target="_blank" rel="noopener noreferrer">
+          {{ icon_arrow_out() }} Buka di {{ job.source|capitalize }}
+        </a>
+        <button type="button" class="save-btn detail-save"
+                aria-pressed="{{ 'true' if job.is_saved else 'false' }}"
+                aria-label="{{ 'Hapus dari tersimpan' if job.is_saved else 'Simpan lowongan' }}"
+                data-job-id="{{ job.id }}">
+          {{ icon_bookmark(job.is_saved) }}
+        </button>
+        <span class="field-hint">
+          Tautan menuju lowongan asli. Atribusi sumber: {{ job.source|capitalize }}.
+        </span>
+      </div>
+    </article>
+
+    {%- if similar -%}
+      <div class="section-head detail-similar-head">
+        <h2>Lowongan serupa</h2>
+        <span class="sub">Berdasarkan skill yang sama</span>
+      </div>
+      <div class="cards">
+        {%- for item in similar -%}
+          {{ job_card(item, href=url_for("preview.job_detail", job_id=item.id)) }}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Tentang perusahaan">
+    <div class="hint">
+      <span>Data perusahaan diambil dari lowongan yang tersimpan.</span>
+    </div>
+
+    <section class="panel">
+      <div class="person">
+        <div class="pic" aria-hidden="true"></div>
+        <div>
+          <div class="nm">{{ job.company_name }}</div>
+          <div class="role">{{ job.location or "Lokasi tidak disebutkan" }}</div>
+        </div>
+      </div>
+      <a class="btn btn-soft" href="{{ url_for('preview.company_detail', slug=job.company_slug) }}">
+        Lihat semua lowongan
+      </a>
+      <div class="foot-note">Hanya memakai data lowongan, tanpa profil resmi.</div>
+    </section>
+
+    {%- if similar -%}
+      <section class="panel">
+        <h4>Lowongan lain</h4>
+        <div class="insights">
+          {%- for item in similar[:3] -%}
+            <a class="insight" href="{{ url_for('preview.job_detail', job_id=item.id) }}">
+              <div class="ico" aria-hidden="true">{{ icon_arrow_out() }}</div>
+              <div class="body">
+                <div class="txt"><b>{{ item.title }}</b></div>
+                <div class="meta"><span class="when">{{ item.company_name }}</span></div>
+              </div>
+            </a>
+          {%- endfor -%}
+        </div>
+      </section>
+    {%- endif -%}
+  </aside>
+</div>
+{% endblock %}

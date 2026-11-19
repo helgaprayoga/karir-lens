@@ -1,0 +1,101 @@
+{#
+  Halaman perusahaan — PRD-F02 R-F02-13 / R-F02-14.
+
+  HANYA memakai data yang diturunkan dari lowongan: nama, jumlah, lokasi, tipe
+  kerja, skill sering muncul, dan daftar lowongan. Tidak ada logo, rating,
+  jumlah karyawan, atau alamat di luar data lowongan.
+#}
+{% extends "base.html" %}
+
+{% from "components/job_card.html" import job_card %}
+{% from "components/skill_tag.html" import skill_tags %}
+{% from "components/employment_type_badge.html" import employment_type_badge %}
+{% from "components/empty_state.html" import empty_state %}
+
+{% block title %}{{ company.name }} — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <p class="field-hint">
+      <a href="{{ url_for('preview.jobs') }}">← Kembali ke daftar lowongan</a>
+    </p>
+
+    <div class="page-head company-head">
+      <div>
+        <h1>{{ company.name }}</h1>
+        <p class="field-hint">
+          {{ company.job_count }} lowongan tersedia · {{ company.locations|join(", ") }}
+        </p>
+      </div>
+    </div>
+
+    <div class="company-facts">
+      <div class="metric-cell">
+        <div class="big"><span>{{ company.job_count }}</span></div>
+        <div class="cap">Lowongan tersedia</div>
+      </div>
+      <div class="metric-cell">
+        <div class="big"><span>{{ company.locations|length }}</span></div>
+        <div class="cap">Lokasi berbeda</div>
+      </div>
+      <div class="metric-cell">
+        <div class="big"><span>{{ company.top_skills|length }}</span></div>
+        <div class="cap">Skill sering muncul</div>
+      </div>
+    </div>
+
+    {%- if company.employment_types -%}
+      <div class="section-head company-section">
+        <h2>Tipe kerja</h2>
+      </div>
+      <div class="tags">
+        {%- for tipe in company.employment_types -%}
+          {{ employment_type_badge(tipe) }}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
+    {%- if company.top_skills -%}
+      <div class="section-head company-section">
+        <h2>Skill yang sering muncul</h2>
+        <span class="sub">Dihitung dari lowongan perusahaan ini</span>
+      </div>
+      <div class="tags">{{ skill_tags(company.top_skills, limit=99) }}</div>
+    {%- endif -%}
+
+    <div class="section-head company-section">
+      <h2>Lowongan di {{ company.name }}</h2>
+    </div>
+
+    {%- if company.jobs -%}
+      <div class="cards">
+        {%- for job in company.jobs -%}
+          {{ job_card(job, href=url_for("preview.job_detail", job_id=job.id)) }}
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      {{ empty_state(
+           "Belum ada lowongan",
+           "Perusahaan ini belum memiliki lowongan aktif di KarirLens.",
+           "Jelajahi lowongan lain",
+           url_for("preview.jobs")) }}
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Ringkasan perusahaan">
+    <div class="hint">
+      <span>Halaman ini dirangkum dari data lowongan, bukan profil resmi perusahaan.</span>
+    </div>
+
+    <section class="panel">
+      <h4>Lokasi</h4>
+      <div class="tags">
+        {%- for lokasi in company.locations -%}
+          <span class="tag">{{ lokasi }}</span>
+        {%- endfor -%}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

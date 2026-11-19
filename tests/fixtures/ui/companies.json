@@ -1,0 +1,82 @@
+[
+  {
+    "name": "NovaTech Labs",
+    "slug": "novatech-labs",
+    "job_count": 2,
+    "locations": ["Jakarta Selatan"],
+    "employment_types": ["full-time"],
+    "top_skills": ["figma", "design system", "python", "postgresql"],
+    "jobs": [
+      {
+        "id": 5,
+        "title": "Backend Engineer (Python)",
+        "company_name": "NovaTech Labs",
+        "company_slug": "novatech-labs",
+        "location": "Jakarta Selatan",
+        "employment_type": "full-time",
+        "experience_level": "menengah",
+        "description": "Membangun dan memelihara layanan API untuk platform rekrutmen, berkolaborasi dengan tim produk dan frontend.",
+        "skills": ["python", "postgresql", "docker", "rest api"],
+        "salary_min": 12000000,
+        "salary_max": 18000000,
+        "salary_currency": "IDR",
+        "salary_period": "month",
+        "source": "dealls",
+        "source_url": "https://dealls.com/loker/backend-engineer-python~novatech-labs",
+        "posted_at": "2026-11-18T08:30:00Z",
+        "is_saved": false,
+        "match": null
+      },
+      {
+        "id": 1,
+        "title": "Product Designer — SaaS",
+        "company_name": "NovaTech Labs",
+        "company_slug": "novatech-labs",
+        "location": "Jakarta Selatan",
+        "employment_type": "full-time",
+        "experience_level": "ahli",
+        "description": "Merancang pengalaman produk SaaS dari wireframe hingga antarmuka siap uji, bekerja rapat dengan tim rekayasa.",
+        "skills": ["figma", "design system", "web design", "mockup"],
+        "salary_min": 9000000,
+        "salary_max": 14000000,
+        "salary_currency": "IDR",
+        "salary_period": "month",
+        "source": "dealls",
+        "source_url": "https://dealls.com/loker/product-designer-saas~novatech-labs",
+        "posted_at": "2026-11-18T07:00:00Z",
+        "is_saved": false,
+        "match": null
+      }
+    ]
+  },
+  {
+    "name": "CloudCore Design",
+    "slug": "cloudcore-design",
+    "job_count": 1,
+    "locations": ["Bandung"],
+    "employment_types": ["contract"],
+    "top_skills": ["ui design", "ux research", "saas"],
+    "jobs": [
+      {
+        "id": 2,
+        "title": "Senior SaaS Dashboard UI/UX Designer",
+        "company_name": "CloudCore Design",
+        "company_slug": "cloudcore-design",
+        "location": "Bandung",
+        "employment_type": "contract",
+        "experience_level": "menengah",
+        "description": "Merancang dashboard analitik modern dan intuitif, menjaga konsistensi komponen lintas modul produk.",
+        "skills": ["ui design", "ux research", "saas", "dashboard"],
+        "salary_min": 11000000,
+        "salary_max": null,
+        "salary_currency": "IDR",
+        "salary_period": "month",
+        "source": "kalibrr",
+        "source_url": "https://kalibrr.id/jobs/senior-saas-dashboard-uiux-designer",
+        "posted_at": "2026-11-18T05:30:00Z",
+        "is_saved": true,
+        "match": null
+      }
+    ]
+  }
+]

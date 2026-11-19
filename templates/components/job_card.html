@@ -14,6 +14,7 @@
   Parameter:
     job    dict  bentuk `job` pada PRD-F01 §4.2
     show_match  bool  tampilkan MatchBadge bila job.match ada
+    href   string|null  tujuan tautan judul; None berarti tanpa tautan
 #}
 
 {% from "components/icons.html" import icon_bookmark, icon_clock, icon_pin, icon_level %}
@@ -22,7 +23,7 @@
 {% from "components/salary_range.html" import salary_range %}
 {% from "components/employment_type_badge.html" import employment_label %}
 
-{% macro job_card(job, show_match=False) -%}
+{% macro job_card(job, show_match=False, href=None) -%}
   <article class="job-card">
     <div class="card-top">
       <span class="company">{{ job.company_name or "Perusahaan tidak disebutkan" }}</span>
@@ -35,7 +36,7 @@
       </button>
     </div>
 
-    <h3><a href="#">{{ job.title }}</a></h3>
+    <h3>{% if href %}<a href="{{ href }}">{{ job.title }}</a>{% else %}{{ job.title }}{% endif %}</h3>
 
     <div class="meta">
       {%- set type_label = employment_label(job.employment_type) -%}

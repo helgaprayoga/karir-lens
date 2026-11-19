@@ -10,7 +10,7 @@ Pengerjaan dibagi dua track: **seluruh antarmuka lebih dulu** (Track A), baru lo
 
 | Track | Keadaan |
 |---|---|
-| A — Frontend (PRD-F01..F06) | PRD-F01 selesai; PRD-F02 s.d. F06 belum dimulai |
+| A — Frontend (PRD-F01..F06) | PRD-F01, F02 selesai; PRD-F03 s.d. F06 belum dimulai |
 | B — Backend (PRD-01..PRD-10) | PRD-01 selesai; PRD-02 s.d. PRD-10 belum dimulai |
 
 | Lapisan | Keadaan |
@@ -22,7 +22,7 @@ Pengerjaan dibagi dua track: **seluruh antarmuka lebih dulu** (Track A), baru lo
 | Registrasi, login, logout, CSRF, cookie aman | Selesai |
 | Logging tanpa data sensitif | Selesai |
 | Design system lengkap, `/styleguide`, preview blueprint | Selesai (PRD-F01) |
-| Halaman katalog, profil, CV, asisten, insight, admin | Belum (PRD-F02..F05) |
+| Halaman katalog, profil, CV, asisten, insight, admin | Katalog selesai (PRD-F02); sisanya PRD-F03..F05 |
 | Modul `jobs`, `insights`, `profile`, `cv`, `assistant`, `admin`, `api` | Kerangka, diisi per PRD |
 | Pipeline `scraper` (adapter, normalisasi, dedup, clustering) | Kerangka, diisi per PRD |
 
@@ -174,6 +174,10 @@ docs/         PRD, arsitektur, design system, PRD per task
 | `/auth/logout` | Logout (POST) |
 | `/preview/` | Daftar halaman preview (hanya `PREVIEW_UI=true`) |
 | `/preview/styleguide` | Audit seluruh komponen design system (hanya `PREVIEW_UI=true`) |
+| `/preview/home` | Beranda katalog dengan data contoh |
+| `/preview/jobs` | Katalog: pencarian, filter, urutan, pagination |
+| `/preview/jobs/<id>` | Detail lowongan dan lowongan serupa |
+| `/preview/companies/<slug>` | Halaman perusahaan dari data lowongan |
 
 Halaman `/preview/*` hanya terdaftar bila `PREVIEW_UI=true`. Ketika flag itu mati, route-nya tidak ada sama sekali sehingga mengembalikan 404, bukan 403.
 

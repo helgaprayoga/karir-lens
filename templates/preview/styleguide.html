@@ -85,16 +85,17 @@
   <section class="styleguide-section">
     <h2>FilterChip &amp; SortControl</h2>
     <p class="field-hint">
-      Dua varian wajib terlihat berbeda: <b>dropdown</b> (belum aktif, ikon ▾) dan
-      <b>terapan</b> (aktif, ikon ×). Toggle pengurutan sengaja dipisah dari baris filter.
+      Chip adalah <b>toggle</b>: klik menerapkan filter, klik lagi menghapusnya.
+      Chip terapan memakai ikon × dan <code>aria-pressed="true"</code>.
+      Toggle pengurutan sengaja dipisah dari baris filter.
     </p>
 
     <div class="filters">
-      {{ filter_chip("Kota", "dropdown", "city") }}
-      {{ filter_chip("Tipe kerja", "dropdown", "employment_type") }}
-      {{ filter_chip("Sumber", "dropdown", "source") }}
-      {{ filter_chip("Jakarta", "applied", "city", "Jakarta") }}
-      {{ filter_chip("Penuh waktu", "applied", "employment_type", "full-time") }}
+      {{ filter_chip("Kota") }}
+      {{ filter_chip("Tipe kerja") }}
+      {{ filter_chip("Sumber") }}
+      {{ filter_chip("Jakarta", "applied") }}
+      {{ filter_chip("Penuh waktu", "applied") }}
       {{ sort_control() }}
     </div>
   </section>

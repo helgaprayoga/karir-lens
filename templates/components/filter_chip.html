@@ -1,38 +1,51 @@
 {#
-  FilterChip — design system §4.6, R-04-02.
+  FilterChip — design system §4.6, R-04-02 / R-F02-06.
 
-  Dua varian yang WAJIB terlihat berbeda:
-    dropdown : border --line-2, teks --ink-2, ikon "▾"  (belum aktif)
-    applied  : border --line-4, teks --ink,   ikon "×"  (bisa dihapus)
+  Dua keadaan yang WAJIB terlihat berbeda:
+    belum aktif : border --line-2, teks --ink-2, tanpa ikon
+    terapan     : border --line-4, teks --ink, ikon "×" (dapat dihapus)
+
+  Catatan penyimpangan dari §4.6: varian "dropdown" pada design system memakai
+  ikon "▾" karena ia membuka panel pilihan. Panel itu belum ada (PRD-F02 di luar
+  scope), sehingga ikon caret sengaja TIDAK dirender — caret yang tidak membuka
+  apa pun adalah state yang menipu (§2 prinsip 2). Chip di sini adalah toggle:
+  klik menerapkan filter, klik lagi menghapusnya.
 
   Parameter:
-    label      string
-    variant    "dropdown" | "applied"
-    name       string|null  nama filter, dipakai sebagai atribut data
-    value      string|null
+    label    string
+    variant  "applied" | lainnya
+    href     string|null  bila diisi, chip menjadi tautan
+    name     string|null  atribut data untuk JavaScript
+    value    string|null
 #}
 
-{% macro filter_chip(label, variant="dropdown", name=None, value=None) -%}
-  {%- if variant == "applied" -%}
-    <button type="button" class="chip" aria-pressed="true"
-            {% if name %}data-filter="{{ name }}"{% endif %}
-            {% if value %}data-value="{{ value }}"{% endif %}>
-      {{ label }}<span class="remove" aria-hidden="true">×</span>
-    </button>
+{% macro filter_chip(label, variant="default", href=None, name=None, value=None) -%}
+  {%- set applied = variant == "applied" -%}
+  {%- set pressed = "true" if applied else "false" -%}
+
+  {%- if href -%}
+    <a class="chip" href="{{ href }}" aria-pressed="{{ pressed }}"
+       {% if name %}data-filter="{{ name }}"{% endif %}
+       {% if value %}data-value="{{ value }}"{% endif %}>{{ label }}{% if applied %}<span class="remove" aria-hidden="true">×</span>{% endif %}</a>
   {%- else -%}
-    <button type="button" class="chip" aria-pressed="false" aria-expanded="false"
-            {% if name %}data-filter="{{ name }}"{% endif %}>
-      {{ label }}<span class="caret" aria-hidden="true">▾</span>
-    </button>
+    <button type="button" class="chip" aria-pressed="{{ pressed }}"
+            {% if name %}data-filter="{{ name }}"{% endif %}
+            {% if value %}data-value="{{ value }}"{% endif %}>{{ label }}{% if applied %}<span class="remove" aria-hidden="true">×</span>{% endif %}</button>
   {%- endif -%}
 {%- endmacro %}
 
 {#
   SortControl — §4.6. Toggle pengurutan SENGAJA dipisah dari baris filter,
   karena ia mengubah cara hasil diurutkan, bukan menyaring isi.
+
+  `action` + `hidden` membuat kontrol ini menjadi form GET sendiri, sehingga
+  urutan ikut tersimpan di URL (R-F02-10).
 #}
-{% macro sort_control(sort="posted_desc", smart=True) -%}
-  <div class="sort-group">
+{% macro sort_control(sort="posted_desc", smart=True, action=None, hidden=None) -%}
+  {%- if action -%}<form class="sort-group" method="get" action="{{ action }}">{%- else -%}<div class="sort-group">{%- endif -%}
+    {%- for name, value in (hidden or {}).items() -%}
+      <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {%- endfor -%}
     <label class="label" for="sort">Urutkan</label>
     <select id="sort" name="sort" class="select">
       <option value="posted_desc" {% if sort == "posted_desc" %}selected{% endif %}>Terbaru</option>
@@ -41,10 +54,15 @@
     </select>
     {%- if smart -%}
       <label class="switch" for="smart-match">
-        <input type="checkbox" id="smart-match" name="smart" role="switch">
+        <input type="checkbox" id="smart-match" name="smart" role="switch" value="1">
         <span class="track" aria-hidden="true"></span>
         Cocokkan otomatis
       </label>
     {%- endif -%}
-  </div>
+    {%- if action -%}
+      <button type="submit" class="btn btn-sm btn-line">Terapkan</button>
+    </form>
+    {%- else -%}
+    </div>
+    {%- endif -%}
 {%- endmacro %}
