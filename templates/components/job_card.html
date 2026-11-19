@@ -1,0 +1,81 @@
+{#
+  JobCard — design system §4.1, R-04-07.
+
+  Anatomi WAJIB dan tidak boleh berubah antar halaman:
+    baris 1  perusahaan + SourceBadge + tombol simpan
+    baris 2  judul (maks 2 baris)
+    baris 3  meta: level · lokasi · waktu
+    baris 4  deskripsi (tepat 2 baris)
+    baris 5  skill (maks 4, lalu +N)
+    baris 6  gaji
+
+  Partial ini HANYA membaca `job` (kontrak §4.2), tidak memanggil service.
+
+  Parameter:
+    job    dict  bentuk `job` pada PRD-F01 §4.2
+    show_match  bool  tampilkan MatchBadge bila job.match ada
+#}
+
+{% from "components/icons.html" import icon_bookmark, icon_clock, icon_pin, icon_level %}
+{% from "components/source_badge.html" import source_badge %}
+{% from "components/skill_tag.html" import skill_tags %}
+{% from "components/salary_range.html" import salary_range %}
+
+{% macro employment_label(value) -%}
+  {%- set labels = {
+    "full-time": "Penuh waktu", "part-time": "Paruh waktu",
+    "contract": "Kontrak", "internship": "Magang", "freelance": "Lepas"
+  } -%}
+  {{ labels.get((value or "")|lower, "") }}
+{%- endmacro %}
+
+{% macro job_card(job, show_match=False) -%}
+  <article class="job-card">
+    <div class="card-top">
+      <span class="company">{{ job.company_name or "Perusahaan tidak disebutkan" }}</span>
+      {{ source_badge(job.source) }}
+      <button type="button" class="save-btn"
+              aria-pressed="{{ 'true' if job.is_saved else 'false' }}"
+              aria-label="{{ 'Hapus dari tersimpan' if job.is_saved else 'Simpan lowongan' }}"
+              data-job-id="{{ job.id }}">
+        {{ icon_bookmark(job.is_saved) }}
+      </button>
+    </div>
+
+    <h3><a href="#">{{ job.title }}</a></h3>
+
+    <div class="meta">
+      {%- set type_label = employment_label(job.employment_type) -%}
+      {%- if type_label -%}
+        <span class="meta-item level">{{ icon_level() }}{{ type_label }}</span>
+        <span class="meta-sep" aria-hidden="true">·</span>
+      {%- endif -%}
+      {%- if job.location -%}
+        <span class="meta-item location">{{ icon_pin() }}{{ job.location }}</span>
+        <span class="meta-sep" aria-hidden="true">·</span>
+      {%- endif -%}
+      {%- if job.posted_at -%}
+        <span class="meta-item">{{ icon_clock() }}{{ job.posted_at|tanggal_relatif }}</span>
+      {%- endif -%}
+    </div>
+
+    {%- if job.description -%}
+      <p class="desc">{{ job.description }}</p>
+    {%- endif -%}
+
+    {%- if job.skills -%}
+      <div class="tags">{{ skill_tags(job.skills, limit=4) }}</div>
+    {%- endif -%}
+
+    {%- if show_match and job.match -%}
+      {%- set score = job.match.score -%}
+      {%- set tier = "match-high" if score >= 75 else ("match-mid" if score >= 50 else "match-low") -%}
+      <span class="match {{ tier }}">{{ score }}% cocok</span>
+      {%- if job.match.reasons -%}
+        <p class="match-reason">Cocok pada <b>{{ job.match.reasons|length }} skill</b>: {{ job.match.reasons|join(", ") }}</p>
+      {%- endif -%}
+    {%- endif -%}
+
+    {{ salary_range(job.salary_min, job.salary_max, job.salary_currency, job.salary_period) }}
+  </article>
+{%- endmacro %}

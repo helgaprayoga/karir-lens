@@ -3,51 +3,50 @@
 | Field | Keterangan |
 |---|---|
 | ID task | PRD-05 |
-| Nama task | Perusahaan dan Insight |
+| Nama task | Perusahaan dan Insight (Backend) |
+| Track | B — Backend |
 | Prioritas | P0 |
 | Milestone | M4 Insight (2 hari) |
-| Dependensi | PRD-03, PRD-04 |
+| Dependensi | PRD-03, PRD-04, PRD-F05 |
 | Task yang bergantung | PRD-08, PRD-09 |
 | Status | Belum dimulai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
+| Frontend pasangan | [PRD-F05](./PRD-F05-insight-admin.md) |
 
 ---
 
 ## 1. Konteks
 
-Setelah katalog publik tersedia, pengguna membutuhkan gambaran pasar kerja: kategori lowongan, skill yang paling dicari, dan kisaran gaji faktual. Task ini menambahkan proses pengelompokan otomatis (TF-IDF, KMeans, PCA), halaman insight dengan grafik, serta halaman perusahaan yang diturunkan dari data lowongan.
+Halaman `/insights`, `/companies/<slug>`, dan seluruh tampilan insight sudah dibangun pada PRD-F05 dan PRD-F02, termasuk grafik Chart.js, kartu statistik, dan state "data terbatas". Task ini mengisi perhitungan di belakangnya: pipeline clustering TF-IDF/PCA/KMeans, agregasi kategori dan skill, serta statistik gaji.
 
-Halaman perusahaan dibangun penuh di task ini, termasuk daftar lowongan per perusahaan dan ringkasan skill serta tipe kerja. Data insight yang dihasilkan juga dipakai ulang oleh REST API pada PRD-09.
+Prinsip yang sudah tertanam di template: statistik gaji tidak muncul bila sampel kurang dari lima, mata uang tidak dicampur, dan tidak ada angka prediksi. Task ini memastikan service menghasilkan data yang membuat template itu bekerja benar — bukan sebaliknya.
+
+Keluaran task ini wajib memenuhi **kontrak template PRD-F05 §4.1**.
 
 ## 2. Tujuan
 
-1. Mengelompokkan lowongan ke kategori yang dapat dipahami menggunakan TF-IDF, KMeans, dan PCA.
-2. Menampilkan jumlah lowongan per kategori dan skill populer.
-3. Menampilkan statistik gaji faktual (median, P25-P75, jumlah sampel) dengan aturan minimal lima sampel.
-4. Menampilkan grafik distribusi dengan Chart.js.
-5. Menyediakan halaman perusahaan dari data lowongan tanpa profil resmi eksternal.
-6. Menyediakan hasil clustering yang dapat ditinjau admin (ditampilkan pada PRD-09).
-7. Menjaga agar insight tidak menampilkan prediksi atau klaim di luar data.
+1. Mengelompokkan lowongan memakai TF-IDF, PCA, dan KMeans.
+2. Menghitung distribusi kategori dan skill populer.
+3. Menghitung statistik gaji faktual dengan aturan sampel minimum.
+4. Menyediakan hasil clustering yang dapat ditinjau admin.
+5. Menyediakan service insight yang dipakai ulang REST API.
 
 ## 3. Scope
 
 ### 3.1 Termasuk
 
-- Pipeline clustering: input judul, deskripsi, dan skill; TF-IDF → PCA → KMeans; penentuan label dan kata kunci per cluster.
-- Penyimpanan hasil ke tabel `clusters` dan `jobs.cluster_id`.
-- CLI untuk menjalankan clustering ulang.
-- Halaman `/insights`: jumlah lowongan per kategori, skill populer, grafik distribusi.
-- Statistik gaji: median, P25, P75, jumlah sampel, per kategori, dipisah per mata uang.
-- Aturan data terbatas: pesan jelas bila sampel < 5 atau data belum mencukupi.
-- Route `/companies/<slug>`: nama perusahaan, jumlah lowongan, lokasi, tipe kerja, skill yang sering muncul, dan daftar lowongan.
-- Bagian insight pada halaman perusahaan (skill sering muncul, tipe kerja, distribusi).
-- Service layer insight yang dipakai ulang REST API.
+- `scraper/cluster.py`: TF-IDF → PCA → KMeans, label dan kata kunci per cluster, penyimpanan idempoten.
+- `app/insights/repository.py`: query agregasi kategori, skill, gaji, dan perusahaan.
+- `app/insights/salary.py`: median, P25, P75, aturan sampel ≥ 5, pemisahan mata uang.
+- `app/insights/service.py`: fungsi yang mengisi kontrak PRD-F05 §4.1 dan PRD-F02 §4.1.
+- CLI `python -m scraper cluster`.
+- Menonaktifkan route preview untuk insight dan perusahaan.
 
 ### 3.2 Tidak termasuk
 
-- Katalog publik dasar dan detail lowongan (PRD-04).
-- Profil resmi perusahaan, logo, rating, jumlah karyawan, atau alamat di luar data lowongan.
-- Tinjauan admin atas cluster (UI di PRD-09; task ini hanya menyediakan datanya).
+- Markup, CSS, JavaScript, dan konfigurasi Chart.js (selesai pada PRD-F05).
+- Profil resmi perusahaan, logo, rating, jumlah karyawan.
+- Tinjauan UI cluster di admin (tampilan di PRD-F05, data di sini).
 - Rekomendasi berbasis CV (PRD-07).
 - Prediksi gaji dalam bentuk apa pun.
 
@@ -55,24 +54,21 @@ Halaman perusahaan dibangun penuh di task ini, termasuk daftar lowongan per peru
 
 | ID | Requirement | Prioritas |
 |---|---|---|
-| R-05-01 | Clustering memakai TF-IDF atas `title` + `description` + `skills` dengan preprocessing konsisten (lowercase, stopword Bahasa Indonesia/Inggris ringan). | P0 |
-| R-05-02 | Reduksi dimensi memakai PCA sebelum KMeans; jumlah komponen dan `n_clusters` dapat dikonfigurasi. | P0 |
+| R-05-01 | Clustering memakai TF-IDF atas `title` + `description` + `skills` dengan preprocessing dari `core/text.py` dan `core/skills.py`. | P0 |
+| R-05-02 | PCA diterapkan sebelum KMeans; `n_clusters` dan komponen PCA dibaca dari konfigurasi. | P0 |
 | R-05-03 | Setiap cluster memiliki `label` dan `keywords` yang dapat dibaca manusia. | P0 |
-| R-05-04 | Setiap lowongan dapat memiliki satu `cluster_id` utama; hasil disimpan ke `jobs` dan `clusters`. | P0 |
-| R-05-05 | Hasil clustering dapat dijalankan ulang (idempoten) melalui CLI dan tidak memblokir halaman web. | P0 |
-| R-05-06 | `/insights` menampilkan jumlah lowongan per kategori yang sesuai isi database. | P0 |
-| R-05-07 | `/insights` menampilkan skill paling banyak dicari (top N) dengan grafik. | P0 |
-| R-05-08 | Statistik gaji hanya memakai lowongan yang mencantumkan gaji dan hanya tampil jika sampel ≥ 5. | P0 |
-| R-05-09 | Statistik gaji menampilkan median, P25, P75, dan jumlah sampel, dipisah per mata uang. | P0 |
-| R-05-10 | Tidak ada prediksi gaji; hanya statistik faktual dari data. | P0 |
-| R-05-11 | Jika data tidak mencukupi, halaman menampilkan pesan data terbatas yang jelas, bukan grafik kosong. | P0 |
-| R-05-12 | Halaman perusahaan menampilkan skill yang sering muncul, tipe kerja yang muncul, dan distribusi lowongan per lokasi dari data `jobs`. | P0 |
-| R-05-13 | Grafik memakai Chart.js dan tetap terbaca pada layar 360 px. | P0 |
-| R-05-14 | Insight dapat dihitung ulang terjadwal (dipanggil dari PRD-10) tanpa mengubah kode web. | P1 |
-| R-05-15 | Service insight menyediakan fungsi yang dipakai ulang oleh `/api/insights/*` pada PRD-09. | P0 |
-| R-05-16 | `/companies/<slug>` menampilkan nama perusahaan, jumlah lowongan tersedia, lokasi yang muncul, tipe kerja yang muncul, skill yang sering muncul, dan daftar lowongan. | P0 |
-| R-05-17 | `/companies/<slug>` tidak menampilkan deskripsi, logo, rating, jumlah karyawan, atau alamat yang tidak berasal dari data lowongan. | P0 |
-| R-05-18 | Halaman perusahaan dibuat dari data `jobs`; tidak ada tabel profil perusahaan dan tidak ada pengambilan profil resmi eksternal. | P0 |
+| R-05-04 | Setiap lowongan memiliki paling banyak satu `cluster_id`. | P0 |
+| R-05-05 | Menjalankan clustering dua kali tidak menggandakan cluster (idempoten). | P0 |
+| R-05-06 | `get_categories()` mengembalikan `cluster_id`, `label`, `job_count`, `keywords`. | P0 |
+| R-05-07 | `get_top_skills(limit)` mengembalikan skill dan jumlah lowongan. | P0 |
+| R-05-08 | `get_salary_stats()` hanya memakai lowongan bergaji dan menyembunyikan kelompok dengan sampel < 5. | P0 |
+| R-05-09 | Statistik gaji mengembalikan median, P25, P75, dan sampel, dipisah per `salary_currency` dan `salary_period`. | P0 |
+| R-05-10 | Tidak ada field prediksi pada keluaran mana pun. | P0 |
+| R-05-11 | `sample_sufficient` bernilai `false` bila tidak ada kelompok yang memenuhi syarat, agar template menampilkan pesan data terbatas. | P0 |
+| R-05-12 | `get_company(slug)` mengembalikan `name`, `slug`, `job_count`, `locations`, `employment_types`, `top_skills`, `jobs`. | P0 |
+| R-05-13 | Clustering dijalankan sebagai proses terpisah, tidak pernah dari request web. | P0 |
+| R-05-14 | Keluaran service memenuhi kontrak PRD-F05 §4.1 tanpa perubahan template. | P0 |
+| R-05-15 | Insight dapat dihitung ulang dari PRD-10 tanpa mengubah kode web. | P1 |
 
 ### 4.1 Aturan Statistik Gaji
 
@@ -99,19 +95,21 @@ Halaman perusahaan dibangun penuh di task ini, termasuk daftar lowongan per peru
 
 - [ ] Proses clustering menghasilkan cluster yang dapat ditampilkan dan ditinjau.
 - [ ] Setiap lowongan memiliki paling banyak satu `cluster_id` utama.
-- [ ] `/insights` menampilkan jumlah lowongan per kategori dan skill populer sesuai database.
-- [ ] Statistik gaji tidak muncul jika sampel < 5 dan tidak ada nilai prediksi.
-- [ ] Mata uang berbeda tidak dicampur dalam satu statistik.
-- [ ] Pesan data terbatas tampil saat data belum mencukupi.
-- [ ] Halaman perusahaan menampilkan skill, tipe kerja, dan lokasi dari data lowongan.
-- [ ] Grafik Chart.js terbaca pada 360 px.
 - [ ] Menjalankan clustering dua kali tidak menggandakan cluster.
+- [ ] Service mengembalikan kategori dan skill yang sesuai isi database.
+- [ ] Statistik gaji tidak dikembalikan bila sampel < 5, dan tidak ada nilai prediksi.
+- [ ] Mata uang dan periode tidak dicampur dalam satu kelompok statistik.
+- [ ] `sample_sufficient` bernilai `false` saat data belum mencukupi.
+- [ ] `get_company` hanya mengembalikan data turunan `jobs`.
+- [ ] Keluaran service memenuhi kontrak PRD-F05 §4.1 tanpa mengubah template.
+- [ ] Clustering hanya berjalan lewat CLI, tidak dari request web.
 
 ## 6. Dependensi
 
 - PRD-03 (data ternormalisasi dan konsisten).
-- PRD-04 (kartu lowongan, navigasi, dan service query dasar).
-- Pustaka: `scikit-learn`, `pandas`, `numpy`, Chart.js.
+- PRD-04 (service query dasar dan `core/pagination.py`).
+- PRD-F05 (template dan kontrak data insight serta admin).
+- Pustaka: `scikit-learn`, `pandas`, `numpy`.
 - Data lowongan yang cukup untuk clustering dan statistik dasar.
 
 ## 7. Test Plan
@@ -124,14 +122,15 @@ Halaman perusahaan dibangun penuh di task ini, termasuk daftar lowongan per peru
 | `test_clustering_labels_generated` | Setiap cluster memiliki label dan keywords tidak kosong. |
 | `test_clustering_idempotent` | Menjalankan ulang tidak menggandakan cluster. |
 | `test_single_cluster_per_job` | Lowongan memiliki paling banyak satu `cluster_id`. |
-| `test_salary_min_sample_rule` | Statistik tidak muncul saat sampel < 5. |
+| `test_salary_min_sample_rule` | Kelompok dengan sampel < 5 tidak dikembalikan. |
 | `test_salary_currency_separation` | Mata uang tidak dicampur. |
+| `test_salary_period_separation` | Periode berbeda tidak dicampur. |
 | `test_salary_quartiles` | Median, P25, P75 dihitung benar pada fixture. |
 | `test_no_prediction_output` | Tidak ada field prediksi pada hasil. |
+| `test_sample_sufficient_flag` | Flag `false` saat tidak ada kelompok memenuhi syarat. |
 | `test_insights_counts_match_db` | Jumlah kategori dan skill sesuai data uji. |
-| `test_company_page_from_jobs_only` | Halaman perusahaan hanya menampilkan data turunan `jobs`. |
-| `test_company_page_no_external_profile` | Tidak ada deskripsi, logo, rating, atau alamat di luar data lowongan. |
-| `test_company_insight_from_jobs` | Bagian insight perusahaan memakai data `jobs`. |
+| `test_company_derived_from_jobs_only` | Keluaran perusahaan hanya dari data `jobs`. |
+| `test_service_matches_insight_contract` | Kunci `dict` sama dengan kontrak PRD-F05 §4.1. |
 
 Pengujian statistik memakai fixture dataset kecil yang deterministik.
 

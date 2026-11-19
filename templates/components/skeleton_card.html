@@ -1,0 +1,27 @@
+{#
+  SkeletonCard — design system §4.14, R-04-06.
+  State loading tanpa teks palsu. Diberi aria-busy dan aria-hidden karena
+  isinya tidak bermakna bagi pembaca layar.
+
+  Parameter:
+    card  bool  bungkus dengan .job-card agar tinggi sama dengan kartu asli
+#}
+
+{% macro skeleton_card(card=True) -%}
+  <div class="{{ 'job-card skeleton-card' if card else 'skeleton-card' }}"
+       aria-busy="true" aria-hidden="true">
+    <div class="row">
+      <span class="skel skel-company"></span>
+      <span class="skel skel-badge"></span>
+    </div>
+    <span class="skel skel-title"></span>
+    <span class="skel skel-line"></span>
+    <span class="skel skel-desc"></span>
+    <div class="skel-tags">
+      <span class="skel skel-tag"></span>
+      <span class="skel skel-tag"></span>
+      <span class="skel skel-tag short"></span>
+    </div>
+    <span class="skel skel-pay"></span>
+  </div>
+{%- endmacro %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Preview — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout-single">
+  <div class="page">
+    <h1>Preview UI</h1>
+    <p class="field-hint">
+      Blueprint ini hanya aktif ketika <b>PREVIEW_UI=true</b>. Semua halaman
+      memakai data dari <code>tests/fixtures/ui/</code>, bukan database.
+    </p>
+
+    <div class="page-head">
+      <a class="btn btn-primary" href="{{ url_for('preview.styleguide') }}">Buka Style Guide</a>
+    </div>
+
+    <div class="banner banner-info" role="status">
+      {{ job_count }} lowongan contoh tersedia untuk merender komponen.
+      Halaman fitur lengkap dibangun pada PRD-F02 sampai PRD-F05.
+    </div>
+
+    <h2>Halaman yang direncanakan</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Task</th><th>Route</th><th>Keadaan</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>PRD-F01</td><td><code>/preview/styleguide</code></td><td>Tersedia</td></tr>
+          <tr><td>PRD-F02</td><td><code>/</code>, <code>/jobs</code>, <code>/jobs/&lt;id&gt;</code>, <code>/companies/&lt;slug&gt;</code></td><td>Belum</td></tr>
+          <tr><td>PRD-F03</td><td><code>/auth/*</code>, <code>/profile</code>, <code>/saved</code></td><td>Sebagian (auth)</td></tr>
+          <tr><td>PRD-F04</td><td><code>/cv</code>, <code>/assistant</code></td><td>Belum</td></tr>
+          <tr><td>PRD-F05</td><td><code>/insights</code>, <code>/admin/*</code></td><td>Belum</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

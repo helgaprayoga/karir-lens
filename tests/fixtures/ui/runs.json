@@ -1,0 +1,7 @@
+[
+  { "id": 41, "status": "success", "source": "dealls", "jobs_found": 128, "jobs_inserted": 12, "jobs_updated": 116, "started_at": "2026-11-18T00:00:00Z", "finished_at": "2026-11-18T00:04:12Z", "error_message": null },
+  { "id": 40, "status": "partial", "source": "kalibrr", "jobs_found": 64, "jobs_inserted": 5, "jobs_updated": 59, "started_at": "2026-11-18T00:00:00Z", "finished_at": "2026-11-18T00:02:40Z", "error_message": "1 halaman gagal dibaca, 3 halaman tersimpan." },
+  { "id": 39, "status": "failed", "source": "remotive", "jobs_found": 0, "jobs_inserted": 0, "jobs_updated": 0, "started_at": "2026-11-17T00:00:00Z", "finished_at": "2026-11-17T00:00:31Z", "error_message": "Server menolak akses (403)." },
+  { "id": 38, "status": "running", "source": "dealls", "jobs_found": 0, "jobs_inserted": 0, "jobs_updated": 0, "started_at": "2026-11-18T01:00:00Z", "finished_at": null, "error_message": null },
+  { "id": 37, "status": "skipped", "source": "remotive", "jobs_found": 0, "jobs_inserted": 0, "jobs_updated": 0, "started_at": "2026-11-16T00:00:00Z", "finished_at": "2026-11-16T00:00:01Z", "error_message": "robots.txt melarang jalur ini." }
+]

@@ -1,0 +1,50 @@
+{#
+  FilterChip — design system §4.6, R-04-02.
+
+  Dua varian yang WAJIB terlihat berbeda:
+    dropdown : border --line-2, teks --ink-2, ikon "▾"  (belum aktif)
+    applied  : border --line-4, teks --ink,   ikon "×"  (bisa dihapus)
+
+  Parameter:
+    label      string
+    variant    "dropdown" | "applied"
+    name       string|null  nama filter, dipakai sebagai atribut data
+    value      string|null
+#}
+
+{% macro filter_chip(label, variant="dropdown", name=None, value=None) -%}
+  {%- if variant == "applied" -%}
+    <button type="button" class="chip" aria-pressed="true"
+            {% if name %}data-filter="{{ name }}"{% endif %}
+            {% if value %}data-value="{{ value }}"{% endif %}>
+      {{ label }}<span class="remove" aria-hidden="true">×</span>
+    </button>
+  {%- else -%}
+    <button type="button" class="chip" aria-pressed="false" aria-expanded="false"
+            {% if name %}data-filter="{{ name }}"{% endif %}>
+      {{ label }}<span class="caret" aria-hidden="true">▾</span>
+    </button>
+  {%- endif -%}
+{%- endmacro %}
+
+{#
+  SortControl — §4.6. Toggle pengurutan SENGAJA dipisah dari baris filter,
+  karena ia mengubah cara hasil diurutkan, bukan menyaring isi.
+#}
+{% macro sort_control(sort="posted_desc", smart=True) -%}
+  <div class="sort-group">
+    <label class="label" for="sort">Urutkan</label>
+    <select id="sort" name="sort" class="select">
+      <option value="posted_desc" {% if sort == "posted_desc" %}selected{% endif %}>Terbaru</option>
+      <option value="posted_asc" {% if sort == "posted_asc" %}selected{% endif %}>Terlama</option>
+      <option value="relevance" {% if sort == "relevance" %}selected{% endif %}>Relevansi</option>
+    </select>
+    {%- if smart -%}
+      <label class="switch" for="smart-match">
+        <input type="checkbox" id="smart-match" name="smart" role="switch">
+        <span class="track" aria-hidden="true"></span>
+        Cocokkan otomatis
+      </label>
+    {%- endif -%}
+  </div>
+{%- endmacro %}

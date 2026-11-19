@@ -1,0 +1,24 @@
+{#
+  AlertBanner — design system §4.18, R-05-11.
+  Satu banner maksimal per halaman; jangan menduplikasi informasi yang sudah
+  ada di judul bagian.
+
+  Parameter:
+    message  string   teks polos; di-escape agar aman
+    variant  "info" | "warning" | "error" | "success"
+    html     bool     bila True, `message` dianggap HTML tepercaya
+#}
+
+{% from "components/icons.html" import icon_info, icon_warning, icon_alert, icon_check %}
+
+{% macro alert_banner(message, variant="info", html=False) -%}
+  {%- set icons = {
+    "info": icon_info, "warning": icon_warning,
+    "error": icon_alert, "success": icon_check
+  } -%}
+  {%- set kind = variant if variant in icons else "info" -%}
+  <div class="banner banner-{{ kind }}" role="status">
+    {{ icons[kind]() }}
+    <div>{{ message|safe if html else message }}</div>
+  </div>
+{%- endmacro %}

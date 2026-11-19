@@ -1,0 +1,354 @@
+{#
+  /styleguide — menampilkan setiap komponen design system §4 dalam semua state
+  wajib (R-F01-08). Hanya tersedia ketika PREVIEW_UI=true.
+
+  Halaman ini adalah alat audit: bandingkan berdampingan dengan
+  docs/design-preview.html.
+#}
+{% extends "base.html" %}
+
+{% from "components/icons.html" import icon_search, icon_filter, icon_info, icon_check, icon_skills, icon_arrow_out, icon_verified %}
+{% from "components/job_card.html" import job_card %}
+{% from "components/filter_chip.html" import filter_chip, sort_control %}
+{% from "components/pagination.html" import pagination %}
+{% from "components/empty_state.html" import empty_state %}
+{% from "components/status_pill.html" import status_pill %}
+{% from "components/alert_banner.html" import alert_banner %}
+{% from "components/skeleton_card.html" import skeleton_card %}
+{% from "components/stat_tile.html" import stat_tile %}
+{% from "components/match_badge.html" import match_badge %}
+{% from "components/source_badge.html" import source_badge %}
+{% from "components/skill_tag.html" import skill_tags %}
+{% from "components/salary_range.html" import salary_range %}
+
+{% block title %}Style Guide — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout-single">
+
+  <div class="page">
+    <div class="page-head">
+      <h1>Style Guide</h1>
+      <div class="page-actions">
+        <div class="search-field">
+          {{ icon_search() }}
+          <input type="search" placeholder="Cari..." aria-label="Cari komponen">
+          <kbd>Ctrl K</kbd>
+        </div>
+        <button class="btn btn-primary" type="button">
+          {{ icon_filter() }} Filter <span class="count">2</span>
+        </button>
+      </div>
+    </div>
+    {{ alert_banner("Halaman ini hanya aktif ketika <b>PREVIEW_UI=true</b>. Bandingkan dengan docs/design-preview.html.", "info", html=true) }}
+  </div>
+  <!-- ═══════════ Button §4.16 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>Button</h2>
+    <p class="field-hint">Lima varian dan lima state. Tombol nonaktif selalu disertai alasan.</p>
+
+    <p class="styleguide-label">Default</p>
+    <p>
+      <button class="btn btn-primary" type="button">Simpan perubahan</button>
+      <button class="btn btn-line" type="button">Lihat detail</button>
+      <button class="btn btn-soft" type="button">Kelola skill</button>
+      <button class="btn btn-ghost" type="button">Batal</button>
+      <button class="btn btn-danger" type="button">Hapus</button>
+    </p>
+
+    <p class="styleguide-label">Hover — arahkan kursor</p>
+    <p>
+      <button class="btn btn-primary" type="button">Simpan perubahan</button>
+      <button class="btn btn-line" type="button">Lihat detail</button>
+      <button class="btn btn-soft" type="button">Kelola skill</button>
+    </p>
+
+    <p class="styleguide-label">Disabled &amp; loading</p>
+    <p>
+      <button class="btn btn-primary" type="button" disabled>Memproses…</button>
+      <button class="btn btn-line" type="button" disabled>Tidak tersedia</button>
+      <span class="field-hint">Isi formulir belum lengkap.</span>
+    </p>
+
+    <p class="styleguide-label">Ukuran kecil (header)</p>
+    <p>
+      <button class="btn btn-line btn-sm" type="button">Masuk</button>
+      <button class="btn btn-primary btn-sm" type="button">Daftar</button>
+    </p>
+  </section>
+
+  <!-- ═══════════ FilterChip §4.6 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>FilterChip &amp; SortControl</h2>
+    <p class="field-hint">
+      Dua varian wajib terlihat berbeda: <b>dropdown</b> (belum aktif, ikon ▾) dan
+      <b>terapan</b> (aktif, ikon ×). Toggle pengurutan sengaja dipisah dari baris filter.
+    </p>
+
+    <div class="filters">
+      {{ filter_chip("Kota", "dropdown", "city") }}
+      {{ filter_chip("Tipe kerja", "dropdown", "employment_type") }}
+      {{ filter_chip("Sumber", "dropdown", "source") }}
+      {{ filter_chip("Jakarta", "applied", "city", "Jakarta") }}
+      {{ filter_chip("Penuh waktu", "applied", "employment_type", "full-time") }}
+      {{ sort_control() }}
+    </div>
+  </section>
+
+  <!-- ═══════════ JobCard §4.1 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>JobCard</h2>
+    <p class="field-hint">
+      Anatomi tetap: perusahaan + SourceBadge + simpan · judul · meta · deskripsi
+      dua baris · skill · gaji. Empat variasi data di bawah menutup semua kasus
+      SalaryRange.
+    </p>
+    <div class="cards">
+      {% for job in items %}
+        {{ job_card(job) }}
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ═══════════ SalaryRange §4.7 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>SalaryRange</h2>
+    <p class="field-hint">Lima kondisi data. Tidak ada nilai prediksi; kosong berarti kosong.</p>
+    <div class="styleguide-grid">
+      <div class="metric-cell">
+        <div class="cap">min + max</div>
+        {{ salary_range(9000000, 14000000, "IDR", "month") }}
+      </div>
+      <div class="metric-cell">
+        <div class="cap">hanya min</div>
+        {{ salary_range(11000000, None, "IDR", "month") }}
+      </div>
+      <div class="metric-cell">
+        <div class="cap">hanya max</div>
+        {{ salary_range(None, 8000000, "IDR", "month") }}
+      </div>
+      <div class="metric-cell">
+        <div class="cap">kosong</div>
+        {{ salary_range(None, None, None, None) }}
+      </div>
+      <div class="metric-cell">
+        <div class="cap">mata uang lain</div>
+        {{ salary_range(4000, 6500, "USD", "month") }}
+      </div>
+      <div class="metric-cell">
+        <div class="cap">periode tahun</div>
+        {{ salary_range(120000000, 180000000, "IDR", "year") }}
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ MatchBadge §4.5 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>MatchBadge</h2>
+    <p class="field-hint">Tiga tier. Skor <b>tidak pernah</b> tampil tanpa alasan (R-07-10).</p>
+    <div class="cards">
+      {% for job in recommended %}
+        {{ job_card(job, show_match=True) }}
+      {% endfor %}
+    </div>
+
+    <p class="styleguide-label">Tiga tier tanpa alasan — sengaja tidak dirender</p>
+    <p class="field-hint">
+      {{ match_badge(82, []) }} {{ match_badge(61, []) }} {{ match_badge(40, []) }}
+      → kosong, karena alasan wajib ada.
+    </p>
+  </section>
+
+  <!-- ═══════════ Badge dan tag ═══════════ -->
+  <section class="styleguide-section">
+    <h2>SourceBadge, SkillTag, StatusPill</h2>
+
+    <p class="styleguide-label">SourceBadge — wajib pada setiap lowongan</p>
+    <p>
+      {{ source_badge("dealls") }} {{ source_badge("kalibrr") }} {{ source_badge("remotive") }}
+      <span class="field-hint">(sumber tak dikenal tidak dirender)</span> {{ source_badge("lainnya") }}
+    </p>
+
+    <p class="styleguide-label">SkillTag — maksimal empat, lalu +N</p>
+    <div class="tags">
+      {{ skill_tags(["python", "postgresql", "docker", "rest api", "git", "redis"]) }}
+    </div>
+
+    <p class="styleguide-label">StatusPill — enum dipetakan ke bahasa manusia</p>
+    <p>
+      {{ status_pill("success") }} {{ status_pill("partial") }} {{ status_pill("failed") }}
+      {{ status_pill("running") }} {{ status_pill("skipped") }}
+    </p>
+    <p class="field-hint">
+      Nilai mentah <code>success</code>, <code>partial</code>, <code>failed</code>,
+      <code>running</code>, <code>skipped</code> tidak pernah tampil di layar.
+    </p>
+  </section>
+
+  <!-- ═══════════ Pagination §4.9 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>Pagination</h2>
+    <p class="field-hint">Wajib di semua daftar; tidak boleh memuat seluruh data ke browser.</p>
+    {{ pagination({"page": 2, "per_page": 12, "total": 240, "has_next": True}, "main.index") }}
+    <p class="styleguide-label">Halaman terakhir</p>
+    {{ pagination({"page": 20, "per_page": 12, "total": 240, "has_next": False}, "main.index") }}
+  </section>
+
+  <!-- ═══════════ EmptyState §4.10 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>EmptyState</h2>
+    <div class="styleguide-grid">
+      {{ empty_state("Tidak ada lowongan yang cocok", "Tidak ada hasil untuk “data engineer sydney” dengan filter yang dipilih.", "Hapus semua filter", url_for("main.index")) }}
+      {{ empty_state("Belum ada lowongan tersimpan", "Simpan lowongan dari halaman katalog agar mudah dibuka kembali.", "Jelajahi lowongan", url_for("main.index")) }}
+    </div>
+  </section>
+
+  <!-- ═══════════ Skeleton §4.14 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>SkeletonCard</h2>
+    <p class="field-hint">State loading tanpa teks palsu. Hanya blok abu.</p>
+    <div class="cards">
+      {{ skeleton_card() }}
+      {{ skeleton_card() }}
+    </div>
+  </section>
+
+  <!-- ═══════════ AlertBanner §4.18 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>AlertBanner</h2>
+    <p class="field-hint">Satu banner maksimal per halaman.</p>
+    {{ alert_banner("Ada 12 lowongan baru yang cocok dengan skill profil Anda hari ini.", "info") }}
+    {{ alert_banner("<b>Statistik gaji belum dapat ditampilkan.</b> Sampel baru 3 lowongan, minimum 5.", "warning", html=true) }}
+    {{ alert_banner("Data gagal dimuat. Coba muat ulang halaman.", "error") }}
+    {{ alert_banner("Lowongan berhasil disimpan.", "success") }}
+  </section>
+
+  <!-- ═══════════ StatTile & MetricCell §4.8 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>StatTile &amp; MetricCell</h2>
+    <p class="field-hint">Data tidak cukup → tampilkan “—”, bukan angka nol.</p>
+
+    <p class="styleguide-label">StatTile</p>
+    <div class="stat-grid">
+      {{ stat_tile(insights.summary.total_jobs, "Lowongan aktif") }}
+      {{ stat_tile(insights.summary.unique_skills, "Skill unik diminta") }}
+      {{ stat_tile(None, "Median gaji (IDR)", "Data belum cukup: 3 dari 5 sampel", sufficient=False) }}
+    </div>
+
+    <p class="styleguide-label">MetricCell — right rail</p>
+    <div class="metric-grid">
+      <div class="metric-cell">
+        <div class="big">{{ icon_verified() }}<span>{{ profile.summary.confirmed_skills }}</span></div>
+        <div class="cap">Skill terkonfirmasi</div>
+      </div>
+      <div class="metric-cell">
+        <div class="big">{{ icon_arrow_out() }}<span>{{ profile.summary.saved_jobs }}</span></div>
+        <div class="cap">Lowongan tersimpan</div>
+      </div>
+      <div class="metric-cell wide">
+        <div class="skill-row">
+          <div class="big">{{ icon_skills() }}<span>{{ profile.summary.matched_today }}</span></div>
+          <div class="cap">Lowongan cocok hari ini</div>
+        </div>
+        <div class="spark" aria-hidden="true">
+          {% for tinggi in profile.sparkline %}<i data-height="{{ tinggi }}"></i>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ InsightCard §4.12 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>InsightCard</h2>
+    <div class="insights insights-narrow">
+      {% for card in insights.insight_cards %}
+        <div class="insight">
+          <div class="ico" aria-hidden="true">{{ icon_info() }}</div>
+          <div class="body">
+            <div class="txt">{{ card.text|safe }}</div>
+            <div class="meta">
+              <span class="pill pill-{{ card.pill_tone }}">{{ card.pill }}</span>
+              <span class="when">{{ card.when }}</span>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ═══════════ DataTable (admin) ═══════════ -->
+  <section class="styleguide-section">
+    <h2>DataTable</h2>
+    <p class="field-hint">Dipakai panel admin. Nilai status memakai StatusPill, bukan enum mentah.</p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Sumber</th><th>Status</th><th>Ditemukan</th><th>Disimpan</th><th>Diperbarui</th><th>Mulai</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in runs %}
+            <tr>
+              <td>{{ run.source|capitalize }}</td>
+              <td>{{ status_pill(run.status) }}</td>
+              <td class="mono">{{ run.jobs_found|angka }}</td>
+              <td class="mono">{{ run.jobs_inserted|angka }}</td>
+              <td class="mono">{{ run.jobs_updated|angka }}</td>
+              <td class="mono">{{ run.started_at|tanggal(format="%d %b %Y, %H:%M") }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════ Toast §4.15 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>Toast</h2>
+    <p class="field-hint">Klik tombol untuk melihat toast. Satu toast pada satu waktu.</p>
+    <p>
+      <button class="btn btn-soft" type="button" data-toast="Lowongan disimpan">Tampilkan toast</button>
+      <button class="btn btn-ghost" type="button" data-toast="Dihapus dari tersimpan">Toast lain</button>
+    </p>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  /* Tinggi batang sparkline berasal dari data, bukan token visual. Nilainya
+     dibaca dari atribut data-height agar tidak ada gaya inline di template. */
+  document.querySelectorAll(".spark i[data-height]").forEach(function (bar) {
+    var tinggi = parseInt(bar.getAttribute("data-height"), 10);
+    if (!isNaN(tinggi)) bar.style.height = tinggi + "px";
+  });
+
+  var toast = document.getElementById("toast");
+  var toastText = document.getElementById("toast-text");
+  var timer = null;
+
+  function show(message) {
+    if (!toast) return;
+    toastText.textContent = message;
+    toast.hidden = false;
+    toast.classList.add("is-visible");
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      toast.classList.remove("is-visible");
+      setTimeout(function () { toast.hidden = true; }, 200);
+    }, 2200);
+  }
+
+  document.querySelectorAll("[data-toast]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      show(btn.getAttribute("data-toast"));
+    });
+  });
+})();
+</script>
+{% endblock %}

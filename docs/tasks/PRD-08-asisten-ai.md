@@ -1,57 +1,61 @@
-# PRD-08 — Asisten AI
+# PRD-08 — Asisten AI (Backend)
 
 | Field | Keterangan |
 |---|---|
 | ID task | PRD-08 |
-| Nama task | Asisten AI |
+| Nama task | Asisten AI (Backend) |
+| Track | B — Backend |
 | Prioritas | P1 |
 | Milestone | M7 AI, admin, API (2 hari) |
-| Dependensi | PRD-03, PRD-05, PRD-06 |
+| Dependensi | PRD-03, PRD-05, PRD-06, PRD-F04 |
 | Task yang bergantung | PRD-09, PRD-10 |
 | Status | Belum dimulai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
+| Frontend pasangan | [PRD-F04](./PRD-F04-cv-asisten.md) |
 
 ---
 
 ## 1. Konteks
 
-Pengguna terdaftar dapat bertanya tentang lowongan dan pasar kerja. Asisten AI menjawab berdasarkan data aplikasi (lowongan, cluster, statistik gaji, dan skill terkonfirmasi), bukan mengambil data langsung dari internet. Asisten tidak boleh mengarang gaji, perusahaan, atau tautan.
+Antarmuka `/assistant` sudah dibangun pada PRD-F04: area pesan dengan `aria-live`, indikator memproses, dan `AlertBanner` untuk galat. Task ini mengisi mesinnya: penyusunan konteks dari data aplikasi, pemanggilan DeepSeek, larangan klaim di luar konteks, dan rate limit per pengguna.
 
-Task ini mengintegrasikan DeepSeek API, menyusun konteks dari data aplikasi, menerapkan pembatasan penggunaan, dan menyediakan pengujian yang memastikan jawaban hanya merujuk pada data tersedia.
+Template sudah mengasumsikan bentuk respons `{"data": {"reply": ..., "sources": [...]}}`. Task ini wajib memenuhinya, termasuk memastikan tautan yang muncul benar-benar berasal dari `jobs`.
+
+Keluaran task ini wajib memenuhi **kontrak PRD-F04 §4.1**.
 
 ## 2. Tujuan
 
-1. Menyediakan antarmuka tanya-jawab di `/assistant` untuk pengguna login.
-2. Menyusun konteks dari data lowongan, cluster, statistik gaji, dan skill terkonfirmasi.
-3. Menjawab dalam Bahasa Indonesia dengan tautan lowongan bila relevan.
-4. Menolak atau meminta klarifikasi jika data tidak cukup.
-5. Membatasi penggunaan per pengguna untuk mencegah penyalahgunaan.
-6. Tidak memakai isi CV mentah dan tidak mengambil data dari internet.
+1. Menyusun konteks dari lowongan, cluster, statistik gaji, dan skill terkonfirmasi.
+2. Menjawab dalam Bahasa Indonesia dengan tautan lowongan bila relevan.
+3. Menolak atau meminta klarifikasi jika data tidak cukup.
+4. Membatasi penggunaan per pengguna untuk mencegah penyalahgunaan.
+5. Tidak memakai isi CV mentah dan tidak mengambil data dari internet.
 
 ## 3. Scope
 
 ### 3.1 Termasuk
 
-- Route `/assistant` (UI percakapan sederhana) dan endpoint form.
-- Service konteks: mengambil lowongan/cluster/statistik relevan berdasarkan pertanyaan.
-- Integrasi DeepSeek API dengan model dari environment variable.
-- System prompt yang melarang klaim di luar data dan halusinasi.
-- Rate limit per pengguna dan batas harian.
+- `app/assistant/service.py`: penyusunan konteks dan rate limit.
+- `core/external/deepseek.py`: implementasi klien HTTP dengan timeout eksplisit.
+- `POST /api/assistant` dengan bentuk respons kontrak PRD-F04 §4.1.
+- System prompt yang melarang klaim di luar konteks.
 - Penanganan error dan timeout API yang ramah.
-- Pengujian dengan respons tiruan (mock) tanpa panggilan jaringan.
+- Pengujian dengan klien tiruan tanpa jaringan.
+- Menonaktifkan route preview untuk `/assistant`.
 
 ### 3.2 Tidak termasuk
 
+- Markup, CSS, dan JavaScript `/assistant` (selesai pada PRD-F04).
 - Pencarian internet atau akses sumber eksternal.
 - Memakai isi CV mentah.
 - Menghitung rekomendasi lowongan (PRD-07).
-- Riwayat percakapan panjang lintas sesi.
+- Riwayat percakapan permanen lintas sesi.
 
 ## 4. Requirement
 
 | ID | Requirement | Prioritas |
 |---|---|---|
-| R-08-01 | `/assistant` dan endpoint form hanya tersedia untuk pengguna login. | P0 |
+| R-08-01 | `/api/assistant` dan `/assistant` hanya tersedia untuk pengguna login; template `/assistant` sudah ada dari PRD-F04. | P0 |
 | R-08-02 | Konteks disusun dari data aplikasi: lowongan relevan, cluster, statistik gaji, dan skill terkonfirmasi milik pengguna. | P0 |
 | R-08-03 | Asisten tidak mengambil data langsung dari internet. | P0 |
 | R-08-04 | Asisten tidak memakai isi CV mentah; hanya skill terkonfirmasi. | P0 |

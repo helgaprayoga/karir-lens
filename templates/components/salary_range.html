@@ -1,0 +1,41 @@
+{#
+  SalaryRange — design system §4.7, R-05-09.
+
+  Lima kondisi data wajib ditangani, tanpa nilai prediksi:
+    min + max   -> "Rp 9.000.000 – 14.000.000 / bulan"
+    hanya min   -> "Mulai Rp 11.000.000 / bulan"
+    hanya max   -> "Sampai Rp 8.000.000 / bulan"
+    kosong      -> "Gaji tidak dicantumkan"
+    mata uang   -> selalu ditampilkan bila bukan IDR
+
+  Parameter:
+    salary_min, salary_max  number|null
+    salary_currency         string|null
+    salary_period           string|null  month|year|hour|day|project
+#}
+
+{%- set PERIOD_LABEL = {"month": "bulan", "year": "tahun", "hour": "jam", "day": "hari", "project": "proyek"} -%}
+
+{% macro _rupiah(value) -%}
+  {%- set n = value|int -%}
+  {{ "{:,}".format(n).replace(",", ".") }}
+{%- endmacro %}
+
+{% macro salary_range(salary_min, salary_max, salary_currency=None, salary_period=None) -%}
+  {%- set currency = (salary_currency or "IDR")|upper -%}
+  {%- set prefix = "Rp" if currency == "IDR" else currency ~ " " -%}
+  {%- set period = PERIOD_LABEL.get(salary_period, "") -%}
+  {%- set suffix = (" / " ~ period) if period else "" -%}
+
+  <span class="pay">
+    {%- if salary_min and salary_max -%}
+      <span class="amount">{{ prefix }} {{ _rupiah(salary_min) }} – {{ _rupiah(salary_max) }}<small>{{ suffix }}</small></span>
+    {%- elif salary_min -%}
+      <span class="amount">Mulai {{ prefix }} {{ _rupiah(salary_min) }}<small>{{ suffix }}</small></span>
+    {%- elif salary_max -%}
+      <span class="amount">Sampai {{ prefix }} {{ _rupiah(salary_max) }}<small>{{ suffix }}</small></span>
+    {%- else -%}
+      <span class="no-salary">Gaji tidak dicantumkan</span>
+    {%- endif -%}
+  </span>
+{%- endmacro %}

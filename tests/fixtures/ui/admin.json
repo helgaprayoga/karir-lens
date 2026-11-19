@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "total_jobs": 1842,
+    "active_users": 37,
+    "total_runs": 128,
+    "last_run_at": "2026-11-18T00:04:12Z"
+  },
+  "users": [
+    { "id": 1, "name": "Helga Arya Prayoga", "email": "helga@example.com", "role": "admin", "created_at": "2026-09-01T00:00:00Z" },
+    { "id": 2, "name": "Rina Pratama", "email": "rina@example.com", "role": "user", "created_at": "2026-10-12T00:00:00Z" }
+  ]
+}

@@ -26,6 +26,9 @@ class BaseConfig:
     SESSION_COOKIE_SAMESITE = _SAFE_COOKIE["SESSION_COOKIE_SAMESITE"]
     SESSION_COOKIE_SECURE = SETTINGS.session_cookie_secure
     SECRET_KEY = SETTINGS.secret_key or "dev-secret-key-tidak-untuk-produksi"
+    # Blueprint preview dan /styleguide hanya aktif bila diaktifkan eksplisit
+    # (PRD-F01 R-F01-08, R-F01-09; PRD-10 R-10-17).
+    PREVIEW_UI = SETTINGS.preview_ui
 
 
 class DevelopmentConfig(BaseConfig):
@@ -37,6 +40,10 @@ class TestingConfig(BaseConfig):
     REQUIRE_CREDENTIALS = False
     SECRET_KEY = "testing-secret-key"
     WTF_CSRF_ENABLED = False
+    PREVIEW_UI = False
+    # Diperlukan agar url_for() dapat dipanggil di luar request context
+    # (mis. saat macro pagination dirender langsung oleh test).
+    SERVER_NAME = "localhost"
     SETTINGS = Settings(
         secret_key="testing-secret-key",
         supabase_url="http://localhost:54321",
@@ -50,6 +57,7 @@ class TestingConfig(BaseConfig):
         cluster_pca_components=2,
         max_upload_bytes=5 * 1024 * 1024,
         session_cookie_secure=False,
+        preview_ui=False,
     )
 
 

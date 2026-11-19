@@ -8,6 +8,32 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_env(path: Path | None = None) -> bool:
+    """Muat ``.env`` ke environment proses. Kembalikan True bila berkas ditemukan.
+
+    Setiap entrypoint non-web (``python -m db``, ``python -m scraper``) wajib
+    memanggil ini lebih dulu. Tanpa ini, variabel hanya terbaca bila diisi
+    lewat environment OS, dan ``.env`` seolah diabaikan.
+
+    Variabel yang sudah ada di environment **tidak** ditimpa, sehingga nilai
+    dari shell atau CI tetap menang atas berkas.
+    """
+    target = path or (PROJECT_ROOT / ".env")
+    if not target.is_file():
+        return False
+
+    try:
+        from dotenv import load_dotenv
+    except ImportError:  # pragma: no cover - python-dotenv ada di requirements
+        return False
+
+    load_dotenv(target, override=False)
+    return True
 
 
 def _env_str(name: str, default: str | None = None) -> str | None:
@@ -57,6 +83,7 @@ class Settings:
     cluster_pca_components: int
     max_upload_bytes: int
     session_cookie_secure: bool
+    preview_ui: bool
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -73,6 +100,7 @@ class Settings:
             cluster_pca_components=_env_int("CLUSTER_PCA_COMPONENTS", 2),
             max_upload_bytes=_env_int("MAX_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_BYTES),
             session_cookie_secure=_env_bool("SESSION_COOKIE_SECURE", False),
+            preview_ui=_env_bool("PREVIEW_UI", False),
         )
 
     def problems(self, require_credentials: bool = True) -> list[str]:

@@ -1,0 +1,20 @@
+{#
+  MatchBadge — design system §4.5, R-07-10.
+  Skor TIDAK boleh tampil tanpa alasan. Partial ini selalu membutuhkan
+  `reasons`; bila kosong, badge tidak dirender sama sekali.
+
+  Parameter:
+    score    int 0..100
+    reasons  list[string]
+#}
+
+{% from "components/icons.html" import icon_ai %}
+
+{% macro match_badge(score, reasons=None) -%}
+  {%- set reasons = reasons or [] -%}
+  {%- if score is not none and reasons -%}
+    {%- set tier = "match-high" if score >= 75 else ("match-mid" if score >= 50 else "match-low") -%}
+    <span class="match {{ tier }}">{{ icon_ai() }}{{ score }}% cocok</span>
+    <p class="match-reason">Cocok pada <b>{{ reasons|length }} skill</b>: {{ reasons|join(", ") }}</p>
+  {%- endif -%}
+{%- endmacro %}

@@ -62,6 +62,8 @@ Setelah seluruh fitur P0 dan P1 selesai, aplikasi perlu diuji menyeluruh, didoku
 | R-10-13 | Statistik gaji tidak tampil saat sampel < 5 di seluruh antarmuka. | P0 |
 | R-10-14 | Halaman publik dimuat di bawah 2 detik setelah instance aktif (dengan toleransi cold start terdokumentasi). | P1 |
 | R-10-15 | Log produksi tidak memuat data sensitif. | P0 |
+| R-10-16 | Seluruh test Track A (PRD-F01 s.d. F06) tetap lulus setelah Track B terpasang, membuktikan template tidak rusak oleh perubahan service. | P0 |
+| R-10-17 | Blueprint `preview` tidak aktif pada environment produksi (`PREVIEW_UI` tidak diisi). | P0 |
 
 ### 4.1 Struktur Workflow Acuan
 

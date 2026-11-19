@@ -1,47 +1,54 @@
-# PRD-06 — Akun dan Bookmark
+# PRD-06 — Akun dan Bookmark (Backend)
 
 | Field | Keterangan |
 |---|---|
 | ID task | PRD-06 |
-| Nama task | Akun dan Bookmark |
+| Nama task | Akun dan Bookmark (Backend) |
+| Track | B — Backend |
 | Prioritas | P0 |
 | Milestone | M5 Akun dan bookmark (1-2 hari) |
-| Dependensi | PRD-01, PRD-04 |
+| Dependensi | PRD-01, PRD-04, PRD-F03 |
 | Task yang bergantung | PRD-07, PRD-08, PRD-09 |
 | Status | Belum dimulai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
+| Frontend pasangan | [PRD-F03](./PRD-F03-auth-profil.md) |
 
 ---
 
 ## 1. Konteks
 
-PRD-01 menyediakan registrasi, login, dan logout dasar. Task ini menyelesaikan pengalaman pengguna terdaftar: halaman profil, pengelolaan lowongan tersimpan (bookmark), serta navigasi yang membedakan pengunjung publik dan pengguna login.
+Halaman profil dan lowongan tersimpan sudah dibangun pada PRD-F03, termasuk state kosong, toast, dan tombol simpan pada kartu. Autentikasi dasar (registrasi, login, logout, CSRF, sesi) sudah berfungsi sejak PRD-01.
+
+Task ini mengisi **perilaku di belakang halaman itu**: penyimpanan bookmark yang unik per pengguna, pembacaan skill terkonfirmasi, pengelolaan skill, dan aksi simpan/hapus dari daftar maupun detail. Semua query hidup di `app/profile/repository.py`.
 
 Penting: "simpan lowongan" di KarirLens berarti bookmark, bukan pencatatan lamaran. Tidak ada status lamaran, tahapan lamaran, atau tracker lamaran di aplikasi ini.
 
+Keluaran task ini wajib memenuhi **kontrak template PRD-F03 §4.1**.
+
 ## 2. Tujuan
 
-1. Menyediakan halaman profil dengan data akun dan skill terkonfirmasi (dibaca dari `user_skills`).
-2. Memungkinkan pengguna menyimpan dan menghapus bookmark lowongan.
-3. Menjamin satu pengguna tidak menyimpan lowongan yang sama dua kali.
-4. Menyediakan halaman `/saved` untuk daftar bookmark.
-5. Menyesuaikan navigasi untuk publik, pengguna login, dan admin.
+1. Menyediakan operasi bookmark yang unik per pengguna dan lowongan.
+2. Menyediakan pembacaan skill terkonfirmasi untuk profil dan rekomendasi.
+3. Menyediakan aksi simpan/hapus dari halaman daftar dan detail.
+4. Menjaga halaman personal hanya dapat diakses pengguna login.
+5. Menyediakan service yang dipakai ulang REST API pada PRD-09.
 
 ## 3. Scope
 
 ### 3.1 Termasuk
 
-- Route `/profile`: data akun, perubahan nama, daftar skill terkonfirmasi (baca), tautan ke CV.
-- Route `/saved`: daftar lowongan tersimpan dengan pagination serta aksi hapus.
-- Aksi simpan/hapus bookmark dari halaman daftar dan detail lowongan.
-- Endpoint form + integrasi daftar tersimpan.
-- Indikator jumlah bookmark pada navigasi.
-- Validasi sesi: halaman personal wajib login.
-- Navigasi responsif yang membedakan state publik, pengguna, dan admin.
+- `app/profile/repository.py`: query dan mutasi `saved_jobs` serta `user_skills`.
+- `app/profile/service.py`: aturan keunikan bookmark, pembacaan hanya skill terkonfirmasi, hapus skill.
+- Route `/profile` dan `/saved` yang mengisi kontrak PRD-F03 §4.1.
+- Endpoint aksi simpan/hapus bookmark dari daftar dan detail.
+- Perubahan nama pengguna.
+- Indikator jumlah bookmark untuk navigasi.
+- Menonaktifkan route preview untuk profil dan tersimpan.
 
 ### 3.2 Tidak termasuk
 
-- Upload CV, ekstraksi, dan konfirmasi skill (PRD-07).
+- Markup, CSS, dan JavaScript halaman (selesai pada PRD-F03).
+- Upload CV, ekstraksi, dan konfirmasi skill dari CV (PRD-07).
 - Rekomendasi dan asisten AI (PRD-07, PRD-08).
 - Panel admin (PRD-09).
 - Status lamaran atau tracker lamaran (di luar scope produk).
@@ -50,8 +57,8 @@ Penting: "simpan lowongan" di KarirLens berarti bookmark, bukan pencatatan lamar
 
 | ID | Requirement | Prioritas |
 |---|---|---|
-| R-06-01 | `/profile` menampilkan email, nama, tanggal bergabung, jumlah bookmark, dan daftar skill terkonfirmasi. | P0 |
-| R-06-02 | Pengguna dapat mengubah `name`; email bersifat tetap pada task ini kecuali dinyatakan lain. | P1 |
+| R-06-01 | `get_profile(user_id)` mengembalikan `profile` dan `summary` (`skill_count`, `saved_count`) sesuai kontrak PRD-F03 §4.1. | P0 |
+| R-06-02 | Pengguna dapat mengubah `name`; email bersifat tetap pada task ini. | P1 |
 | R-06-03 | Pengguna dapat menyimpan lowongan sebagai bookmark dari daftar maupun detail lowongan. | P0 |
 | R-06-04 | Pengguna dapat menghapus bookmark dari `/saved` dan dari tombol pada kartu/detail. | P0 |
 | R-06-05 | Kombinasi `user_id` dan `job_id` unik; menyimpan dua kali tidak membuat baris baru. | P0 |
@@ -87,17 +94,19 @@ Penting: "simpan lowongan" di KarirLens berarti bookmark, bukan pencatatan lamar
 
 - [ ] Pengguna login dapat menyimpan dan menghapus bookmark.
 - [ ] Menyimpan lowongan yang sama dua kali tidak membuat duplikat.
-- [ ] `/saved` hanya berisi bookmark dan memiliki pagination serta kondisi kosong.
-- [ ] `/profile` menampilkan data akun dan skill terkonfirmasi (hanya baca).
+- [ ] `list_saved_jobs` mengembalikan `items` dan `meta` sesuai pagination.
+- [ ] `get_profile` mengembalikan `profile`, `skills`, dan `summary` sesuai kontrak PRD-F03 §4.1.
+- [ ] Hanya skill `is_confirmed = true` yang dikembalikan ke fitur lain.
 - [ ] Pengunjung yang membuka route personal diarahkan ke login.
-- [ ] Navigasi berbeda untuk publik, pengguna, dan admin.
 - [ ] Aksi POST dilindungi CSRF.
-- [ ] Tidak ada status lamaran atau tracker lamaran di UI maupun database.
+- [ ] Keluaran service memenuhi kontrak template PRD-F03 §4.1 tanpa mengubah template.
+- [ ] Tidak ada status lamaran atau tracker lamaran di database maupun service.
 
 ## 6. Dependensi
 
 - PRD-01 (autentikasi, sesi, layout, CSRF).
-- PRD-04 (kartu lowongan dan detail lowongan untuk tombol simpan).
+- PRD-04 (service katalog dan detail lowongan).
+- PRD-F03 (template profil dan tersimpan, serta kontrak data).
 - Tabel `saved_jobs` dan `user_skills` dari PRD-01.
 
 ## 7. Test Plan

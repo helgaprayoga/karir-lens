@@ -3,7 +3,11 @@
 {% block title %}{{ error.code }} — KarirLens{% endblock %}
 
 {% block content %}
-  <h1>{{ error.code }}</h1>
-  <p>{{ error.message }}</p>
-  <p><a href="{{ url_for('main.index') }}">Kembali ke beranda</a></p>
+  <div class="layout-single">
+    <div class="page">
+      <h1>{{ error.code }}</h1>
+      <div class="banner banner-error" role="status">{{ error.message }}</div>
+      <p><a class="btn btn-line" href="{{ url_for('main.index') }}">Kembali ke beranda</a></p>
+    </div>
+  </div>
 {% endblock %}

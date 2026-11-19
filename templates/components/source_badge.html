@@ -1,0 +1,17 @@
+{#
+  SourceBadge — design system §4.2, R-04-08.
+  Identitas KarirLens: setiap lowongan wajib menampilkan asalnya.
+
+  Parameter:
+    source  string  salah satu "dealls" | "kalibrr" | "remotive"
+#}
+
+{% macro source_badge(source) -%}
+  {%- set labels = {"dealls": "Dealls", "kalibrr": "Kalibrr", "remotive": "Remotive"} -%}
+  {%- set key = (source or "")|lower -%}
+  {%- if key in labels -%}
+    <span class="source-badge" data-source="{{ key }}" aria-label="Sumber: {{ labels[key] }}">
+      <span class="dot" aria-hidden="true"></span>{{ labels[key] }}
+    </span>
+  {%- endif -%}
+{%- endmacro %}

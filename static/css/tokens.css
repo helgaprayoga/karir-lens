@@ -1,0 +1,161 @@
+/* Token visual KarirLens — docs/design-system.md §3.
+   Semua warna, ukuran, dan jarak diambil dari sini. Tidak ada nilai hex lepas
+   di komponen maupun template (design-system §7). */
+
+:root {
+  /* Permukaan */
+  --sheet: #ffffff;
+  --sunken: #f4f5f7;
+  --sunken-2: #fafafb;
+  --line: #eef0f3;
+  --line-2: #e1e4e9;
+  --line-3: #d2d7de;
+  --line-4: #9aa1ac;
+  --line-strong: #111827;
+
+  /* Teks */
+  --ink: #101215;
+  --ink-2: #4a515b;
+  --ink-3: #5b6270;
+  --ink-4: #b4bac3;
+  --ink-5: #cbd0d8;
+
+  /* Aksi dan status */
+  --action: #15181c;
+  --blue: #2563eb;
+  --violet: #6d28d9;
+  --rose: #e11d48;
+  --green: #15803d;
+  --amber: #b45309;
+  --danger: #dc2626;
+  --danger-ink: #b91c1c;
+
+  /* Permukaan status */
+  --success-bg: #eaf7ee;
+  --warning-bg: #fef4e7;
+  --info-bg: #eef3ff;
+  --match-high-bg: #f3eeff;
+  --hint-bg: #f0f6ff;
+  --hint-ink: #1e40af;
+  --danger-bg: #fef2f2;
+
+  /* Warna sumber lowongan */
+  --source-dealls: #0284c7;
+  --source-kalibrr: #059669;
+  --source-remotive: #b45309;
+
+  /* Gradien AI — hanya untuk elemen asisten AI */
+  --ai-from: #c4b5fd;
+  --ai-to: #93c5fd;
+
+  /* Skeleton (state loading, R-04-06) */
+  --skeleton-a: #eff1f4;
+  --skeleton-b: #e4e8ed;
+  --skeleton-flat: #eff1f4;
+
+  /* Sparkline pada MetricCell — tiga tingkat terang/gelap */
+  --spark-1: #dbeafe;
+  --spark-2: #93c5fd;
+  --spark-3: #60a5fa;
+
+  /* Placeholder dan pembatas */
+  --switch-thumb: #ffffff;
+  --dot-separator: #cbd0d8;
+  --avatar-from: #d5dbe4;
+  --avatar-to: #a7b0be;
+  --avatar-head-from: #cbd5e1;
+  --avatar-head-to: #94a3b8;
+  --hint-ink-soft: #1f2937;
+
+  /* Tipografi */
+  --font-sans: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont,
+    "Inter", "Segoe UI", Roboto, sans-serif;
+
+  --text-page: 38px;
+  --text-section: 18.5px;
+  --text-stat: 21px;
+  --text-card: 16.5px;
+  --text-body: 13.5px;
+  --text-label: 13px;
+  --text-meta: 12px;
+  --text-micro: 11px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Padding dan lebar */
+  --gutter-sheet: 32px;
+  --gutter-rail: 24px;
+  --gap-card: 16px;
+  --pad-card-y: 18px;
+  --pad-card-x: 18px;
+  --pad-panel: 15px;
+  --pad-cell: 11px;
+  --pad-cell-x: 12px;
+  --pad-hint: 12px;
+  --gap-rail: 14px;
+  --rail-w: 322px;
+
+  /* Ukuran kontrol tambahan */
+  --control-h-sm: 38px;
+  --control-h-xs: 32px;
+  --touch-min: 44px;
+  --search-w: 236px;
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-chip: 10px;
+  --r-md: 12px;
+  --r-card: 16px;
+  --r-full: 9999px;
+
+  /* Elevation */
+  --shadow-hover: 0 4px 12px -2px rgba(16, 24, 40, 0.1);
+  --shadow-toast: 0 8px 24px -6px rgba(16, 24, 40, 0.35);
+
+  /* Motion */
+  --dur-instant: 90ms;
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Kontrol */
+  --control-h: 40px;
+  --focus-ring: 0 0 0 2px var(--sheet), 0 0 0 4px var(--blue);
+}
+
+@media (max-width: 1240px) {
+  :root {
+    --gutter-sheet: 24px;
+    --rail-w: 300px;
+  }
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --gutter-rail: 20px;
+  }
+}
+
+@media (max-width: 820px) {
+  :root {
+    --gutter-sheet: 18px;
+    --gap-card: 14px;
+    --pad-card-x: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --pad-card-y: 16px;
+    --text-page: 25px;
+  }
+}

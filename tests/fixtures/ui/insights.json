@@ -1,0 +1,50 @@
+{
+  "categories": [
+    { "cluster_id": 1, "label": "Backend & Data", "job_count": 120, "keywords": ["python", "sql", "api"] },
+    { "cluster_id": 2, "label": "Desain Produk", "job_count": 86, "keywords": ["figma", "ux", "design system"] },
+    { "cluster_id": 3, "label": "Infrastruktur", "job_count": 41, "keywords": ["docker", "kubernetes", "aws"] }
+  ],
+  "skills": [
+    { "skill": "python", "job_count": 210 },
+    { "skill": "sql", "job_count": 184 },
+    { "skill": "figma", "job_count": 96 },
+    { "skill": "docker", "job_count": 74 }
+  ],
+  "salary": {
+    "sample_sufficient": false,
+    "sample": 3,
+    "minimum_sample": 5,
+    "groups": []
+  },
+  "summary": {
+    "total_jobs": 1842,
+    "unique_skills": 128,
+    "matched_today": 12
+  },
+  "insight_cards": [
+    {
+      "icon": "plus",
+      "tone": "green",
+      "text": "<b>3 lowongan baru</b> sesuai skill yang Anda konfirmasi",
+      "pill": "Baru",
+      "pill_tone": "green",
+      "when": "hari ini"
+    },
+    {
+      "icon": "info",
+      "tone": "blue",
+      "text": "Profil Anda belum lengkap: <b>2 skill</b> masih kosong",
+      "pill": "Saran",
+      "pill_tone": "blue",
+      "when": "perlu 5 menit"
+    },
+    {
+      "icon": "warning",
+      "tone": "amber",
+      "text": "Skill <b>sql</b> paling sering diminta di kategori Anda",
+      "pill": "Perlu perhatian",
+      "pill_tone": "amber",
+      "when": "12 lowongan"
+    }
+  ]
+}

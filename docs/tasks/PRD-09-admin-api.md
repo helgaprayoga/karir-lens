@@ -1,50 +1,51 @@
-# PRD-09 — Admin dan API
+# PRD-09 — Admin dan API (Backend)
 
 | Field | Keterangan |
 |---|---|
 | ID task | PRD-09 |
-| Nama task | Admin dan API |
+| Nama task | Admin dan API (Backend) |
+| Track | B — Backend |
 | Prioritas | P0 |
 | Milestone | M7 AI, admin, API (2 hari) |
-| Dependensi | PRD-04, PRD-05, PRD-06, PRD-07, PRD-08 |
+| Dependensi | PRD-04, PRD-05, PRD-06, PRD-07, PRD-08, PRD-F05 |
 | Task yang bergantung | PRD-10 |
 | Status | Belum dimulai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
+| Frontend pasangan | [PRD-F05](./PRD-F05-insight-admin.md) |
 
 ---
 
 ## 1. Konteks
 
-Admin perlu memantau data lowongan, pengguna, hasil pengelompokan, dan proses pembaruan. Selain itu, KarirLens menyediakan REST API untuk data lowongan, kategori, statistik gaji, dan rekomendasi.
+Seluruh halaman `/admin/*` sudah dibangun pada PRD-F05: kartu ringkasan, tabel lowongan, pengguna, riwayat run, tinjauan cluster, `DataTable`, dan dialog konfirmasi hapus. Task ini mengisi akses dan datanya: pengecekan peran admin, query agregat, aksi hapus, serta REST API yang memakai service yang sama dengan halaman web.
 
-Task ini membangun panel admin terpisah dari pengguna biasa serta REST API yang memakai service layer yang sama dengan halaman web. Panel admin tidak boleh menampilkan file atau teks CV.
+Panel admin tidak boleh menampilkan file atau teks CV. Aturan itu sudah ditegakkan di template (PRD-F05 R-F05-13); task ini memastikan backend juga tidak menyediakan datanya.
+
+Dua kontrak wajib dipenuhi: **PRD-F05 §4.1** untuk halaman admin, dan bentuk respons `{"data", "meta"}` / `{"error"}` untuk API.
 
 ## 2. Tujuan
 
-1. Menyediakan login admin terpisah dan kontrol akses berbasis peran.
-2. Menyediakan ringkasan jumlah lowongan, pengguna, dan proses pembaruan.
-3. Menyediakan daftar dan pengelolaan lowongan (tinjau, hapus data tidak valid).
-4. Menyediakan daftar pengguna.
-5. Menyediakan riwayat pembaruan data dan error.
-6. Menyediakan tinjauan hasil cluster.
-7. Menyediakan REST API publik dan personal dengan pagination serta format error konsisten.
+1. Menyediakan pengecekan peran admin melalui `admin_required`.
+2. Menyediakan data ringkasan, daftar lowongan, pengguna, run, dan cluster.
+3. Menyediakan aksi hapus lowongan tidak valid dengan konfirmasi.
+4. Menyediakan REST API publik dan personal memakai service yang sama.
+5. Menjaga agar API dan web tidak menduplikasi logika (R-09-15).
 
 ## 3. Scope
 
 ### 3.1 Termasuk
 
-- Route `/admin`, `/admin/jobs`, `/admin/users`, `/admin/runs`, `/admin/clusters`.
-- Peran admin pada tabel `users` (kolom `role`) dan dekorator `admin_required`.
-- Ringkasan statistik admin.
-- Aksi tinjau/hapus lowongan tidak valid dengan konfirmasi.
-- Daftar pengguna dengan pagination dan pencarian dasar.
-- Riwayat `scrape_runs` termasuk status dan error.
-- Tinjauan hasil cluster (label, kata kunci, jumlah lowongan).
-- REST API pada §4.3 memakai service layer halaman web.
-- Pagination, format error konsisten, dan autentikasi endpoint personal.
+- `app/admin/repository.py`: query agregat dan daftar dengan pagination.
+- `app/admin/service.py`: ringkasan, penghapusan lowongan.
+- Dekorator `admin_required` dan migrasi kolom `users.role`.
+- Route `/admin*` yang mengisi kontrak PRD-F05 §4.1.
+- `app/api/routes.py` untuk seluruh endpoint §4.3.
+- `app/api/response.py` untuk format `{"data","meta"}` dan `{"error"}`.
+- Menonaktifkan route preview untuk `/admin/*`.
 
 ### 3.2 Tidak termasuk
 
+- Markup, CSS, JavaScript, `DataTable`, dan dialog admin (selesai pada PRD-F05).
 - Menampilkan file atau teks CV.
 - Status lamaran atau tracker lamaran.
 - Endpoint admin di API publik.

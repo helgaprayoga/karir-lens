@@ -1,58 +1,111 @@
 # PRD per Task — KarirLens
 
-Dokumen ini memecah [PRD KarirLens](../PRD.md) menjadi PRD per task yang lebih kecil. Setiap task PRD memuat konteks, tujuan, scope, requirement, acceptance criteria, dependensi, test plan, dan out of scope.
+Dokumen ini memecah [PRD KarirLens](../PRD.md) menjadi PRD per task yang lebih kecil. Setiap PRD memuat konteks, tujuan, scope, requirement, acceptance criteria, dependensi, test plan, dan out of scope.
 
-## Daftar Task
+## Dua Track
 
-| ID | Task | Prioritas | Milestone | Dependensi |
-|---|---|---|---|---|
-| [PRD-01](./PRD-01-fondasi-proyek.md) | Fondasi Proyek | P0 | M1 | — |
-| [PRD-02](./PRD-02-data-ingestion.md) | Data Ingestion | P0 | M2 | PRD-01 |
-| [PRD-03](./PRD-03-normalisasi-deduplikasi.md) | Normalisasi dan Deduplikasi | P0 | M2 | PRD-01, PRD-02 |
-| [PRD-04](./PRD-04-katalog-publik.md) | Katalog Publik | P0 | M3 | PRD-01, PRD-03 |
-| [PRD-05](./PRD-05-perusahaan-insight.md) | Perusahaan dan Insight | P0 | M4 | PRD-03, PRD-04 |
-| [PRD-06](./PRD-06-akun-bookmark.md) | Akun dan Bookmark | P0 | M5 | PRD-01, PRD-04 |
-| [PRD-07](./PRD-07-cv-rekomendasi.md) | CV dan Rekomendasi | P0 | M6 | PRD-03, PRD-04, PRD-06 |
-| [PRD-08](./PRD-08-asisten-ai.md) | Asisten AI | P1 | M7 | PRD-03, PRD-05, PRD-06 |
-| [PRD-09](./PRD-09-admin-api.md) | Admin dan API | P0 | M7 | PRD-04 s.d. PRD-08 |
-| [PRD-10](./PRD-10-kualitas-rilis.md) | Kualitas dan Rilis | P0 | M8 | PRD-01 s.d. PRD-09 |
-
-## Urutan Pengerjaan
+Pengerjaan dibagi menjadi **dua track berurutan**: seluruh antarmuka diselesaikan lebih dulu, baru logika backend diisi.
 
 ```text
-PRD-01 Fondasi
-   |
-   v
-PRD-02 Data ingestion --> PRD-03 Normalisasi & deduplikasi
-   |                          |
-   v                          v
-PRD-04 Katalog publik --> PRD-05 Perusahaan & insight
-   |
-   v
-PRD-06 Akun & bookmark
-   |
-   v
-PRD-07 CV & rekomendasi --> PRD-08 Asisten AI
-                              |
-                              v
-                        PRD-09 Admin & API
-                              |
-                              v
-                        PRD-10 Kualitas & rilis
+TRACK A — Frontend (duluan)
+  PRD-F01 Design system & kerangka UI
+      |
+      v
+  PRD-F02 Katalog publik
+      |
+      +--> PRD-F03 Auth, profil, tersimpan
+      |
+      +--> PRD-F04 CV & asisten AI
+      |
+      +--> PRD-F05 Insight & admin
+      |
+      v
+  PRD-F06 State, responsif, aksesibilitas
+      |
+      v
+TRACK B — Backend (menyusul)
+  PRD-01 Fondasi  (selesai)
+      |
+      v
+  PRD-02 Ingestion --> PRD-03 Normalisasi & dedup
+      |                    |
+      v                    v
+  PRD-04 Katalog    --> PRD-05 Insight
+      |
+      v
+  PRD-06 Akun & bookmark
+      |
+      v
+  PRD-07 CV & rekomendasi --> PRD-08 Asisten AI
+      |
+      v
+  PRD-09 Admin & API
+      |
+      v
+  PRD-10 Kualitas & rilis
 ```
 
-Urutan mengikuti dependensi: fondasi, data pipeline, katalog publik, insight, fitur pengguna, AI, admin/API, lalu rilis.
+**Aturan pembagian yang mengikat:**
+
+| Track | Memiliki | Tidak memiliki |
+|---|---|---|
+| A — Frontend | Template Jinja, CSS, JavaScript, komponen, state tampilan, aksesibilitas | Query database, aturan bisnis, panggilan AI, akses Supabase |
+| B — Backend | Repository, service, aturan bisnis, pipeline data, API, skema | Markup, warna, layout, animasi |
+
+Satu-satunya titik temu keduanya adalah **kontrak template**: nama variabel konteks yang diharapkan sebuah template. Track A menetapkannya, Track B memenuhinya. Kontrak itu ditulis pada masing-masing PRD-F (bagian "Kontrak Template") dan dirujuk oleh PRD backend yang bersangkutan.
+
+## Daftar Task Frontend (Track A)
+
+| ID | Task | Prioritas | Dependensi | Halaman |
+|---|---|---|---|---|
+| [PRD-F01](./PRD-F01-design-system.md) | Design System & Kerangka UI | P0 | — | `base.html`, `/styleguide` |
+| [PRD-F02](./PRD-F02-katalog-publik.md) | Katalog Publik | P0 | F01 | `/`, `/jobs`, `/jobs/<id>`, `/companies/<slug>` |
+| [PRD-F03](./PRD-F03-auth-profil.md) | Auth, Profil, Tersimpan | P0 | F01 | `/auth/*`, `/profile`, `/saved` |
+| [PRD-F04](./PRD-F04-cv-asisten.md) | CV & Asisten AI | P0 | F01, F02 | `/cv`, `/assistant` |
+| [PRD-F05](./PRD-F05-insight-admin.md) | Insight & Admin | P0 | F01, F02 | `/insights`, `/admin/*` |
+| [PRD-F06](./PRD-F06-state-aksesibilitas.md) | State, Responsif, Aksesibilitas | P0 | F01 s.d. F05 | audit seluruh halaman |
+
+## Daftar Task Backend (Track B)
+
+| ID | Task | Prioritas | Milestone | Dependensi | Status |
+|---|---|---|---|---|---|
+| [PRD-01](./PRD-01-fondasi-proyek.md) | Fondasi Proyek | P0 | M1 | — | Selesai |
+| [PRD-02](./PRD-02-data-ingestion.md) | Data Ingestion | P0 | M2 | PRD-01 | Belum dimulai |
+| [PRD-03](./PRD-03-normalisasi-deduplikasi.md) | Normalisasi dan Deduplikasi | P0 | M2 | PRD-01, PRD-02 | Belum dimulai |
+| [PRD-04](./PRD-04-katalog-publik.md) | Katalog Publik (backend) | P0 | M3 | PRD-01, PRD-03, F02 | Belum dimulai |
+| [PRD-05](./PRD-05-perusahaan-insight.md) | Perusahaan dan Insight (backend) | P0 | M4 | PRD-03, PRD-04, F05 | Belum dimulai |
+| [PRD-06](./PRD-06-akun-bookmark.md) | Akun dan Bookmark (backend) | P0 | M5 | PRD-01, PRD-04, F03 | Belum dimulai |
+| [PRD-07](./PRD-07-cv-rekomendasi.md) | CV dan Rekomendasi (backend) | P0 | M6 | PRD-03, PRD-04, PRD-06, F04 | Belum dimulai |
+| [PRD-08](./PRD-08-asisten-ai.md) | Asisten AI (backend) | P1 | M7 | PRD-03, PRD-05, PRD-06, F04 | Belum dimulai |
+| [PRD-09](./PRD-09-admin-api.md) | Admin dan API (backend) | P0 | M7 | PRD-04 s.d. PRD-08, F05 | Belum dimulai |
+| [PRD-10](./PRD-10-kualitas-rilis.md) | Kualitas dan Rilis | P0 | M8 | PRD-01 s.d. PRD-09 | Belum dimulai |
+
+## Cara Frontend Dikerjakan Tanpa Backend
+
+Track A tidak menunggu Track B. Tiga mekanisme membuatnya mungkin:
+
+1. **Preview blueprint.** `app/preview/` hanya diregistrasi ketika `PREVIEW_UI=true`. Blueprint ini merender setiap template dengan data contoh dari `tests/fixtures/ui/*.json`, sehingga semua halaman dapat dibuka di browser dan ditinjau pada 360/768/1024/1280 px sebelum satu query pun ditulis.
+2. **Fixture sebagai kontrak.** Berkas JSON di `tests/fixtures/ui/` adalah bentuk data yang disepakati. Track A memakai JSON itu untuk merender; Track B wajib menghasilkan `dict` dengan bentuk yang sama dari `service`.
+3. **Test render.** Setiap halaman diuji `200 OK` + memuat komponen wajibnya, memakai fixture yang sama. Test ini tetap berlaku setelah backend terpasang, sebagai jaring pengaman bahwa perubahan service tidak merusak tampilan.
+
+Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan preview untuk halaman itu dipertahankan sebagai alat audit visual.
 
 ## Konvensi
 
-- Setiap PRD memakai pola nama `PRD-XX-nama-task.md`.
-- Requirement diberi ID `R-XX-NN` agar dapat ditelusuri pada implementasi dan pengujian.
+- Setiap PRD memakai pola nama `PRD-XX-nama-task.md` (backend) atau `PRD-FXX-nama-task.md` (frontend).
+- Requirement diberi ID `R-XX-NN` (backend) atau `R-FXX-NN` (frontend) agar dapat ditelusuri pada implementasi dan pengujian.
 - Acceptance criteria ditulis sebagai checklist yang harus terbukti terpenuhi.
 - Test plan membedakan pengujian otomatis (`pytest`) dan pengujian manual.
 - Out of scope merujuk batasan pada PRD induk, terutama tracker lamaran, prediksi gaji, dan penyimpanan CV.
 - Setiap PRD punya bagian **Referensi Proyek** yang menyebut berkas konkret dari proyek sebelumnya.
-- Spesifikasi visual (token, anatomi komponen, state, aksesibilitas) berada di [Design System KarirLens](../design-system.md), bukan di PRD task. PRD menyebut requirement; design system menyebut cara membangun komponennya.
-- Penempatan kode, arah dependensi antar lapisan, dan struktur direktori mengikuti [Arsitektur Kode KarirLens](../ARCHITECTURE.md). Sebelum menambah berkas pada task mana pun, periksa §9 dokumen itu untuk menentukan lokasinya.
+- Spesifikasi visual (token, anatomi komponen, state, aksesibilitas) berada di [Design System KarirLens](../design-system.md). Track A wajib mengikutinya; Track B tidak menyentuh tampilan.
+- Penempatan kode, arah dependensi antar lapisan, dan struktur direktori mengikuti [Arsitektur Kode KarirLens](../ARCHITECTURE.md).
+- Pratinjau visual acuan ada di [design-preview.html](../design-preview.html). Setiap halaman baru harus memakai bahasa visual yang sama.
+
+## Status
+
+- **Track A**: PRD-F01 **selesai**. PRD-F02 s.d. PRD-F06 **Belum dimulai**. Design system (token, komponen, shell, `/styleguide`) sudah tersedia sebagai fondasi halaman berikutnya.
+- **Track B**: PRD-01 **selesai** kecuali eksekusi migrasi ke Supabase. PRD-02 s.d. PRD-10 **Belum dimulai**.
 
 ## Referensi Proyek Sebelumnya
 
@@ -69,20 +122,24 @@ Fitur KarirLens mengacu pada proyek yang sudah dikerjakan di `D:\Semester 5\Prak
 
 | Task | Proyek referensi utama | Bagian yang diambil |
 |---|---|---|
+| [PRD-F01](./PRD-F01-design-system.md) | design-preview.html | Struktur shell, header, navpill, anatomi kartu, token |
+| [PRD-F02](./PRD-F02-katalog-publik.md) | design-preview.html, Bot Rekap Lowongan Dealls | Kartu lowongan, bar filter, pagination, filter Jinja `tanggal`/`angka` |
+| [PRD-F03](./PRD-F03-auth-profil.md) | Bot Utang-Piutang | Form, pesan validasi, dashboard per pengguna |
+| [PRD-F04](./PRD-F04-cv-asisten.md) | BengkelBot | UI chat, pasangan pesan, penanganan galat jaringan |
+| [PRD-F05](./PRD-F05-insight-admin.md) | Dashboard Analisis PLN, BengkelBot | Dashboard admin, kartu statistik, Chart.js `state.charts` |
+| [PRD-F06](./PRD-F06-state-aksesibilitas.md) | design-system.md §5, §7 | Checklist aksesibilitas dan review UI |
 | [PRD-01](./PRD-01-fondasi-proyek.md) | Bot Utang-Piutang, BengkelBot, Bot Rekap Lowongan Dealls | Application factory, konfigurasi environment, header keamanan, error handler, migrasi bertahap |
 | [PRD-02](./PRD-02-data-ingestion.md) | Bot Rekap Lowongan Dealls | Adapter scraper, `robots.txt`, retry/backoff, isolasi kegagalan sumber, `scrape_runs`, CLI, fixture parser |
 | [PRD-03](./PRD-03-normalisasi-deduplikasi.md) | Bot Rekap Lowongan Dealls | Insert-or-update idempoten, penyimpanan skill sebagai JSON, utilitas pembersihan teks, klasifikasi baris meta |
-| [PRD-04](./PRD-04-katalog-publik.md) | Bot Rekap Lowongan Dealls | Query dinamis + filter, pagination, halaman detail, filter Jinja, endpoint JSON, fixture test web |
-| [PRD-05](./PRD-05-perusahaan-insight.md) | Dashboard Analisis PLN, Bot Utang-Piutang | TF-IDF/PCA/KMeans, kata kunci cluster, pesan data terbatas, Chart.js, agregasi grafik |
+| [PRD-04](./PRD-04-katalog-publik.md) | Bot Rekap Lowongan Dealls | Query dinamis + filter, pagination, endpoint JSON, fixture test web |
+| [PRD-05](./PRD-05-perusahaan-insight.md) | Dashboard Analisis PLN, Bot Utang-Piutang | TF-IDF/PCA/KMeans, kata kunci cluster, pesan data terbatas, agregasi grafik |
 | [PRD-06](./PRD-06-akun-bookmark.md) | Bot Utang-Piutang, Bot Rekap Lowongan Dealls | Decorator pembatas akses, sesi dari server, upsert idempoten, data per pengguna |
 | [PRD-07](./PRD-07-cv-rekomendasi.md) | BengkelBot | Kamus normalisasi skill, pemisahan praproses, pengukuran akurasi kamus, penanda ambigu |
-| [PRD-08](./PRD-08-asisten-ai.md) | BengkelBot | Kontrak `POST /api/chat`, helper error JSON, bentuk respons, pola ambang, UI chat, pengujian dengan mock |
+| [PRD-08](./PRD-08-asisten-ai.md) | BengkelBot | Kontrak `POST /api/chat`, helper error JSON, bentuk respons, pola ambang, pengujian dengan mock |
 | [PRD-09](./PRD-09-admin-api.md) | BengkelBot, Bot Rekap Lowongan Dealls | Dashboard admin, pengecekan akses admin, agregasi statistik, pemisahan JSON vs HTML, pagination API |
 | [PRD-10](./PRD-10-kualitas-rilis.md) | Bot Utang-Piutang, Bot Rekap Lowongan Dealls | `pytest.ini`, test tanpa jaringan, struktur README, konfigurasi terpusat |
 
 ### Fitur KarirLens yang tidak punya acuan
-
-Fitur berikut tidak ada padanannya di kedua folder, sehingga PRD-nya tetap seperti semula tanpa referensi:
 
 | Fitur | Task | Alasan |
 |---|---|---|
@@ -93,7 +150,4 @@ Fitur berikut tidak ada padanannya di kedua folder, sehingga PRD-nya tetap seper
 | GitHub Actions terjadwal, Render, `render.yaml` | PRD-10 | Tidak ada konfigurasi CI/deployment di proyek sebelumnya |
 | Statistik gaji (median/P25/P75) | PRD-05 | Proyek referensi tidak mengolah data gaji |
 | Deduplikasi lintas sumber (`dedup_hash`) | PRD-03 | Semua proyek referensi hanya memakai satu sumber |
-
-## Status
-
-Semua task masih **Belum dimulai**. Status pada masing-masing dokumen diperbarui saat implementasi berjalan.
+| Seluruh Track A (design system, komponen, halaman) | PRD-F01..F06 | Proyek referensi memakai CSS sederhana, bukan design system bertoken |

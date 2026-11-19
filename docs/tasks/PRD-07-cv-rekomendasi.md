@@ -1,23 +1,27 @@
-# PRD-07 — CV dan Rekomendasi
+# PRD-07 — CV dan Rekomendasi (Backend)
 
 | Field | Keterangan |
 |---|---|
 | ID task | PRD-07 |
-| Nama task | CV dan Rekomendasi |
+| Nama task | CV dan Rekomendasi (Backend) |
+| Track | B — Backend |
 | Prioritas | P0 |
 | Milestone | M6 CV dan rekomendasi (2 hari) |
-| Dependensi | PRD-03, PRD-04, PRD-06 |
+| Dependensi | PRD-03, PRD-04, PRD-06, PRD-F04 |
 | Task yang bergantung | PRD-09 |
 | Status | Belum dimulai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
+| Frontend pasangan | [PRD-F04](./PRD-F04-cv-asisten.md) |
 
 ---
 
 ## 1. Konteks
 
-Fitur inti KarirLens adalah rekomendasi lowongan berdasarkan skill yang dimiliki pengguna. Skill berasal dari CV yang diunggah, diekstrak secara lokal menggunakan kamus skill, lalu dikonfirmasi pengguna. AI hanya menjadi fallback untuk skill ambigu. File dan teks CV tidak disimpan.
+Alur `/cv` — unggah, pratinjau skill, konfirmasi, rekomendasi — sudah dibangun pada PRD-F04, termasuk drop zone, state empat tahap, dan `MatchBadge` dengan alasan. Task ini mengisi mesin di belakangnya: ekstraksi teks PDF/DOCX, pencocokan kamus skill, AI fallback terbatas, dan skor rekomendasi deterministik.
 
-Task ini membangun alur upload CV, ekstraksi, konfirmasi skill, serta perhitungan rekomendasi berbasis skill terkonfirmasi, kategori lowongan, dan skill lowongan. Rekomendasi tidak memanggil AI per permintaan.
+Batas privasi sudah tertanam di tampilan: halaman menyatakan berkas dan teks CV tidak disimpan. Task ini wajib membuktikannya di sisi server, bukan hanya menjanjikannya di layar.
+
+Keluaran task ini wajib memenuhi **kontrak template PRD-F04 §4.1**, termasuk bentuk respons `POST /api/cv/extract`.
 
 ## 2. Tujuan
 
@@ -25,29 +29,27 @@ Task ini membangun alur upload CV, ekstraksi, konfirmasi skill, serta perhitunga
 2. Memakai AI hanya sebagai fallback untuk skill ambigu.
 3. Meminta pengguna mengonfirmasi skill sebelum dipakai.
 4. Tidak menyimpan file atau teks CV setelah ekstraksi selesai.
-5. Menghitung rekomendasi tanpa AI per permintaan, dengan alasan singkat yang dapat dijelaskan.
+5. Menghitung rekomendasi tanpa AI per permintaan, dengan alasan singkat.
 
 ## 3. Scope
 
 ### 3.1 Termasuk
 
-- Route `/cv`: upload, proses, pratinjau skill, dan konfirmasi.
-- Validasi file: tipe PDF/DOCX, ukuran maksimum 5 MB.
-- Ekstraksi teks lokal (`pypdf`, `python-docx`).
-- Kamus skill sebagai sumber utama pencocokan.
-- AI fallback untuk skill ambigu.
-- Penyimpanan hanya skill terkonfirmasi ke `user_skills`.
-- Penghapusan file sementara setelah proses.
-- Halaman rekomendasi yang menampilkan lowongan relevan beserta alasan.
-- Service rekomendasi tanpa AI per permintaan.
+- `app/cv/extractor.py`: ekstraksi teks lokal dan penghapusan berkas sementara.
+- `app/cv/recommender.py`: skor deterministik berbobot dari konfigurasi.
+- `app/cv/service.py`: validasi tipe/ukuran, urutan kamus → AI fallback, penyusunan alasan.
+- `app/cv/repository.py`: pembacaan skill terkonfirmasi dan kandidat lowongan.
+- `core/skills.py` dan `core/data/skills.json`: kamus skill dan pencocokan.
+- Route `/cv` dan `POST /api/cv/extract` yang mengisi kontrak PRD-F04 §4.1.
+- Menonaktifkan route preview untuk `/cv`.
 
 ### 3.2 Tidak termasuk
 
+- Markup, CSS, dan JavaScript `/cv` (selesai pada PRD-F04).
 - Penyimpanan file CV atau teks CV dalam bentuk apa pun.
 - Menampilkan CV di panel admin.
 - Asisten AI percakapan (PRD-08).
-- Prediksi gaji.
-- Penilaian kualitas CV atau saran penulisan CV.
+- Prediksi gaji dan penilaian kualitas CV.
 
 ## 4. Requirement
 

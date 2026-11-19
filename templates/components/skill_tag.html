@@ -1,0 +1,29 @@
+{#
+  SkillTag — design system §4.4, R-03-06.
+  Pada kartu: statis, maksimal empat, sisanya penanda "+N".
+
+  Parameter:
+    skills  list[string]
+    limit   int  jumlah tag yang ditampilkan sebelum "+N" (default 4)
+    href    string|null  bila diisi, tag menjadi tautan filter
+#}
+
+{% macro skill_tag(skill, href=None) -%}
+  {%- if href -%}
+    <a class="tag" href="{{ href }}">{{ skill }}</a>
+  {%- else -%}
+    <span class="tag">{{ skill }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro skill_tags(skills, limit=4, href_template=None) -%}
+  {%- set items = skills or [] -%}
+  {%- set shown = items[:limit] -%}
+  {%- set rest = items[limit:] -%}
+  {%- for skill in shown -%}
+    {{ skill_tag(skill, (href_template.format(skill=skill|urlencode) if href_template else None)) }}
+  {%- endfor -%}
+  {%- if rest -%}
+    <span class="tag more" aria-label="{{ rest|length }} skill lain">+{{ rest|length }}</span>
+  {%- endif -%}
+{%- endmacro %}

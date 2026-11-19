@@ -1,8 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Beranda — KarirLens{% endblock %}
+{% from "components/alert_banner.html" import alert_banner %}
+{% from "components/skeleton_card.html" import skeleton_card %}
+
+{% block title %}KarirLens — Lowongan dari tiga sumber, satu pencarian{% endblock %}
 
 {% block content %}
-  <h1>KarirLens</h1>
-  <p>Kerangka aplikasi aktif. Beranda dibangun pada PRD-04.</p>
+<div class="layout">
+<div class="feed">
+  <div class="page-head">
+    <h1>Lowongan dari tiga sumber, satu pencarian</h1>
+  </div>
+
+  <p class="field-hint">
+    KarirLens mengumpulkan lowongan dari Dealls, Kalibrr, dan Remotive, lalu
+    menampilkannya dalam satu daftar yang dapat dicari dan disaring.
+  </p>
+
+  {{ alert_banner("Kerangka antarmuka sudah berjalan. Katalog lowongan dibangun pada PRD-F02.", "info") }}
+
+  <p>
+    <a class="btn btn-primary" href="{{ url_for('auth.register') }}">Buat akun</a>
+    <a class="btn btn-line" href="{{ url_for('auth.login') }}">Masuk</a>
+    {% if preview_ui %}
+      <a class="btn btn-ghost" href="{{ url_for('preview.styleguide') }}">Buka Style Guide</a>
+    {% endif %}
+  </p>
+
+  <div class="section-head">
+    <h2>Contoh komponen</h2>
+    <span class="sub">state loading (R-04-06)</span>
+  </div>
+  <div class="cards">
+    {{ skeleton_card() }}
+    {{ skeleton_card() }}
+  </div>
+</div>
+
+<aside class="rail" aria-label="Ringkasan akun">
+  <div class="hint">
+    <span>Rekomendasi berbasis skill CV tersedia setelah Anda masuk dan mengonfirmasi skill.</span>
+  </div>
+</aside>
+</div>
 {% endblock %}

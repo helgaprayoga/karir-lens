@@ -61,6 +61,7 @@ create table if not exists users (
   email text not null unique,
   password_hash text not null,
   name text,
+  role text not null default 'user' check (role in ('user', 'admin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -1,0 +1,23 @@
+{#
+  EmptyState — design system §4.10, R-04-06 / R-06-07.
+  Setiap daftar kosong wajib memakai komponen ini; jangan menampilkan area
+  kosong atau grafik kosong tanpa penjelasan.
+
+  Parameter:
+    title, message  string
+    action_label    string|null
+    action_href     string|null
+#}
+
+{% from "components/icons.html" import icon_search %}
+
+{% macro empty_state(title, message, action_label=None, action_href=None) -%}
+  <div class="empty">
+    <div class="empty-icon" aria-hidden="true">{{ icon_search() }}</div>
+    <h3>{{ title }}</h3>
+    <p>{{ message }}</p>
+    {%- if action_label and action_href -%}
+      <a class="btn btn-line" href="{{ action_href }}">{{ action_label }}</a>
+    {%- endif -%}
+  </div>
+{%- endmacro %}

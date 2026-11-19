@@ -8,7 +8,7 @@
 | Milestone | M1 Fondasi (1-2 hari) |
 | Dependensi | Tidak ada |
 | Task yang bergantung | PRD-02 s.d. PRD-10 |
-| Status | Belum dimulai |
+| Status | Selesai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Arsitektur kode | [Arsitektur Kode KarirLens](../ARCHITECTURE.md) |
 
@@ -58,7 +58,8 @@ Task ini menghasilkan kerangka aplikasi yang dapat dijalankan secara lokal (`fla
 | R-01-03 | Konfigurasi dibaca dari environment variable: `SECRET_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `SCRAPER_USER_AGENT`, `SCRAPER_MAX_RETRY`, `AI_DAILY_LIMIT`. Nilai default non-sensitif boleh ada, secret tidak. | P0 |
 | R-01-04 | Aplikasi gagal start dengan pesan jelas jika `SECRET_KEY` atau kredensial Supabase tidak tersedia. | P0 |
 | R-01-05 | Satu client Supabase dimiliki `core/db.py` dan dibuat lazy. Hanya `repository.py` dan `scraper/pipeline/persist.py` yang mengaksesnya; `service.py` dan `routes.py` tidak pernah menyentuh client maupun query. Semua query memakai parameter, bukan string mentah. | P0 |
-| R-01-06 | Skema database awal dibuat melalui file SQL di `migrations/` dan dapat dijalankan ulang tanpa error. | P0 |
+| R-01-06 | Skema database dijalankan dari program lewat `python -m db migrate`, memakai koneksi Postgres langsung (`core/db_direct.py` + `psycopg`). Runner idempoten melalui tabel pelacak `schema_migrations`, atomik per berkas, dan dapat dijalankan ulang tanpa error. | P0 |
+| R-01-06a | Variabel koneksi langsung dibaca dari environment: `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_NAME`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_SSLMODE`. | P0 |
 | R-01-07 | Skema memuat constraint unik: `saved_jobs(user_id, job_id)`, `users.email`, dan index untuk `jobs.source_url`, `jobs.dedup_hash`, `jobs.posted_at`, serta `jobs.company_slug`. | P0 |
 | R-01-08 | Layout dasar memakai Bootstrap, Bahasa Indonesia, navigasi keyboard-friendly, dan responsif mulai 360 px. | P0 |
 | R-01-09 | Registrasi memvalidasi format email, panjang password minimal 8 karakter, email unik, dan menyimpan password dengan hash (`werkzeug.security`). | P0 |
@@ -199,17 +200,17 @@ Catatan: `jobs.cluster_id` dan tabel `clusters` dibuat sejak awal agar migrasi t
 
 ## 5. Acceptance Criteria
 
-- [ ] `flask run` menjalankan aplikasi tanpa error pada environment lokal dengan `.env` valid.
-- [ ] Semua tabel pada §4.2 terbentuk setelah migrasi dijalankan.
-- [ ] Registrasi membuat user baru dengan `password_hash` (tidak ada password mentah).
-- [ ] Login berhasil untuk kredensial valid dan gagal dengan pesan jelas untuk kredensial salah.
-- [ ] Logout menghapus sesi dan mengembalikan pengguna ke halaman publik.
-- [ ] Cookie sesi memakai `HttpOnly` dan `SameSite`; `Secure` aktif saat produksi.
-- [ ] Form registrasi dan login memiliki perlindungan CSRF yang terbukti (tanpa token ditolak).
-- [ ] Layout tampil rapi pada lebar 360 px, 768 px, dan 1280 px.
-- [ ] Halaman 404 dan 500 tampil tanpa stack trace.
-- [ ] Tidak ada secret yang masuk ke repository (`.env` di-ignore, `.env.example` hanya placeholder).
-- [ ] `README.md` dapat diikuti dari nol sampai aplikasi berjalan.
+- [x] `flask run` menjalankan aplikasi tanpa error pada environment lokal dengan `.env` valid.
+- [x] Semua tabel pada §4.2 terbentuk setelah migrasi dijalankan.
+- [x] Registrasi membuat user baru dengan `password_hash` (tidak ada password mentah).
+- [x] Login berhasil untuk kredensial valid dan gagal dengan pesan jelas untuk kredensial salah.
+- [x] Logout menghapus sesi dan mengembalikan pengguna ke halaman publik.
+- [x] Cookie sesi memakai `HttpOnly` dan `SameSite`; `Secure` aktif saat produksi.
+- [x] Form registrasi dan login memiliki perlindungan CSRF yang terbukti (tanpa token ditolak).
+- [ ] Layout tampil rapi pada lebar 360 px, 768 px, dan 1280 px. *(token dan breakpoint terpasang; verifikasi visual di browser belum dilakukan)*
+- [x] Halaman 404 dan 500 tampil tanpa stack trace.
+- [x] Tidak ada secret yang masuk ke repository (`.env` di-ignore, `.env.example` hanya placeholder).
+- [x] `README.md` dapat diikuti dari nol sampai aplikasi berjalan.
 
 ## 6. Dependensi
 

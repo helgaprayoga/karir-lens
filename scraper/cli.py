@@ -13,7 +13,12 @@ from __future__ import annotations
 import argparse
 from typing import Sequence
 
+from core import config as core_config
+
 SOURCES = ("dealls", "kalibrr", "remotive", "all")
+
+# Pipeline berjalan di luar Flask; .env harus dimuat eksplisit.
+core_config.load_env()
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 APP_DIR = ROOT / "app"
 CORE_DIR = ROOT / "core"
 SCRAPER_DIR = ROOT / "scraper"
+DB_DIR = ROOT / "db"
 
 
 def _python_files(*directories: Path) -> list[Path]:
@@ -138,6 +139,66 @@ def test_service_uses_only_own_repository(path: Path) -> None:
     assert not offenders, (
         f"{path.relative_to(ROOT)} mengimpor repository modul lain: {offenders}. "
         "Panggil service modul tersebut, bukan repository-nya."
+    )
+
+
+def _preview_files() -> list[Path]:
+    preview = APP_DIR / "preview"
+    return sorted(preview.rglob("*.py")) if preview.exists() else []
+
+
+def test_preview_never_touches_data_layer() -> None:
+    """Aturan 8: preview hanya menyajikan fixture, tidak pernah query produksi.
+
+    Berkas preview belum ada sampai PRD-F01 dikerjakan; test ini otomatis
+    memeriksa berkas itu begitu dibuat, tanpa perlu diubah.
+    """
+    offenders: list[str] = []
+
+    for path in _preview_files():
+        for module in imported_modules(path):
+            if module.startswith("supabase") or ".repository" in module:
+                offenders.append(f"{path.relative_to(ROOT)} mengimpor {module!r}")
+
+    assert not offenders, (
+        "app/preview/ hanya boleh membaca tests/fixtures/ui (docs/ARCHITECTURE.md §4 aturan 8):\n- "
+        + "\n- ".join(offenders)
+    )
+
+
+def test_db_entrypoint_is_framework_free() -> None:
+    """Aturan 9: entrypoint migrasi bebas Flask dan tidak memakai PostgREST."""
+    offenders: list[str] = []
+
+    for path in _python_files(DB_DIR):
+        for module in imported_modules(path):
+            root_module = module.split(".")[0]
+            if root_module == "flask":
+                offenders.append(f"{path.relative_to(ROOT)} mengimpor {module!r}")
+            if root_module == "app":
+                offenders.append(f"{path.relative_to(ROOT)} mengimpor {module!r}")
+            # Migrasi butuh DDL; client PostgREST tidak bisa melakukannya.
+            if module in {"core.db", "core.db.get_db", "supabase"}:
+                offenders.append(f"{path.relative_to(ROOT)} memakai PostgREST ({module!r})")
+
+    assert not offenders, (
+        "db/ harus memakai core/db_direct.py, bukan Flask atau PostgREST "
+        "(docs/ARCHITECTURE.md §4 aturan 9):\n- " + "\n- ".join(offenders)
+    )
+
+
+def test_web_app_never_uses_direct_db() -> None:
+    """Aplikasi web tidak boleh memegang koneksi Postgres berhak penuh."""
+    offenders: list[str] = []
+
+    for path in _python_files(APP_DIR):
+        for module in imported_modules(path):
+            if "db_direct" in module:
+                offenders.append(f"{path.relative_to(ROOT)} mengimpor {module!r}")
+
+    assert not offenders, (
+        "Aplikasi web tidak boleh memakai core/db_direct.py; hanya db/ yang boleh "
+        "(docs/ARCHITECTURE.md §8.0):\n- " + "\n- ".join(offenders)
     )
 
 

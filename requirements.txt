@@ -5,10 +5,12 @@
 Flask>=3.0                  # kerangka aplikasi web
 Flask-WTF>=1.2              # CSRF untuk seluruh form (R-01-11)
 Flask-Login>=0.6            # sesi pengguna dan decorator login_required
+email-validator>=2.1        # validasi field Email WTForms (R-01-09)
 python-dotenv>=1.0          # memuat .env saat pengembangan lokal
 
 # --- Database ---------------------------------------------------------------
 supabase>=2.0               # client PostgREST ke Supabase (PRD §10.3)
+psycopg[binary]>=3.1        # koneksi Postgres langsung untuk migrasi (`python -m db`)
 
 # --- Pipeline data ----------------------------------------------------------
 requests>=2.31              # HTTP ke sumber lowongan dan DeepSeek

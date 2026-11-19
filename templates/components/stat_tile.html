@@ -1,0 +1,25 @@
+{#
+  StatTile — design system §4.8, R-05-06 / R-09-02.
+  Statistik gaji TIDAK ditampilkan bila sampel < 5: tampilkan "—" dengan
+  keterangan, bukan angka nol (R-05-08, R-10-13).
+
+  Parameter:
+    value      number|string|null
+    label      string
+    note       string|null  keterangan saat data kurang
+    sufficient bool         False -> tampilkan nilai kosong
+#}
+
+{% macro stat_tile(value, label, note=None, sufficient=True) -%}
+  <div class="stat-tile">
+    {%- if sufficient and value is not none -%}
+      <div class="value">{{ value|angka }}</div>
+    {%- else -%}
+      <div class="value na" title="Data belum cukup">—</div>
+    {%- endif -%}
+    <div class="label">{{ label }}</div>
+    {%- if note -%}
+      <div class="note">{{ note }}</div>
+    {%- endif -%}
+  </div>
+{%- endmacro %}

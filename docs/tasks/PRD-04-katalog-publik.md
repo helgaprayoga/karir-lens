@@ -3,67 +3,80 @@
 | Field | Keterangan |
 |---|---|
 | ID task | PRD-04 |
-| Nama task | Katalog Publik |
+| Nama task | Katalog Publik (Backend) |
+| Track | B — Backend |
 | Prioritas | P0 |
 | Milestone | M3 Katalog publik (2 hari) |
-| Dependensi | PRD-01, PRD-03 |
+| Dependensi | PRD-01, PRD-03, PRD-F02 |
 | Task yang bergantung | PRD-05, PRD-06, PRD-07, PRD-09 |
 | Status | Belum dimulai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
+| Frontend pasangan | [PRD-F02](./PRD-F02-katalog-publik.md) |
 
 ---
 
 ## 1. Konteks
 
-Setelah data lowongan bersih dan konsisten (PRD-03), pengguna membutuhkan antarmuka publik untuk menemukan lowongan. Task ini membangun beranda, daftar lowongan dengan pencarian, filter, pengurutan, dan pagination, serta halaman detail lowongan. Halaman perusahaan dan insight dibangun pada PRD-05.
+Tampilan katalog publik sudah dibangun pada PRD-F02, termasuk beranda, daftar lowongan, detail, halaman perusahaan, pagination, empty state, dan skeleton. Template, komponen, dan kontrol filter sudah ada dan diuji dengan data fixture.
 
-Halaman publik tidak memerlukan akun. Semua route pada task ini adalah publik, dan logika query-nya dipakai ulang oleh REST API pada PRD-09.
+Task ini mengisi **logika di belakang template itu**: query pencarian dan filter, pagination server-side, pengambilan detail, dan penurunan data perusahaan. Semua query hidup di `app/jobs/repository.py` dan `app/insights/repository.py`; aturan filter hidup di `service.py`; route hanya memanggil service dan merender template yang sudah ada.
+
+Keluaran task ini wajib memenuhi **kontrak template PRD-F02 §4.1** tanpa mengubah template.
 
 ## 2. Tujuan
 
-1. Menyediakan beranda yang menjelaskan produk dan menampilkan lowongan terbaru serta kategori.
-2. Menyediakan pencarian berdasarkan posisi, perusahaan, atau skill.
-3. Menyediakan filter kota, tipe kerja, dan sumber.
-4. Menyediakan halaman detail lowongan dengan tautan sumber asli.
-5. Menjaga performa: halaman publik di bawah 2 detik, pencarian di bawah 1,5 detik untuk ~5.000 lowongan.
+1. Mengganti sumber data fixture pada halaman katalog dengan query Supabase.
+2. Menyediakan pencarian, filter, urutan, dan pagination server-side.
+3. Menyediakan detail lowongan dan lowongan serupa.
+4. Menurunkan ringkasan perusahaan dari tabel `jobs`.
+5. Menyediakan service yang dipakai ulang REST API pada PRD-09.
 
 ## 3. Scope
 
 ### 3.1 Termasuk
 
-- Route `/` (beranda): hero, ringkasan jumlah lowongan, lowongan terbaru, pintasan kategori.
-- Route `/jobs`: daftar lowongan dengan pencarian, filter, pengurutan, dan pagination.
-- Route `/jobs/<id>`: detail lowongan, skill, gaji bila ada, sumber, tautan asli, lowongan serupa.
-- Komponen UI: kartu lowongan, chip skill, badge tipe kerja, badge sumber, indikator gaji.
-- Kondisi kosong, loading, dan error yang jelas.
-- Service layer query yang dipakai ulang oleh API.
+- `app/jobs/repository.py`: query kriteria, count, detail, lowongan serupa.
+- `app/jobs/service.py`: validasi filter defensif, penyusunan kriteria, metadata halaman.
+- Route `main`, `jobs` yang mengisi variabel kontrak PRD-F02 §4.1.
+- `app/insights/service.py` fungsi perusahaan dan repository terkait (dipakai PRD-05).
+- Filter Jinja `tanggal` dan `angka`.
+- Menonaktifkan route preview untuk halaman yang sudah punya backend.
 
 ### 3.2 Tidak termasuk
 
-- Halaman perusahaan (dibangun di PRD-05).
-- Clustering, insight kategori, skill populer, dan statistik gaji (PRD-05).
-- Bookmark dan halaman tersimpan (PRD-06).
-- Asisten AI, admin, dan REST API (PRD-08, PRD-09).
-- Profil resmi perusahaan dari situs eksternal.
+- Markup, CSS, dan JavaScript halaman (selesai pada PRD-F02).
+- Clustering, kategori, skill populer, statistik gaji (PRD-05).
+- Bookmark persisten (PRD-06).
+- REST API (PRD-09).
 
 ## 4. Requirement
 
 | ID | Requirement | Prioritas |
 |---|---|---|
-| R-04-01 | `/jobs` mendukung query `q` untuk mencari posisi, perusahaan, atau skill. | P0 |
-| R-04-02 | `/jobs` mendukung filter `city`, `employment_type`, dan `source`. Filter dapat dikombinasikan dengan pencarian. | P0 |
-| R-04-03 | `/jobs` mendukung pengurutan `sort=posted_desc` (default), `posted_asc`, dan `relevance` saat `q` tersedia. | P0 |
-| R-04-04 | `/jobs` memakai pagination server-side (mis. 12-20 item per halaman) dengan metadata `page`, `per_page`, `total`, `has_next`. | P0 |
-| R-04-05 | Query database memakai parameter terikat; pencarian memakai pencarian teks yang aman (bukan string mentah). | P0 |
-| R-04-06 | Kondisi kosong menampilkan pesan jelas dan saran menghapus filter. | P0 |
-| R-04-07 | `/jobs/<id>` menampilkan judul, perusahaan, lokasi, tipe kerja, deskripsi, skill, gaji bila tersedia, sumber, tanggal, dan tautan ke lowongan asli. | P0 |
-| R-04-08 | `/jobs/<id>` menampilkan atribusi sumber (termasuk Remotive) dan tautan asli yang valid. | P0 |
-| R-04-09 | `/jobs/<id>` menampilkan lowongan serupa berdasarkan skill yang sama (maksimum 5-6 item). | P1 |
-| R-04-10 | Halaman publik menampilkan pesan yang ramah saat data gagal dimuat. | P0 |
-| R-04-11 | Layout responsif mulai 360 px, navigasi keyboard-friendly, label form jelas, dan kontras memenuhi keterbacaan dasar. | P0 |
-| R-04-12 | `/` menampilkan jumlah lowongan terkini dan lowongan terbaru tanpa query berat. | P0 |
-| R-04-13 | Semua halaman publik dapat diakses tanpa login. | P0 |
-| R-04-14 | State pencarian/filter tersimpan di URL agar dapat dibagikan dan di-refresh. | P1 |
+| R-04-01 | `service.search_jobs` menerima `q`, `city`, `employment_type`, `source`, `sort`, `page`, `per_page` dan mengembalikan `{items, meta, filters, options}`. | P0 |
+| R-04-02 | Nilai filter di luar himpunan baku direset ke default, bukan menghasilkan error. | P0 |
+| R-04-03 | Pencarian `q` mencakup `title`, `company_name`, dan `skills`. | P0 |
+| R-04-04 | Urutan mendukung `posted_desc` (default), `posted_asc`, dan `relevance` saat `q` ada. | P0 |
+| R-04-05 | Pagination server-side memakai `core/pagination.py`, dengan `per_page` default 12 dan maksimum 50. | P0 |
+| R-04-06 | `service.get_job` mengembalikan detail beserta lowongan serupa maksimum 6 berdasarkan skill yang sama. | P0 |
+| R-04-07 | `service.get_company` menurunkan nama, jumlah lowongan, lokasi, tipe kerja, dan skill sering muncul dari tabel `jobs`. | P0 |
+| R-04-08 | Semua query memakai parameter terikat PostgREST; tidak ada string SQL yang disusun dari input pengguna. | P0 |
+| R-04-09 | Route mengembalikan 404 lewat `AppError` bila lowongan atau perusahaan tidak ada, sehingga halaman error PRD-01 dipakai. | P0 |
+| R-04-10 | Halaman katalog tetap dapat diakses tanpa login. | P0 |
+| R-04-11 | Keluaran service memenuhi kontrak template PRD-F02 §4.1 tanpa perubahan template. | P0 |
+| R-04-12 | Filter `tanggal` dan `angka` tersedia untuk seluruh template. | P1 |
+| R-04-13 | Target performa: daftar < 1,5 detik untuk ~5.000 lowongan. | P0 |
+
+### 4.1 Kontrak yang Harus Dipenuhi
+
+Bentuk data pada [PRD-F02 §4.1](./PRD-F02-katalog-publik.md) adalah spesifikasi. Repository boleh mengambil kolom berbeda, tetapi service wajib mengembalikan `dict` dengan kunci dan tipe yang sama.
+
+| Fungsi service | Mengisi variabel template |
+|---|---|
+| `search_jobs(...)` | `items`, `meta`, `filters`, `options` |
+| `get_job(job_id)` | `job`, `similar` |
+| `get_company(slug)` | `company` |
+| `get_home()` | `stats`, `latest`, `categories` (bagian kategori diisi PRD-05) |
 
 ### 4.1 Parameter Query `/jobs`
 
@@ -90,20 +103,21 @@ Halaman publik tidak memerlukan akun. Semua route pada task ini adalah publik, d
 
 - [ ] Pencarian posisi, perusahaan, dan skill mengembalikan hasil relevan.
 - [ ] Kombinasi filter kota, tipe kerja, dan sumber bekerja tanpa error.
-- [ ] Pagination menampilkan metadata benar dan navigasi berfungsi.
-- [ ] Kondisi kosong menampilkan pesan jelas.
+- [ ] Nilai filter di luar himpunan direset ke default, tidak menghasilkan error.
+- [ ] Pagination mengembalikan metadata yang benar dan sesuai `core/pagination.py`.
+- [ ] Halaman katalog diakses tanpa login.
 - [ ] Setiap lowongan yang tampil memiliki tautan sumber asli yang valid.
-- [ ] Tidak ada halaman tracker lamaran atau status lamaran.
-- [ ] Halaman publik diakses tanpa login.
-- [ ] Tampilan rapi pada 360 px, 768 px, dan 1280 px.
-- [ ] Waktu muat halaman publik < 2 detik dan pencarian < 1,5 detik pada data uji ~5.000 baris.
+- [ ] Lowongan atau perusahaan yang tidak ada menghasilkan 404 lewat `AppError`.
+- [ ] Service mengembalikan `dict` sesuai kontrak PRD-F02 §4.1 tanpa mengubah template.
+- [ ] Waktu muat daftar < 1,5 detik pada data uji ~5.000 baris.
+- [ ] Tidak ada template, CSS, atau komponen baru yang ditambahkan pada task ini.
 
 ## 6. Dependensi
 
-- PRD-01 (layout, blueprint).
+- PRD-01 (layout, blueprint, `core/pagination.py`, `core/errors.py`).
 - PRD-03 (data ternormalisasi, `company_slug`, `dedup_hash`).
+- PRD-F02 (template, komponen, dan kontrak data).
 - Data uji minimal untuk verifikasi pagination dan pencarian.
-- Pustaka: Bootstrap, JavaScript dasar.
 
 ## 7. Test Plan
 
@@ -115,11 +129,13 @@ Halaman publik tidak memerlukan akun. Semua route pada task ini adalah publik, d
 | `test_jobs_search_title` | `q` menemukan lowongan berdasarkan judul. |
 | `test_jobs_search_company_and_skill` | `q` menemukan berdasarkan perusahaan dan skill. |
 | `test_jobs_filter_combined` | Kombinasi `city`, `employment_type`, `source` bekerja. |
+| `test_jobs_filter_invalid_reset` | Nilai filter di luar himpunan direset ke default. |
 | `test_jobs_sort` | Urutan `posted_desc` dan `posted_asc` benar. |
-| `test_jobs_pagination` | `page`/`per_page` dan `has_next` benar. |
-| `test_jobs_empty_state` | Hasil kosong merender pesan kosong. |
-| `test_job_detail_source_link` | Detail menampilkan `source_url` valid dan atribusi sumber. |
-| `test_job_detail_not_found` | ID tidak ada menghasilkan 404 ramah. |
+| `test_jobs_pagination_meta` | `page`/`per_page`/`has_next` sesuai `build_meta`. |
+| `test_job_detail_not_found` | ID tidak ada menghasilkan `NotFoundError`. |
+| `test_company_derived_from_jobs` | Ringkasan perusahaan hanya dari data `jobs`. |
+| `test_service_matches_template_contract` | Kunci `dict` service sama dengan kontrak PRD-F02 §4.1. |
+| `test_templates_unchanged_by_backend` | Template katalog tidak diubah pada task ini. |
 | `test_public_pages_no_auth` | Semua route publik dapat diakses tanpa login. |
 
 ### 7.2 Pengujian Manual
@@ -127,7 +143,7 @@ Halaman publik tidak memerlukan akun. Semua route pada task ini adalah publik, d
 1. Cari "python" lalu tambahkan filter kota dan tipe kerja.
 2. Refresh halaman dan pastikan state URL tetap.
 3. Buka detail lowongan dari masing-masing sumber dan periksa tautan asli.
-4. Uji tampilan pada 360 px, 768 px, dan 1280 px.
+4. Isi URL dengan `employment_type=ngawur` dan pastikan halaman tetap normal.
 5. Ukur waktu muat dengan data uji ±5.000 lowongan.
 
 ## 8. Out of Scope

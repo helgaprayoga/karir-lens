@@ -97,6 +97,8 @@ Ini bagian yang mengikat. Semua aturan lain di dokumen ini turun dari sini.
 | 5 | `scraper/*` adalah entrypoint batch | `core/*`, pustaka data/HTTP | impor `flask`, impor `app.*` |
 | 6 | Blueprint | diregistrasi hanya oleh `app/__init__.py` | saling mengimpor `routes.py` |
 | 7 | `app/api/` adalah adapter presentasi | memanggil `service` modul lain, `core/errors`, `core/pagination` | menulis aturan bisnis, menulis query, menduplikasi logika `service` |
+| 8 | `app/preview/` hanya menyajikan data contoh | membaca `tests/fixtures/ui/*.json`, merender template produksi | impor `repository`, impor `supabase`, memanggil `service` produksi, menulis aturan bisnis |
+| 9 | `db/` menjalankan migrasi | `core/db_direct.py`, `migrations/*.sql` | impor `flask`, impor `app.*`, memakai `core/db.py` (PostgREST tidak bisa DDL) |
 
 Aturan 4 dan 5 adalah alasan `core/` diletakkan di akar repo, **bukan** di dalam `app/`. Kalau `core` berada di dalam paket Flask, `scraper/` harus mengimpor `app`, dan pemisahan entrypoint runtuh.
 
@@ -197,15 +199,24 @@ KarirLens/
 │   │   ├── routes.py
 │   │   ├── service.py
 │   │   └── repository.py
-│   └── api/                        # adapter JSON, tanpa logika bisnis
+│   ├── api/                        # adapter JSON, tanpa logika bisnis
+│   │   ├── __init__.py
+│   │   ├── routes.py
+│   │   └── response.py             # {"data","meta"} dan {"error"}
+│   └── preview/                    # hanya aktif bila PREVIEW_UI=true
 │       ├── __init__.py
-│       ├── routes.py
-│       └── response.py             # {"data","meta"} dan {"error"}
+│       ├── routes.py               # merender template produksi dengan fixture
+│       └── fixtures.py             # pemuat tests/fixtures/ui/*.json
+│
+├── db/                              # entrypoint ketiga: migrasi skema
+│   ├── __init__.py
+│   └── __main__.py                  # python -m db migrate|status
 │
 ├── core/                           # shared kernel, bebas Flask
 │   ├── __init__.py
 │   ├── config.py                   # _env_str/_env_int/_env_bool, Settings, validate_settings
-│   ├── db.py                       # satu client Supabase, lazy
+│   ├── db.py                       # client PostgREST untuk aplikasi web
+│   ├── db_direct.py                # koneksi Postgres langsung untuk DDL/migrasi
 │   ├── errors.py                   # AppError, ValidationError, NotFoundError, ForbiddenError
 │   ├── pagination.py               # parse_page, build_meta
 │   ├── text.py                     # normalize_text, slugify, tokenize
@@ -247,7 +258,11 @@ KarirLens/
 ├── tests/
 │   ├── conftest.py
 │   ├── fixtures/                   # HTML/JSON sumber, CV sintetis, dataset kecil
+│   │   └── ui/                     # data contoh untuk Track A (kontrak template)
 │   ├── unit/
+│   │   ├── test_architecture.py
+│   │   ├── test_ui_rules.py        # aturan design system yang dapat diperiksa mesin
+│   │   └── ...
 │   └── integration/
 ├── requirements.txt
 ├── pytest.ini
@@ -352,7 +367,8 @@ Aturan keras: **tidak ada string SQL/interpolasi filter yang dibangun dari input
 | Berkas | Isi | Dipakai oleh |
 |---|---|---|
 | `config.py` | `_env_str`/`_env_int`/`_env_bool`, `Settings`, `validate_settings()`. Fail-fast dengan pesan jelas. | `app`, `scraper`, `tests` |
-| `db.py` | `get_db()` mengembalikan satu client Supabase, dibuat lazy pada pemanggilan pertama. | seluruh `repository.py`, `scraper/pipeline/persist.py` |
+| `db.py` | `get_db()` mengembalikan satu client PostgREST Supabase, dibuat lazy. Untuk baca/tulis **baris**. | seluruh `repository.py`, `scraper/pipeline/persist.py` |
+| `db_direct.py` | `DatabaseConfig` + `connect()` memakai `psycopg` ke Postgres. Untuk **DDL** (migrasi) dan operasi yang tidak dapat dilakukan PostgREST. | `db/__main__.py` saja |
 | `errors.py` | `AppError(code, message, status)` dan turunannya, dengan `to_dict()`. | service, error handler |
 | `pagination.py` | `parse_page(args)`, `build_meta()`. Satu sumber kebenaran untuk `page`/`per_page`/`total`/`has_next`. | `jobs`, `admin`, `api` |
 | `text.py` | `normalize_text`, `slugify`, `normalize_company`, `tokenize`. | `scraper/pipeline/normalize.py`, `cv/extractor.py` |
@@ -382,6 +398,33 @@ pipeline/persist.py     insert-or-update idempoten
 ---
 
 ## 8. Alur Permintaan dan Alur Error
+
+### 8.0 Dua Jalur Akses ke Supabase
+
+Supabase bukan satu API, melainkan beberapa. KarirLens memakai dua di antaranya, untuk keperluan yang berbeda, dan keduanya tidak boleh tertukar.
+
+| Jalur | Berkas | Protokol | Kemampuan | Dipakai untuk |
+|---|---|---|---|---|
+| **PostgREST** | `core/db.py` | HTTP + kunci API (`publishable`/`anon`) | Baca/tulis **baris**; tidak bisa DDL | Seluruh CRUD aplikasi |
+| **Koneksi langsung** | `core/db_direct.py` | Protokol Postgres + `psycopg` + password DB | Termasuk DDL (`CREATE TABLE`, `CREATE INDEX`) | Migrasi lewat `python -m db` |
+
+Alasannya teknis: PostgREST hanya mengekspos tabel sebagai endpoint REST. Ia tidak meneruskan `CREATE TABLE`. Karena itu migrasi memerlukan jalur kedua — sama seperti Laravel (`php artisan migrate`) yang juga konek langsung ke Postgres, bukan lewat API.
+
+```text
+python -m db migrate
+   -> core/db_direct.py  (psycopg, password DB)
+   -> migrations/*.sql   (CREATE TABLE, CREATE INDEX)
+   -> Postgres Supabase
+
+GET /jobs
+   -> app/jobs/routes.py
+   -> app/jobs/service.py
+   -> app/jobs/repository.py
+   -> core/db.py         (PostgREST, kunci API)
+   -> Supabase
+```
+
+Konsekuensi yang mengikat: **migrasi tidak pernah berjalan dari request web**, dan **aplikasi web tidak pernah memakai `db_direct.py`**. Hak penuh atas database hanya dimiliki entrypoint `db/`.
 
 ### 8.1 Alur normal
 
@@ -465,20 +508,60 @@ Selain itu, `validate_settings()` memastikan aplikasi gagal start dengan pesan j
 
 ## 11. Pemetaan Task PRD ke Direktori
 
+### 11.1 Track A — Frontend (dikerjakan lebih dulu)
+
+| Task | Direktori utama yang disentuh |
+|---|---|
+| PRD-F01 Design system & kerangka UI | `static/css/{tokens,components}.css`, `templates/components/`, `templates/base.html`, `app/preview/`, `tests/fixtures/ui/`, `/styleguide` |
+| PRD-F02 Katalog publik | `templates/main/`, `templates/jobs/`, `templates/companies/`, `static/js/` |
+| PRD-F03 Auth, profil, tersimpan | `templates/auth/`, `templates/profile/`, `static/js/toast.js` |
+| PRD-F04 CV & asisten | `templates/cv/`, `templates/assistant/`, `static/js/{cv,assistant}.js` |
+| PRD-F05 Insight & admin | `templates/insights/`, `templates/admin/`, `static/js/charts.js`, `static/vendor/` |
+| PRD-F06 State, responsif, aksesibilitas | audit seluruh `templates/` dan `static/css/`; `tests/unit/test_ui_rules.py` |
+
+Track A hanya menyentuh `templates/`, `static/`, `app/preview/`, dan `tests/fixtures/ui/`. Ia **tidak** menyentuh `repository.py`, `service.py`, `core/db.py`, maupun `scraper/`.
+
+### 11.2 Track B — Backend (menyusul)
+
 | Task | Direktori utama yang disentuh |
 |---|---|
 | PRD-01 Fondasi | `app/__init__.py`, `app/config.py`, `app/extensions.py`, `core/{config,db,errors,pagination}.py`, `app/auth/`, `templates/base.html`, `templates/errors/`, `migrations/` |
 | PRD-02 Data ingestion | `scraper/{http,runner,cli}.py`, `scraper/adapters/`, `scraper/pipeline/persist.py` |
 | PRD-03 Normalisasi & deduplikasi | `scraper/pipeline/{normalize,dedup}.py`, `core/{text,skills}.py`, `core/data/skills.json` |
-| PRD-04 Katalog publik | `app/main/`, `app/jobs/`, `templates/jobs/`, `app/api/routes.py` (bagian jobs) |
-| PRD-05 Perusahaan & insight | `app/insights/`, `scraper/cluster.py`, `templates/insights/`, `static/js/` (Chart.js) |
-| PRD-06 Akun & bookmark | `app/auth/`, `app/profile/`, `templates/profile/` |
-| PRD-07 CV & rekomendasi | `app/cv/`, `core/skills.py`, `templates/cv/` |
-| PRD-08 Asisten AI | `app/assistant/`, `core/external/deepseek.py`, `templates/assistant/` |
-| PRD-09 Admin & API | `app/admin/`, `app/api/{routes,response}.py`, `templates/admin/` |
+| PRD-04 Katalog (backend) | `app/jobs/{service,repository}.py`, `app/main/routes.py`, `app/insights/{service,repository}.py` (perusahaan) |
+| PRD-05 Perusahaan & insight (backend) | `app/insights/`, `scraper/cluster.py` |
+| PRD-06 Akun & bookmark (backend) | `app/profile/{service,repository}.py`, `app/auth/service.py` |
+| PRD-07 CV & rekomendasi (backend) | `app/cv/{extractor,recommender,service,repository}.py`, `core/skills.py` |
+| PRD-08 Asisten AI (backend) | `app/assistant/service.py`, `core/external/deepseek.py` |
+| PRD-09 Admin & API (backend) | `app/admin/`, `app/api/`, `app/auth/decorators.py` |
 | PRD-10 Kualitas & rilis | `.github/workflows/`, `render.yaml`, `tests/`, `README.md`, `docs/API.md` |
 
-Setiap task hanya menyentuh folder modulnya sendiri, kecuali `core/` ketika ia menambah aturan yang dipakai bersama (PRD-03 dan PRD-07). Itu sebabnya `core/` dijaga ketat: ia satu-satunya berkas yang dipakai semua orang.
+Track B mengisi lapisan di belakang template yang sudah ada. Ia tidak menambah komponen visual baru; bila sebuah template butuh data yang belum tersedia, yang berubah adalah `service.py`, bukan template.
+
+### 11.3 Titik Temu: Kontrak Template
+
+Satu-satunya sambungan antara kedua track adalah **kontrak template** — nama, tipe, dan bentuk variabel konteks yang diharapkan sebuah template.
+
+| Arah | Siapa menulis | Siapa memenuhi |
+|---|---|---|
+| `templates/jobs/list.html` mengharapkan `items`, `meta`, `filters`, `options` | PRD-F02 §4.1 | PRD-04 `jobs.service.search_jobs` |
+| `templates/insights/index.html` mengharapkan `categories`, `skills`, `salary`, `sample_sufficient` | PRD-F05 §4.1 | PRD-05 `insights.service` |
+| `templates/profile/index.html` mengharapkan `profile`, `skills`, `summary` | PRD-F03 §4.1 | PRD-06 `profile.service.get_profile` |
+| `templates/cv/index.html` mengharapkan `suggested_skills`, `confirmed_skills`, `recommendations`, `state` | PRD-F04 §4.1 | PRD-07 `cv.service` |
+| `templates/admin/*.html` mengharapkan `summary`, `items`, `meta`, `runs`, `clusters` | PRD-F05 §4.1 | PRD-09 `admin.service` |
+
+Konsekuensinya jelas: menambah halaman berarti menetapkan kontrak lebih dulu; mengisi backend berarti memenuhi kontrak tanpa mengubah template.
+
+### 11.4 Mekanisme Preview
+
+Selama Track A berjalan, backend belum ada. Agar template tetap dapat dilihat dan diuji:
+
+```text
+app/preview/            blueprint, hanya diregistrasi bila PREVIEW_UI=true
+tests/fixtures/ui/      bentuk data yang disepakati (kontrak dalam bentuk konkret)
+```
+
+Route preview merender template produksi dengan data dari fixture. Setelah modul terkait selesai di Track B, route produksi mengambil alih; preview untuk halaman itu dipertahankan sebagai alat audit visual. Test render dari Track A tetap berlaku sebagai jaring pengaman terhadap perubahan service.
 
 ---
 

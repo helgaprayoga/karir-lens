@@ -9,7 +9,6 @@ Ini satu-satunya berkas yang boleh meregistrasi blueprint
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
@@ -18,8 +17,15 @@ from core import config as core_config
 from core import db as core_db
 from core.errors import AppError
 
-from .config import CONFIG_MAP
-from .extensions import csrf, login_manager
+# Harus dimuat SEBELUM ``.config`` diimpor: kelas konfigurasi mengevaluasi
+# Settings.from_env() saat modul dimuat, bukan saat create_app() dipanggil.
+# ``wsgi.py`` juga memuatnya, tetapi test, skrip, dan `flask --app app`
+# tidak melewati wsgi.py.
+core_config.load_env(core_config.PROJECT_ROOT / ".env")
+
+from .config import CONFIG_MAP  # noqa: E402  (setelah .env dimuat)
+from .extensions import csrf, login_manager  # noqa: E402
+from .logging_config import configure_logging  # noqa: E402
 
 __all__ = ["create_app"]
 
@@ -53,6 +59,14 @@ def _register_blueprints(app: Flask) -> None:
         api_bp,
     ):
         app.register_blueprint(blueprint)
+
+    # Blueprint preview hanya ada ketika PREVIEW_UI=true (R-F01-09). Bila flag
+    # mati, endpoint-nya tidak terdaftar sama sekali sehingga /styleguide 404
+    # secara alami, bukan lewat pemeriksaan di dalam route.
+    if app.config.get("PREVIEW_UI"):
+        from .preview import bp as preview_bp
+
+        app.register_blueprint(preview_bp)
 
 
 def _register_error_handlers(app: Flask) -> None:
@@ -95,6 +109,25 @@ def _register_security_headers(app: Flask) -> None:
         return response
 
 
+def _register_context(app: Flask) -> None:
+    """Variabel template yang dipakai semua halaman (pola context processor)."""
+    from .navigation import nav_links
+    from .template_filters import FILTERS
+
+    app.jinja_env.filters.update(FILTERS)
+
+    # ``preview_ui`` ditentukan dari endpoint yang benar-benar terdaftar, bukan
+    # dari flag konfigurasi. Alasannya sama dengan navigation.py: memanggil
+    # url_for untuk endpoint yang tidak ada akan melempar BuildError. Dengan
+    # cara ini template selalu aman meskipun config diubah setelah create_app.
+    @app.context_processor
+    def inject_navigation():
+        return {
+            "nav_links": nav_links(),
+            "preview_ui": "preview.styleguide" in app.view_functions,
+        }
+
+
 def create_app(config_name: str = "development") -> Flask:
     # Template dan static berada di akar repo, bukan di dalam paket ``app``.
     project_root = Path(__file__).resolve().parents[1]
@@ -104,13 +137,16 @@ def create_app(config_name: str = "development") -> Flask:
         static_folder=str(project_root / "static"),
         instance_relative_config=False,
     )
+
+    # ``.env`` sudah dimuat di tingkat modul (lihat atas berkas) supaya kelas
+    # konfigurasi membaca nilai yang benar saat diimpor.
     app.config.from_object(CONFIG_MAP[config_name])
 
     settings = app.config["SETTINGS"]
     core_config.validate_settings(settings, require_credentials=app.config["REQUIRE_CREDENTIALS"])
     core_db.configure(settings.supabase_url, settings.supabase_key)
 
-    logging.basicConfig(level=app.config["LOG_LEVEL"], format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    configure_logging(app.config["LOG_LEVEL"])
 
     csrf.init_app(app)
     login_manager.init_app(app)
@@ -118,5 +154,6 @@ def create_app(config_name: str = "development") -> Flask:
     _register_blueprints(app)
     _register_error_handlers(app)
     _register_security_headers(app)
+    _register_context(app)
 
     return app

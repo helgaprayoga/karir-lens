@@ -1,0 +1,29 @@
+{#
+  StatusPill — design system §4.11, R-09-06.
+  Nilai enum mentah TIDAK boleh tampil; selalu dipetakan ke bahasa manusia.
+
+  Parameter:
+    status  "success" | "partial" | "failed" | "running" | "skipped" | lainnya
+#}
+
+{% macro status_pill(status) -%}
+  {%- set mapping = {
+    "success": ("Berhasil", "status-success"),
+    "partial": ("Sebagian berhasil", "status-warning"),
+    "failed": ("Gagal", "status-danger"),
+    "running": ("Sedang berjalan", "status-muted"),
+    "skipped": ("Dilewati", "status-muted"),
+    "dilarang": ("Dilarang robots.txt", "status-muted"),
+    "diblokir": ("Diblokir sumber", "status-muted")
+  } -%}
+  {%- set entry = mapping.get((status or "")|lower) -%}
+  {%- if entry -%}
+    <span class="status-pill {{ entry[1] }}">
+      <span class="dot" aria-hidden="true"></span>{{ entry[0] }}
+    </span>
+  {%- else -%}
+    <span class="status-pill status-muted">
+      <span class="dot" aria-hidden="true"></span>Tidak diketahui
+    </span>
+  {%- endif -%}
+{%- endmacro %}

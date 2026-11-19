@@ -1,4 +1,4 @@
-"""Ekstensi Flask yang dipakai lintas blueprint (R-01-11, R-01-10).
+"""Ekstensi Flask yang dipakai lintas blueprint (R-01-10, R-01-11).
 
 Objek dibuat di sini lalu diikat ke aplikasi pada ``create_app`` agar test dapat
 memakai konfigurasi terpisah.
@@ -18,5 +18,11 @@ login_manager.login_message_category = "warning"
 
 @login_manager.user_loader
 def load_user(user_id: str):
-    """Muat pengguna dari tabel ``users`` (implementasi pada PRD-06)."""
-    raise NotImplementedError("Diisi pada PRD-06 (user_loader dari tabel users).")
+    """Muat pengguna dari tabel ``users`` untuk sesi yang aktif.
+
+    Impor dilakukan di dalam fungsi agar ekstensi tidak bergantung pada modul
+    auth saat modul itu sendiri masih dimuat.
+    """
+    from app.auth.service import load_user as _load
+
+    return _load(user_id)

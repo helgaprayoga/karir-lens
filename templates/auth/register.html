@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar — KarirLens{% endblock %}
+
+{% block content %}
+  <div class="layout-single">
+  <div class="auth-card">
+    <h1>Buat akun</h1>
+    <p class="field-hint">Cukup email dan password. Tidak perlu verifikasi email.</p>
+
+    <form method="post" action="{{ url_for('auth.register') }}" novalidate>
+      {{ form.hidden_tag() }}
+
+      <div class="field">
+        {{ form.name.label }}
+        {{ form.name(type="text", autocomplete="name") }}
+        {% if form.name.errors %}
+          <p class="field-error">{{ form.name.errors[0] }}</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        {{ form.email.label }}
+        {{ form.email(
+            type="email",
+            autocomplete="email",
+            aria_invalid="true" if form.email.errors else "false",
+            aria_describedby="email-error" if form.email.errors else ""
+        ) }}
+        {% if form.email.errors %}
+          <p class="field-error" id="email-error">{{ form.email.errors[0] }}</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        {{ form.password.label }}
+        {{ form.password(
+            autocomplete="new-password",
+            aria_invalid="true" if form.password.errors else "false",
+            aria_describedby="password-hint" if not form.password.errors else "password-error"
+        ) }}
+        {% if form.password.errors %}
+          <p class="field-error" id="password-error">{{ form.password.errors[0] }}</p>
+        {% else %}
+          <p class="field-hint" id="password-hint">Minimal 8 karakter.</p>
+        {% endif %}
+      </div>
+
+      {{ form.submit(class="btn btn-primary btn-block") }}
+    </form>
+
+    <p class="auth-switch">
+      Sudah punya akun? <a href="{{ url_for('auth.login') }}">Masuk</a>
+    </p>
+  </div>
+  </div>
+{% endblock %}

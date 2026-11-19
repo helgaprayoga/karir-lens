@@ -1,0 +1,15 @@
+{
+  "user": {
+    "id": 1,
+    "name": "Helga Arya Prayoga",
+    "role": "Web Developer · UI/UX · Data",
+    "joined_at": "2026-09-01T00:00:00Z"
+  },
+  "skills": ["python", "sql", "tableau", "figma", "git"],
+  "summary": {
+    "confirmed_skills": 5,
+    "saved_jobs": 8,
+    "matched_today": 12
+  },
+  "sparkline": [9, 15, 11, 19, 14, 23, 17, 26, 21, 24, 18, 26]
+}
