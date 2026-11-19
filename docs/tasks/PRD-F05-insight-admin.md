@@ -8,7 +8,7 @@
 | Prioritas | P0 |
 | Dependensi | PRD-F01, PRD-F02 |
 | Task yang bergantung | PRD-F06 |
-| Status | Belum dimulai |
+| Status | Selesai (Track A, fixture) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Backend pasangan | [PRD-05](./PRD-05-perusahaan-insight.md), [PRD-09](./PRD-09-admin-api.md) |
 | Design system | [Design System KarirLens](../design-system.md) |
@@ -90,20 +90,24 @@ Task ini membangun `/insights` dengan Chart.js, dan seluruh halaman `/admin/*`, 
 
 ## 5. Acceptance Criteria
 
-- [ ] `/insights` menampilkan kategori, skill, dan gaji dari fixture.
-- [ ] Statistik gaji menampilkan median, P25, P75, dan sampel.
-- [ ] Sampel < 5 memunculkan pesan data terbatas, bukan grafik kosong.
-- [ ] Mata uang tidak pernah dicampur dalam satu grafik.
-- [ ] Grafik terbaca pada 360 px.
-- [ ] Setiap grafik punya alternatif tekstual.
-- [ ] Tidak ada angka prediksi.
-- [ ] `/admin` menampilkan kartu ringkasan.
-- [ ] `/admin/jobs` mendukung pencarian, pagination, dan hapus dengan konfirmasi.
-- [ ] `/admin/users` tidak menampilkan password atau CV.
-- [ ] `/admin/runs` menampilkan status dan pesan error.
-- [ ] `/admin/clusters` menampilkan label, kata kunci, dan jumlah.
-- [ ] Tidak ada tautan atau elemen CV di panel admin.
-- [ ] DataTable dan dialog konfirmasi dapat dipakai dengan keyboard.
+- [x] `/insights` menampilkan kategori, skill, dan gaji dari fixture.
+- [x] Statistik gaji menampilkan median, P25, P75, dan sampel.
+- [x] Sampel < 5 memunculkan pesan data terbatas, bukan grafik kosong.
+- [x] Mata uang tidak pernah dicampur dalam satu grafik.
+- [x] Grafik terbaca pada 360 px.
+- [x] Setiap grafik punya alternatif tekstual.
+- [x] Tidak ada angka prediksi.
+- [x] `/admin` menampilkan kartu ringkasan.
+- [x] `/admin/jobs` mendukung pencarian, pagination, dan hapus dengan konfirmasi.
+- [x] `/admin/users` tidak menampilkan password atau CV.
+- [x] `/admin/runs` menampilkan status dan pesan error.
+- [x] `/admin/clusters` menampilkan label, kata kunci, dan jumlah.
+- [x] Tidak ada tautan atau elemen CV di panel admin.
+- [x] DataTable dan dialog konfirmasi dapat dipakai dengan keyboard.
+
+Catatan kejujuran: pada Track A halaman berada di `/preview/insights` dan
+`/preview/admin*`. Route produksi `/insights` dan `/admin/*` tetap kosong sampai
+PRD-05 dan PRD-09 mengisinya.
 
 ## 6. Dependensi
 
@@ -180,3 +184,66 @@ Task ini membangun `/insights` dengan Chart.js, dan seluruh halaman `/admin/*`, 
 - Test otomatis pada §7.1 lulus.
 - `/insights` dan seluruh `/admin/*` dapat ditinjau di browser dengan fixture.
 - Kontrak template pada §4.1 tertulis dan dipakai PRD-05 serta PRD-09.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `templates/insights/index.html` | Ringkasan, dua grafik, statistik gaji per mata uang |
+| `templates/admin/index.html` | Empat kartu ringkasan dan tabel proses terakhir |
+| `templates/admin/jobs.html` | Pencarian, tabel, pagination, dialog hapus |
+| `templates/admin/users.html`, `runs.html`, `clusters.html` | Tabel masing-masing bagian |
+| `templates/admin/_tabs.html` | Satu-satunya daftar bagian admin |
+| `static/vendor/chart/chart.umd.min.js` | Chart.js 4.4.1, lokal bukan CDN (§9) |
+| `static/css/tokens.css` | `--chart-bar`, `--chart-grid`, `--chart-label` |
+| `static/css/components.css` | Stat grid, tabel alternatif, gaji, tab admin, dialog |
+| `app/preview/routes.py` | Route `insights` dan lima route `admin*` |
+| `tests/unit/test_insights_admin_ui.py` | 25 test untuk §7.1 |
+
+### 12.2 Keputusan
+
+**Chart.js diunduh ke `static/vendor/`, bukan CDN.** Demo tidak boleh bergantung jaringan. Berkasnya 205 KB dan dimuat hanya di halaman insight.
+
+**Warna grafik lewat token CSS, bukan hex di JavaScript.** Test `test_no_raw_hex_in_templates` menolak hex di template, dan aturan §9 memang meminta warna dari token. Tiga token baru ditambahkan ke `tokens.css`; JavaScript membacanya dengan `getPropertyValue`.
+
+**Kedua grafik memakai bar horizontal.** Lihat §12.3 — ini perbaikan setelah audit browser, bukan pilihan awal.
+
+**Alternatif tekstual berupa `<details>` berisi tabel lengkap.** Angka tetap dapat disalin dan dibaca pembaca layar tanpa bergantung pada kanvas. Test memastikan jumlah tabel alternatif sama dengan jumlah kanvas.
+
+**Mata uang tidak pernah digabung.** Fixture memuat IDR (42 sampel) dan USD (11 sampel); masing-masing mendapat kartu sendiri. Test `test_currency_not_mixed` memeriksa setiap kartu hanya memuat satu kode mata uang — membandingkan Rp 9.000.000 dengan USD 4.200 dalam satu grafik akan menyesatkan.
+
+**Sampel kurang memunculkan banner, bukan angka nol.** `?sample=low` mengosongkan kelompok gaji; halaman menampilkan `AlertBanner` varian warning berisi ambang minimum. Test juga memastikan tidak ada kartu gaji dan tidak ada ">0<" di bagian itu.
+
+**Dialog hapus memakai `<dialog>` native.** Escape menutup, fokus terkelola tanpa pustaka. `returnValue` menentukan apakah baris benar-benar dilepas, sehingga "Batal" tidak menghapus apa pun.
+
+### 12.3 Bug yang Ditemukan Lewat Audit Browser
+
+**Label sumbu grafik kategori bertumpuk pada 360px.** Lima label vertikal ("Backend & Data", "Desain Produk", …) menimpa satu sama lain hingga tidak terbaca — R-F05-05 dilanggar. Perbaikan: kedua grafik memakai `indexAxis: "y"` sehingga label mendapat ruang penuh di kiri. Diverifikasi dengan tangkapan layar 360px.
+
+**Nilai enum mentah tampil sebagai judul gaji.** Kartu bertuliskan "Gaji **Month** · IDR" — nilai database bocor ke layar, melanggar design system §2 butir 4. Diganti peta `{month: "bulanan", year: "tahunan", …}` sehingga menjadi "Gaji bulanan · IDR".
+
+**Tab admin memakai blok gelap penuh.** Terbaca seperti tombol aksi utama, bukan navigasi bagian. Diganti latar `--sunken` dengan garis bawah 2px.
+
+### 12.4 Satu Batas yang Perlu Dinyatakan
+
+Test `test_admin_no_cv_links` awalnya gagal karena header global memuat tautan "CV". Setelah ditelusuri, R-09-09 melarang **route atau data CV di panel admin** — bukan tautan navigasi pengguna ke halamannya sendiri. Menghapus menu itu di halaman admin saja akan membuat navigasi tidak konsisten. Test dipersempit ke isi `<main>`, dan alasan ini ditulis di docstring-nya agar tidak "diperbaiki" orang lain menjadi kesalahan yang berbeda.
+
+### 12.5 Verifikasi Terukur
+
+| Pemeriksaan | Hasil |
+|---|---|
+| Chart.js termuat | `typeof Chart !== undefined`, 2 instance aktif |
+| Tinggi kanvas | 240px (rentang 240–360 sesuai §4.8) |
+| Tabel alternatif | 2, sama dengan jumlah kanvas |
+| `?sample=low` | banner warning, 0 kartu gaji |
+| Dialog hapus — Batal | 5 baris tetap 5 |
+| Dialog hapus — Hapus | 5 baris menjadi 4 |
+| Tab admin | tepat satu `aria-current` per halaman |
+| `scrollWidth` 360px | 360 di insight maupun admin |
+| Garis lurus | 32px pada 1280, 18px pada 360 |
+
+Total test setelah task ini: **249 lulus** (224 → 249).

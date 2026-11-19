@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% from "components/pagination.html" import pagination %}
+{% from "components/source_badge.html" import source_badge %}
+
+{% block title %}Lowongan — Admin — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Lowongan</h1>
+        <p class="company-sub">{{ meta.total }} lowongan tersimpan di database.</p>
+      </div>
+    </div>
+
+    {% include "admin/_tabs.html" %}
+
+    <form class="admin-search" method="get" action="{{ url_for('preview.admin_jobs') }}" role="search">
+      <label class="sr-only" for="admin-q">Cari lowongan</label>
+      <input id="admin-q" type="search" name="q" value="{{ q }}"
+             placeholder="Cari judul atau perusahaan…">
+      <button type="submit" class="btn btn-line">Cari</button>
+      {%- if q -%}
+        <a class="btn btn-ghost" href="{{ url_for('preview.admin_jobs') }}">Hapus pencarian</a>
+      {%- endif -%}
+    </form>
+
+    {%- if items -%}
+      <div class="table-wrap">
+        <table class="data-table" tabindex="0" aria-label="Daftar lowongan">
+          <caption class="sr-only">Daftar lowongan beserta sumber dan waktu tayang</caption>
+          <thead>
+            <tr>
+              <th scope="col">Judul</th>
+              <th scope="col">Perusahaan</th>
+              <th scope="col">Sumber</th>
+              <th scope="col">Lokasi</th>
+              <th scope="col">Tayang</th>
+              <th scope="col"><span class="sr-only">Aksi</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- for job in items -%}
+              <tr data-row-id="{{ job.id }}">
+                <td>{{ job.title }}</td>
+                <td>{{ job.company_name }}</td>
+                <td>{{ source_badge(job.source) }}</td>
+                <td>{{ job.location or "-" }}</td>
+                <td>{{ job.posted_at|tanggal_relatif }}</td>
+                <td class="cell-action">
+                  {# R-F05-15: hapus TIDAK langsung jalan. Tombol membuka
+                     dialog konfirmasi yang dapat dibatalkan. #}
+                  <button type="button" class="btn btn-ghost btn-sm js-hapus"
+                          data-hapus-id="{{ job.id }}"
+                          data-hapus-nama="{{ job.title }}">
+                    Hapus
+                  </button>
+                </td>
+              </tr>
+            {%- endfor -%}
+          </tbody>
+        </table>
+      </div>
+
+      {{ pagination(meta, "preview.admin_jobs", params=url_params) }}
+    {%- else -%}
+      <p class="field-hint">
+        {%- if q -%}
+          Tidak ada lowongan yang cocok dengan "{{ q }}".
+        {%- else -%}
+          Belum ada lowongan tersimpan.
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+
+    {# <dialog> native mengelola fokus dan Escape tanpa pustaka (§9). #}
+    <dialog class="confirm" id="dialog-hapus" aria-labelledby="dialog-hapus-judul">
+      <form method="dialog">
+        <h2 id="dialog-hapus-judul">Hapus lowongan?</h2>
+        <p class="confirm-body">
+          <b data-hapus-target></b> akan dihapus dari database. Tindakan ini tidak
+          dapat dibatalkan.
+        </p>
+        <div class="confirm-actions">
+          <button type="submit" class="btn btn-line" value="batal">Batal</button>
+          <button type="submit" class="btn btn-danger" value="hapus" data-hapus-konfirmasi>Hapus</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+
+  <aside class="rail" aria-label="Tentang daftar lowongan">
+    <div class="hint">
+      <span>Menghapus lowongan hanya menghapus baris di database KarirLens; data
+      di situs sumber tidak berubah.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  var dialog = document.getElementById("dialog-hapus");
+  if (!dialog || typeof dialog.showModal !== "function") return;
+
+  var target = dialog.querySelector("[data-hapus-target]");
+  var tombolKonfirmasi = dialog.querySelector("[data-hapus-konfirmasi]");
+  var terpilih = null;
+
+  document.querySelectorAll(".js-hapus").forEach(function (tombol) {
+    tombol.addEventListener("click", function () {
+      terpilih = tombol;
+      target.textContent = tombol.getAttribute("data-hapus-nama");
+      dialog.showModal();
+    });
+  });
+
+  dialog.addEventListener("close", function () {
+    /* Hapus hanya terjadi setelah pengguna menekan "Hapus".
+       Pada Track A barisnya dilepas dari DOM; PRD-09 yang memanggil API. */
+    if (dialog.returnValue === "hapus" && terpilih) {
+      var baris = terpilih.closest("tr");
+      if (baris) baris.remove();
+      terpilih = null;
+    }
+    tombolKonfirmasi.blur();
+  });
+})();
+</script>
+{% endblock %}

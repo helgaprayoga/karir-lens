@@ -292,3 +292,101 @@ def api_assistant():
             "sources": balasan.get("sources", []),
         }
     }
+
+
+# --- Insight (PRD-F05) ---------------------------------------------------
+
+@bp.get("/insights")
+def insights():
+    """``/insights``: kategori, skill populer, statistik gaji per mata uang.
+
+    ``?sample=low`` memaksa keadaan sampel kurang agar pesan data terbatas dapat
+    diperiksa tanpa mengubah fixture (R-F05-03).
+    """
+    data = fixtures.insights()
+    salary = dict(data.get("salary", {}))
+
+    if request.args.get("sample") == "low":
+        # Keadaan sampel kurang: kelompok dikosongkan, bukan diisi angka nol.
+        minimum = salary.get("minimum_sample", 5)
+        salary = {"sample_sufficient": False, "minimum_sample": minimum, "groups": []}
+
+    return render_template(
+        "insights/index.html",
+        categories=data.get("categories", []),
+        skills=data.get("skills", []),
+        salary=salary,
+        summary=data.get("summary", {}),
+    )
+
+
+# --- Admin (PRD-F05) -----------------------------------------------------
+
+def _admin_page(items: list, page: int, per_page: int = 8) -> dict:
+    total = len(items)
+    mulai = (max(1, page) - 1) * per_page
+    return {
+        "items": items[mulai : mulai + per_page],
+        "meta": {
+            "page": max(1, page),
+            "per_page": per_page,
+            "total": total,
+            "has_next": mulai + per_page < total,
+        },
+    }
+
+
+@bp.get("/admin")
+def admin_index():
+    """Ringkasan admin: jumlah lowongan, pengguna, run terbaru (R-F05-08)."""
+    data = fixtures.admin()
+    return render_template(
+        "admin/index.html",
+        summary=data.get("summary", {}),
+        latest_runs=fixtures.runs()[:5],
+    )
+
+
+@bp.get("/admin/jobs")
+def admin_jobs():
+    """Daftar lowongan admin dengan pencarian dan pagination (R-F05-09)."""
+    data = fixtures.admin()
+    q = (request.args.get("q") or "").strip().lower()
+    items = data.get("jobs", [])
+    if q:
+        items = [
+            j for j in items
+            if q in (j.get("title") or "").lower() or q in (j.get("company_name") or "").lower()
+        ]
+
+    halaman = request.args.get("page", type=int) or 1
+    page = _admin_page(items, halaman)
+    return render_template(
+        "admin/jobs.html",
+        items=page["items"],
+        meta=page["meta"],
+        q=q,
+        url_params={"q": q} if q else {},
+    )
+
+
+@bp.get("/admin/users")
+def admin_users():
+    """Daftar pengguna; tidak memuat password (R-F05-10)."""
+    data = fixtures.admin()
+    halaman = request.args.get("page", type=int) or 1
+    page = _admin_page(data.get("users", []), halaman)
+    return render_template("admin/users.html", items=page["items"], meta=page["meta"], url_params={})
+
+
+@bp.get("/admin/runs")
+def admin_runs():
+    """Riwayat scraping: waktu, status, jumlah, pesan galat (R-F05-11)."""
+    return render_template("admin/runs.html", runs=fixtures.runs())
+
+
+@bp.get("/admin/clusters")
+def admin_clusters():
+    """Tinjauan cluster: label, kata kunci, jumlah lowongan (R-F05-12)."""
+    data = fixtures.admin()
+    return render_template("admin/clusters.html", clusters=data.get("clusters", []))

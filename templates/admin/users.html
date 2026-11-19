@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% from "components/pagination.html" import pagination %}
+
+{% block title %}Pengguna — Admin — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Pengguna</h1>
+        <p class="company-sub">{{ meta.total }} akun terdaftar.</p>
+      </div>
+    </div>
+
+    {% include "admin/_tabs.html" %}
+
+    {# R-F05-10: tidak ada kolom password atau hash. Tidak ada kolom CV juga —
+       data itu dilarang muncul di admin (R-09-09, R-F05-13). #}
+    <div class="table-wrap">
+      <table class="data-table" tabindex="0" aria-label="Daftar pengguna">
+        <caption class="sr-only">Akun pengguna beserta peran dan tanggal bergabung</caption>
+        <thead>
+          <tr>
+            <th scope="col">Nama</th>
+            <th scope="col">Email</th>
+            <th scope="col">Peran</th>
+            <th scope="col">Skill</th>
+            <th scope="col">Bergabung</th>
+          </tr>
+        </thead>
+        <tbody>
+          {%- for user in items -%}
+            <tr data-row-id="{{ user.id }}">
+              <td>{{ user.name or "-" }}</td>
+              <td>{{ user.email }}</td>
+              <td><span class="pill">{{ "Admin" if user.role == "admin" else "Pengguna" }}</span></td>
+              <td>{{ user.skill_count or 0 }}</td>
+              <td>{{ user.created_at|tanggal_relatif }}</td>
+            </tr>
+          {%- endfor -%}
+        </tbody>
+      </table>
+    </div>
+
+    {{ pagination(meta, "preview.admin_users", params=url_params) }}
+  </main>
+
+  <aside class="rail" aria-label="Tentang pengguna">
+    <div class="hint">
+      <span>Kolom jumlah skill hanya berisi angka. Isi skill dan CV pengguna tidak
+      ditampilkan di panel admin.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}

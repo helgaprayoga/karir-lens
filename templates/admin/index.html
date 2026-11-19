@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% from "components/stat_tile.html" import stat_tile %}
+{% from "components/status_pill.html" import status_pill %}
+
+{% block title %}Admin — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Panel admin</h1>
+        <p class="company-sub">
+          Ringkasan data yang dikumpulkan dan status proses pengambilan terakhir.
+        </p>
+      </div>
+    </div>
+
+    {% include "admin/_tabs.html" %}
+
+    <div class="stat-grid">
+      {{ stat_tile(summary.total_jobs, "Lowongan tersimpan") }}
+      {{ stat_tile(summary.active_users, "Pengguna aktif") }}
+      {{ stat_tile(summary.total_clusters, "Kategori") }}
+      {{ stat_tile(summary.total_runs, "Proses scraping") }}
+    </div>
+
+    <div class="section-head admin-head">
+      <h2>Proses terakhir</h2>
+      <span class="sub">
+        {%- if summary.last_run_at -%}
+          Terakhir {{ summary.last_run_at|tanggal_relatif }}
+        {%- else -%}
+          Belum pernah berjalan
+        {%- endif -%}
+      </span>
+    </div>
+
+    {%- if latest_runs -%}
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption class="sr-only">Lima proses scraping terakhir</caption>
+          <thead>
+            <tr>
+              <th scope="col">Mulai</th>
+              <th scope="col">Sumber</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ditemukan</th>
+              <th scope="col">Baru</th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- for run in latest_runs -%}
+              <tr>
+                <td>{{ run.started_at|tanggal }}</td>
+                <td>{{ run.source|capitalize if run.source else "-" }}</td>
+                <td>{{ status_pill(run.status) }}</td>
+                <td>{{ run.jobs_found|angka }}</td>
+                <td>{{ run.jobs_inserted|angka }}</td>
+              </tr>
+            {%- endfor -%}
+          </tbody>
+        </table>
+      </div>
+      <p class="admin-more">
+        <a class="btn btn-line" href="{{ url_for('preview.admin_runs') }}">Lihat semua proses</a>
+      </p>
+    {%- else -%}
+      <p class="field-hint">Belum ada proses scraping yang tercatat.</p>
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Tentang panel admin">
+    <div class="hint">
+      <span>Panel ini hanya menampilkan data lowongan dan pengguna. Tidak ada
+      berkas atau teks CV di sini.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}

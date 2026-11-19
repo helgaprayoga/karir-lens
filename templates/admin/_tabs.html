@@ -1,0 +1,22 @@
+{#
+  Tab navigasi panel admin. Satu-satunya tempat daftar halaman admin ditulis,
+  supaya menambah halaman tidak perlu menyunting empat berkas.
+#}
+<nav class="admin-tabs" aria-label="Bagian panel admin">
+  {%- set bagian = [
+    ("preview.admin_index", "Ringkasan"),
+    ("preview.admin_jobs", "Lowongan"),
+    ("preview.admin_users", "Pengguna"),
+    ("preview.admin_runs", "Proses"),
+    ("preview.admin_clusters", "Kategori"),
+  ] -%}
+  {%- set aktif = request.endpoint -%}
+  <ul>
+    {%- for endpoint, label in bagian -%}
+      <li>
+        <a href="{{ url_for(endpoint) }}"
+           {% if aktif == endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
+      </li>
+    {%- endfor -%}
+  </ul>
+</nav>

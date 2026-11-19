@@ -30,10 +30,12 @@ ADMIN_LINKS = (("admin.index", "Admin"),)
 # di blueprint preview, bukan blueprint produksi (PRD-F03 §6).
 PREVIEW_LINKS = (
     ("preview.jobs", "Lowongan"),
+    ("preview.insights", "Insight"),
     ("preview.profile", "Profil"),
     ("preview.saved", "Tersimpan"),
     ("preview.cv", "CV"),
     ("preview.assistant", "Asisten"),
+    ("preview.admin_index", "Admin"),
 )
 
 # Endpoint yang bukan menu, tetapi tetap milik sebuah menu. Halaman detail dan
@@ -45,6 +47,11 @@ PARENT = {
     "preview.home": "preview.jobs",
     "preview.index": "preview.jobs",
     "preview.styleguide": "preview.jobs",
+    "preview.admin_index": "preview.admin_index",
+    "preview.admin_jobs": "preview.admin_index",
+    "preview.admin_users": "preview.admin_index",
+    "preview.admin_runs": "preview.admin_index",
+    "preview.admin_clusters": "preview.admin_index",
     "jobs.detail": "jobs.index",
     "insights.detail": "insights.index",
 }

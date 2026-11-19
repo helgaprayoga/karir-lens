@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% from "components/empty_state.html" import empty_state %}
+
+{% block title %}Kategori — Admin — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Kategori</h1>
+        <p class="company-sub">
+          {{ clusters|length }} cluster terbentuk dari kata kunci lowongan.
+        </p>
+      </div>
+    </div>
+
+    {% include "admin/_tabs.html" %}
+
+    {%- if clusters -%}
+      <div class="table-wrap">
+        <table class="data-table" tabindex="0" aria-label="Daftar kategori">
+          <caption class="sr-only">Kategori beserta kata kunci dan jumlah lowongan</caption>
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Kata kunci</th>
+              <th scope="col">Lowongan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- for cluster in clusters -%}
+              <tr data-row-id="{{ cluster.id }}">
+                <td>{{ cluster.label }}</td>
+                <td>
+                  <div class="tags">
+                    {%- for kata in cluster.keywords -%}
+                      <span class="tag">{{ kata }}</span>
+                    {%- endfor -%}
+                  </div>
+                </td>
+                <td>{{ cluster.job_count|angka }}</td>
+              </tr>
+            {%- endfor -%}
+          </tbody>
+        </table>
+      </div>
+    {%- else -%}
+      {{ empty_state("Belum ada kategori", "Cluster terbentuk setelah cukup lowongan dianalisis.") }}
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Tentang kategori">
+    <div class="hint">
+      <span>Label cluster dibuat dari kata kunci yang paling sering muncul, bukan
+      diketik manual.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}

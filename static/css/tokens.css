@@ -58,6 +58,12 @@
   --spark-2: #93c5fd;
   --spark-3: #60a5fa;
 
+  /* Grafik Chart.js. Warna dibaca dari sini, bukan ditulis di JavaScript,
+     supaya tema hanya berubah di satu tempat (PRD-F05 §9). */
+  --chart-bar: #111827;
+  --chart-grid: #e5e7eb;
+  --chart-label: #5b6270;
+
   /* Placeholder dan pembatas */
   --switch-thumb: #ffffff;
   --dot-separator: #cbd0d8;

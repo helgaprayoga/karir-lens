@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% from "components/status_pill.html" import status_pill %}
+
+{% block title %}Proses — Admin — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Proses scraping</h1>
+        <p class="company-sub">{{ runs|length }} proses tercatat, terbaru lebih dulu.</p>
+      </div>
+    </div>
+
+    {% include "admin/_tabs.html" %}
+
+    {%- if runs -%}
+      <div class="table-wrap">
+        <table class="data-table" tabindex="0" aria-label="Riwayat proses scraping">
+          <caption class="sr-only">
+            Riwayat proses pengambilan lowongan: waktu, sumber, status, jumlah, dan galat
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Mulai</th>
+              <th scope="col">Sumber</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ditemukan</th>
+              <th scope="col">Baru</th>
+              <th scope="col">Diperbarui</th>
+              <th scope="col">Keterangan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- for run in runs -%}
+              <tr data-row-id="{{ run.id }}">
+                <td>{{ run.started_at|tanggal }}</td>
+                <td>{{ run.source|capitalize if run.source else "-" }}</td>
+                <td>{{ status_pill(run.status) }}</td>
+                <td>{{ run.jobs_found|angka }}</td>
+                <td>{{ run.jobs_inserted|angka }}</td>
+                <td>{{ run.jobs_updated|angka }}</td>
+                <td class="cell-note">
+                  {# Pesan galat ditampilkan apa adanya dari catatan sistem —
+                     ini data operasional, bukan pesan untuk pengguna akhir. #}
+                  {%- if run.error_message -%}
+                    {{ run.error_message }}
+                  {%- elif run.status == "running" -%}
+                    <span class="muted">Belum selesai</span>
+                  {%- else -%}
+                    <span class="muted">—</span>
+                  {%- endif -%}
+                </td>
+              </tr>
+            {%- endfor -%}
+          </tbody>
+        </table>
+      </div>
+    {%- else -%}
+      <p class="field-hint">Belum ada proses scraping yang tercatat.</p>
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Tentang proses">
+    <div class="hint">
+      <span>Proses dijalankan terjadwal. Status "Sebagian berhasil" berarti sebagian
+      halaman gagal dibaca tetapi data lain tetap tersimpan.</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}

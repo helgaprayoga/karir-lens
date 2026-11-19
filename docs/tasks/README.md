@@ -62,7 +62,7 @@ Satu-satunya titik temu keduanya adalah **kontrak template**: nama variabel kont
 | [PRD-F02](./PRD-F02-katalog-publik.md) | Katalog Publik | P0 | F01 | `/`, `/jobs`, `/jobs/<id>`, `/companies/<slug>` |
 | [PRD-F03](./PRD-F03-auth-profil.md) | Auth, Profil, Tersimpan | P0 | F01 | `/preview/profile`, `/preview/saved`, `/auth/*` |
 | [PRD-F04](./PRD-F04-cv-asisten.md) | CV & Asisten AI | P0 | F01, F02 | `/preview/cv`, `/preview/assistant` |
-| [PRD-F05](./PRD-F05-insight-admin.md) | Insight & Admin | P0 | F01, F02 | `/insights`, `/admin/*` |
+| [PRD-F05](./PRD-F05-insight-admin.md) | Insight & Admin | P0 | F01, F02 | `/preview/insights`, `/preview/admin/*` |
 | [PRD-F06](./PRD-F06-state-aksesibilitas.md) | State, Responsif, Aksesibilitas | P0 | F01 s.d. F05 | audit seluruh halaman |
 
 ## Daftar Task Backend (Track B)
@@ -104,7 +104,7 @@ Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan pre
 
 ## Status
 
-- **Track A**: PRD-F01 s.d. PRD-F04 **selesai**. PRD-F05, PRD-F06 **Belum dimulai**.
+- **Track A**: PRD-F01 s.d. PRD-F05 **selesai**. PRD-F06 **Belum dimulai**.
 - **Track B**: PRD-01 **selesai** kecuali eksekusi migrasi ke Supabase. PRD-02 s.d. PRD-10 **Belum dimulai**.
 
 ## Referensi Proyek Sebelumnya

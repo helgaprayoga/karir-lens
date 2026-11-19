@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% from "components/stat_tile.html" import stat_tile %}
+{% from "components/chart_card.html" import chart_card %}
+{% from "components/alert_banner.html" import alert_banner %}
+{% from "components/empty_state.html" import empty_state %}
+
+{% block title %}Insight — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Insight</h1>
+        <p class="company-sub">
+          Ringkasan dari {{ summary.total_jobs|angka }} lowongan yang sudah dikumpulkan,
+          bukan prediksi.
+        </p>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      {{ stat_tile(summary.total_jobs, "Lowongan aktif") }}
+      {{ stat_tile(summary.unique_skills, "Skill unik diminta") }}
+      {{ stat_tile(summary.categories, "Kategori") }}
+    </div>
+
+    {# ── Kategori ─────────────────────────────────────────────────────── #}
+    <div class="section-head insight-head">
+      <h2>Lowongan per kategori</h2>
+      <span class="sub">Dihitung dari cluster yang sudah terbentuk</span>
+    </div>
+
+    {%- if categories -%}
+      {{ chart_card("Jumlah lowongan per kategori", "chart-categories", caption="Angka diambil dari tabel clusters.") }}
+      <details class="chart-alt">
+        <summary>Lihat angka dalam tabel</summary>
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption>Jumlah lowongan per kategori</caption>
+            <thead>
+              <tr><th scope="col">Kategori</th><th scope="col">Kata kunci</th><th scope="col">Lowongan</th></tr>
+            </thead>
+            <tbody>
+              {%- for kategori in categories -%}
+                <tr>
+                  <td>{{ kategori.label }}</td>
+                  <td>{{ kategori.keywords|join(", ") }}</td>
+                  <td>{{ kategori.job_count|angka }}</td>
+                </tr>
+              {%- endfor -%}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {%- else -%}
+      {{ empty_state("Belum ada kategori", "Cluster belum terbentuk dari data lowongan.") }}
+    {%- endif -%}
+
+    {# ── Skill ────────────────────────────────────────────────────────── #}
+    <div class="section-head insight-head">
+      <h2>Skill paling sering diminta</h2>
+      <span class="sub">Dari seluruh lowongan aktif</span>
+    </div>
+
+    {%- if skills -%}
+      {{ chart_card("Jumlah lowongan per skill", "chart-skills", caption="Enam skill teratas.") }}
+      <details class="chart-alt">
+        <summary>Lihat angka dalam tabel</summary>
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption>Jumlah lowongan per skill</caption>
+            <thead>
+              <tr><th scope="col">Skill</th><th scope="col">Lowongan</th></tr>
+            </thead>
+            <tbody>
+              {%- for skill in skills -%}
+                <tr><td>{{ skill.skill }}</td><td>{{ skill.job_count|angka }}</td></tr>
+              {%- endfor -%}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {%- else -%}
+      {{ empty_state("Belum ada data skill", "Skill akan muncul setelah lowongan dianalisis.") }}
+    {%- endif -%}
+
+    {# ── Gaji ─────────────────────────────────────────────────────────── #}
+    <div class="section-head insight-head">
+      <h2>Statistik gaji</h2>
+      <span class="sub">Per mata uang, tidak digabung</span>
+    </div>
+
+    {%- if not salary.sample_sufficient -%}
+      {# R-F05-03: pesan jelas, bukan grafik kosong atau angka nol. #}
+      {{ alert_banner(
+           "<b>Data gaji belum dapat ditampilkan.</b> Sampel minimal " ~ (salary.minimum_sample or 5)
+           ~ " lowongan per mata uang. Menampilkan angka dari sampel lebih kecil akan menyesatkan.",
+           "warning", html=true) }}
+    {%- elif salary.groups -%}
+      {# R-F05-04: satu kartu per mata uang. Tidak pernah digabung dalam satu
+         grafik karena Rp 9.000.000 dan USD 4.200 tidak sebanding. #}
+      <div class="salary-grid">
+        {%- set PERIODE = {"month": "bulanan", "year": "tahunan", "day": "harian", "hour": "per jam", "project": "per proyek"} -%}
+        {%- for grup in salary.groups -%}
+          {# Nama periode dipetakan ke bahasa manusia. "Gaji Month · IDR"
+             adalah nilai enum mentah dan dilarang (§2 butir 4). #}
+          <section class="panel salary-card">
+            <div class="panel-head">
+              <h4>Gaji {{ PERIODE.get(grup.period, "bulanan") }} · {{ grup.currency }}</h4>
+              <span class="sub">{{ grup.sample }} sampel</span>
+            </div>
+            <dl class="salary-stats">
+              <div>
+                <dt>Median</dt>
+                <dd>{{ grup.median|angka }} <span>{{ grup.currency }}</span></dd>
+              </div>
+              <div>
+                <dt>P25</dt>
+                <dd>{{ grup.p25|angka }} <span>{{ grup.currency }}</span></dd>
+              </div>
+              <div>
+                <dt>P75</dt>
+                <dd>{{ grup.p75|angka }} <span>{{ grup.currency }}</span></dd>
+              </div>
+            </dl>
+            <p class="foot-note">
+              Separuh lowongan berada antara P25 dan P75. Angka ini dari data yang
+              terkumpul, bukan perkiraan.
+            </p>
+          </section>
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      {{ empty_state("Belum ada data gaji", "Lowongan yang menyebut gaji belum cukup untuk dihitung.") }}
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Tentang insight">
+    <div class="hint">
+      <span>Semua angka di halaman ini dihitung dari data lowongan yang tersimpan,
+      tanpa estimasi atau prediksi.</span>
+    </div>
+
+    <section class="panel">
+      <h4>Ambang sampel</h4>
+      <p class="field-hint">
+        Statistik gaji hanya tampil bila satu mata uang punya minimal
+        {{ salary.minimum_sample or 5 }} lowongan. Di bawah itu, angkanya terlalu
+        mudah berubah untuk dijadikan acuan.
+      </p>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart/chart.umd.min.js') }}"></script>
+<script>
+(function () {
+  "use strict";
+  if (typeof Chart === "undefined") return;
+
+  /* Registry grafik (PRD-F05 §9): satu objek per halaman, dan setiap grafik
+     lama dihancurkan sebelum yang baru dibuat. Tanpa destroy, kanvas yang
+     dirender ulang menumpuk tooltip dan listener. */
+  var charts = {};
+
+  function destroyChart(key) {
+    if (charts[key]) {
+      charts[key].destroy();
+      delete charts[key];
+    }
+  }
+
+  /* Warna dibaca dari token, bukan nilai hex di JavaScript (§9). */
+  var css = getComputedStyle(document.documentElement);
+  var token = function (nama) {
+    return css.getPropertyValue(nama).trim();
+  };
+
+  var warnaBar = token("--chart-bar");
+  var warnaGrid = token("--chart-grid");
+  var warnaTeks = token("--chart-label");
+
+  /* Satu konfigurasi bar horizontal untuk kedua grafik. Label kategori dan
+     skill sama-sama panjang, dan pada 360px label vertikal saling menimpa
+     sehingga tidak terbaca (R-F05-05). */
+  var dasarHorizontal = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: "y",
+    plugins: {
+      legend: { display: false },
+      tooltip: { intersect: false }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: { color: warnaGrid },
+        ticks: { color: warnaTeks, font: { size: 11 }, precision: 0 }
+      },
+      y: {
+        grid: { display: false },
+        ticks: { color: warnaTeks, font: { size: 11 } }
+      }
+    }
+  };
+
+  function horizontalChart(id, labels, values, label) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    destroyChart(id);
+    charts[id] = new Chart(el, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: values,
+          backgroundColor: warnaBar,
+          borderRadius: 4,
+          maxBarThickness: 22
+        }]
+      },
+      options: dasarHorizontal
+    });
+  }
+
+  var kategori = {{ categories|map(attribute='label')|list|tojson }};
+  var kategoriJumlah = {{ categories|map(attribute='job_count')|list|tojson }};
+  var skill = {{ skills|map(attribute='skill')|list|tojson }};
+  var skillJumlah = {{ skills|map(attribute='job_count')|list|tojson }};
+
+  /* Grafik kategori memakai bar horizontal. Pada 360px, lima label kategori
+     vertikal saling menimpa dan menjadi tidak terbaca (R-F05-05). Bar
+     horizontal memberi label ruang penuh di sisi kiri. */
+  if (kategori.length) {
+    horizontalChart("chart-categories", kategori, kategoriJumlah, "Lowongan");
+  }
+  if (skill.length) {
+    horizontalChart("chart-skills", skill, skillJumlah, "Lowongan");
+  }
+})();
+</script>
+{% endblock %}

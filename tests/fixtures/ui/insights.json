@@ -2,49 +2,49 @@
   "categories": [
     { "cluster_id": 1, "label": "Backend & Data", "job_count": 120, "keywords": ["python", "sql", "api"] },
     { "cluster_id": 2, "label": "Desain Produk", "job_count": 86, "keywords": ["figma", "ux", "design system"] },
-    { "cluster_id": 3, "label": "Infrastruktur", "job_count": 41, "keywords": ["docker", "kubernetes", "aws"] }
+    { "cluster_id": 3, "label": "Infrastruktur", "job_count": 41, "keywords": ["docker", "kubernetes", "aws"] },
+    { "cluster_id": 4, "label": "Frontend", "job_count": 74, "keywords": ["javascript", "react", "css"] },
+    { "cluster_id": 5, "label": "Quality Assurance", "job_count": 28, "keywords": ["testing", "selenium", "qa"] }
   ],
   "skills": [
     { "skill": "python", "job_count": 210 },
     { "skill": "sql", "job_count": 184 },
     { "skill": "figma", "job_count": 96 },
-    { "skill": "docker", "job_count": 74 }
+    { "skill": "docker", "job_count": 74 },
+    { "skill": "react", "job_count": 63 },
+    { "skill": "testing", "job_count": 41 }
   ],
   "salary": {
-    "sample_sufficient": false,
-    "sample": 3,
+    "sample_sufficient": true,
     "minimum_sample": 5,
-    "groups": []
+    "groups": [
+      { "currency": "IDR", "period": "month", "sample": 42, "median": 9000000, "p25": 7000000, "p75": 12000000 },
+      { "currency": "USD", "period": "month", "sample": 11, "median": 4200, "p25": 3500, "p75": 5600 }
+    ]
   },
   "summary": {
     "total_jobs": 1842,
     "unique_skills": 128,
-    "matched_today": 12
+    "categories": 5
   },
   "insight_cards": [
     {
-      "icon": "plus",
-      "tone": "green",
-      "text": "<b>3 lowongan baru</b> sesuai skill yang Anda konfirmasi",
-      "pill": "Baru",
-      "pill_tone": "green",
-      "when": "hari ini"
-    },
-    {
-      "icon": "info",
-      "tone": "blue",
-      "text": "Profil Anda belum lengkap: <b>2 skill</b> masih kosong",
-      "pill": "Saran",
+      "text": "<b>120 lowongan</b> di kategori Backend & Data",
+      "pill": "Kategori terbesar",
       "pill_tone": "blue",
-      "when": "perlu 5 menit"
+      "when": "dari 5 kategori"
     },
     {
-      "icon": "warning",
-      "tone": "amber",
-      "text": "Skill <b>sql</b> paling sering diminta di kategori Anda",
-      "pill": "Perlu perhatian",
-      "pill_tone": "amber",
-      "when": "12 lowongan"
+      "text": "Skill <b>python</b> paling sering diminta: 210 lowongan",
+      "pill": "Paling dicari",
+      "pill_tone": "green",
+      "when": "dari 128 skill unik"
+    },
+    {
+      "text": "Gaji bulanan IDR punya <b>42 sampel</b>, cukup untuk statistik",
+      "pill": "Sampel memadai",
+      "pill_tone": "blue",
+      "when": "minimum 5"
     }
   ]
 }

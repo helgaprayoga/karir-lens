@@ -2474,6 +2474,246 @@ a.insight:hover {
   max-height: 360px;
 }
 
+/* --- Insight (PRD-F05) --------------------------------------------------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: var(--gap-card);
+  margin-bottom: var(--space-5);
+}
+
+.insight-head {
+  margin-top: var(--space-5);
+}
+
+/* Alternatif tekstual grafik (§9): <details> agar angka tetap terbaca pembaca
+   layar dan dapat disalin tanpa harus membaca kanvas. */
+.chart-alt {
+  margin-top: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--sheet);
+}
+
+.chart-alt > summary {
+  padding: 10px var(--pad-panel);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: var(--r-card);
+}
+
+.chart-alt > summary:hover {
+  background: var(--sunken);
+}
+
+.chart-alt > summary:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: -2px;
+}
+
+.chart-alt .table-wrap {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+}
+
+.chart-alt .data-table caption {
+  padding: var(--space-3) var(--space-3) 0;
+  font-size: var(--text-micro);
+  color: var(--ink-3);
+  text-align: left;
+}
+
+/* Gaji: satu kartu per mata uang, tidak pernah digabung (R-F05-04). */
+.salary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: var(--gap-card);
+}
+
+.salary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.salary-stats div {
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+}
+
+.salary-stats dt {
+  font-size: var(--text-micro);
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.salary-stats dd {
+  margin: 3px 0 0;
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.salary-stats dd span {
+  font-size: var(--text-micro);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+/* --- Admin (PRD-F05) ---------------------------------------------------- */
+
+.admin-tabs {
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border-radius: var(--r-chip);
+  color: var(--ink-3);
+  font-size: var(--text-label);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.admin-tabs a:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+/* Tab admin: aksen garis bawah, bukan blok gelap. Blok gelap penuh membuat
+   navigasi bagian terbaca seperti tombol aksi utama. */
+.admin-tabs a[aria-current="page"] {
+  background: var(--sunken);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--action);
+  border-radius: var(--r-chip) var(--r-chip) 0 0;
+}
+
+.admin-tabs a:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.admin-head {
+  margin-top: var(--space-5);
+}
+
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.admin-search input {
+  flex: 1 1 220px;
+  min-width: 0;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: var(--text-label);
+  color: var(--ink);
+}
+
+.admin-search input:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 1px;
+}
+
+.admin-more {
+  margin-top: var(--space-3);
+}
+
+.cell-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cell-note {
+  max-width: 260px;
+  font-size: var(--text-micro);
+  color: var(--ink-3);
+}
+
+.cell-note .muted {
+  color: var(--ink-4);
+}
+
+/* Baris tabel yang difokus keyboard harus terlihat (§5). */
+.data-table:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+/* Dialog konfirmasi. <dialog> native: Escape menutup, fokus terkelola. */
+.confirm {
+  width: min(420px, calc(100vw - 32px));
+  padding: var(--pad-card-y) var(--pad-card-x);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: var(--shadow-toast);
+}
+
+.confirm::backdrop {
+  background: rgb(17 24 39 / 0.42);
+}
+
+.confirm h2 {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-section);
+}
+
+.confirm-body {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-label);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: var(--sheet);
+}
+
+.btn-danger:hover {
+  background: var(--danger-ink);
+}
+
 /* --- Page, footer, styleguide -------------------------------------------- */
 
 .site-footer {

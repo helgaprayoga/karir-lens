@@ -3,10 +3,27 @@
     "total_jobs": 1842,
     "active_users": 37,
     "total_runs": 128,
-    "last_run_at": "2026-11-18T00:04:12Z"
+    "total_clusters": 5,
+    "last_run_at": "2026-11-18T00:04:12Z",
+    "last_run_status": "success"
   },
   "users": [
-    { "id": 1, "name": "Helga Arya Prayoga", "email": "helga@example.com", "role": "admin", "created_at": "2026-09-01T00:00:00Z" },
-    { "id": 2, "name": "Rina Pratama", "email": "rina@example.com", "role": "user", "created_at": "2026-10-12T00:00:00Z" }
+    { "id": 1, "name": "Helga Arya Prayoga", "email": "helga@example.com", "role": "admin", "created_at": "2026-09-01T00:00:00Z", "skill_count": 5 },
+    { "id": 2, "name": "Rina Pratama", "email": "rina@example.com", "role": "user", "created_at": "2026-10-12T00:00:00Z", "skill_count": 3 },
+    { "id": 3, "name": "Bagas Nugroho", "email": "bagas@example.com", "role": "user", "created_at": "2026-10-28T00:00:00Z", "skill_count": 2 }
+  ],
+  "jobs": [
+    { "id": 1, "title": "Product Designer — SaaS", "company_name": "NovaTech Labs", "source": "dealls", "location": "Jakarta Selatan", "posted_at": "2026-11-18T07:00:00Z", "is_active": true },
+    { "id": 2, "title": "Senior SaaS Dashboard UI/UX Designer", "company_name": "CloudCore Design", "source": "kalibrr", "location": "Bandung", "posted_at": "2026-11-18T05:30:00Z", "is_active": true },
+    { "id": 3, "title": "Backend Engineer (Python)", "company_name": "NovaTech Labs", "source": "dealls", "location": "Jakarta Selatan", "posted_at": "2026-11-18T07:00:00Z", "is_active": true },
+    { "id": 4, "title": "Data Engineer", "company_name": "Northwind Data", "source": "kalibrr", "location": "Jakarta Pusat", "posted_at": "2026-11-18T03:15:00Z", "is_active": true },
+    { "id": 5, "title": "Frontend Engineer", "company_name": "Bright Studio", "source": "remotive", "location": "Remote", "posted_at": "2026-11-17T09:00:00Z", "is_active": false }
+  ],
+  "clusters": [
+    { "id": 1, "label": "Backend & Data", "keywords": ["python", "sql", "api"], "job_count": 120 },
+    { "id": 2, "label": "Desain Produk", "keywords": ["figma", "ux", "design system"], "job_count": 86 },
+    { "id": 3, "label": "Infrastruktur", "keywords": ["docker", "kubernetes", "aws"], "job_count": 41 },
+    { "id": 4, "label": "Frontend", "keywords": ["javascript", "react", "css"], "job_count": 74 },
+    { "id": 5, "label": "Quality Assurance", "keywords": ["testing", "selenium", "qa"], "job_count": 28 }
   ]
 }
