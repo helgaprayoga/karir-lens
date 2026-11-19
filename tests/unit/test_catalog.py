@@ -61,6 +61,40 @@ def test_job_card_anatomy_order(catalog) -> None:
     assert posisi == sorted(posisi), f"Anatomi kartu tidak berurutan: {posisi}"
 
 
+def test_whole_card_is_clickable(catalog) -> None:
+    """Seluruh permukaan kartu menuju detail, bukan hanya judulnya.
+
+    Satu tautan penutup dipakai karena kartu berisi <button> simpan —
+    <button> di dalam <a> tidak sah.
+    """
+    body = _html(catalog.get("/preview/jobs"))
+    kartu = body.split('class="job-card"')[1].split("</article>")[0]
+
+    assert 'class="card-link"' in kartu, "kartu tidak punya tautan penutup"
+    assert 'href="/preview/jobs/' in kartu
+    # Judul bukan tautan, agar tidak ada dua tujuan tab yang sama.
+    assert not re.search(r"<h3>\s*<a", kartu)
+    # Tombol simpan tetap berada di atas tautan penutup.
+    css = open("static/css/components.css", encoding="utf-8").read()
+    assert re.search(r"\.save-btn\s*\{[^}]*z-index:\s*2", css, re.S)
+    assert re.search(r"\.card-link\s*\{[^}]*z-index:\s*1", css, re.S)
+
+
+def test_card_top_not_inflated_by_save_button() -> None:
+    """Tombol simpan 44px tidak boleh menggelembungkan baris atas kartu (§5).
+
+    Area sentuh tetap 44×44, tetapi margin negatif menariknya keluar dari alur
+    visual sehingga .card-top kembali setinggi teksnya.
+    """
+    css = open("static/css/components.css", encoding="utf-8").read()
+    blok = css.split(".job-card .card-top {")[1].split("}")[0]
+    assert "min-height: 0" in blok
+
+    simpan = css.split(".job-card .save-btn {")[1].split("}")[0]
+    assert "var(--touch-min)" in simpan, "area sentuh 44px harus dipertahankan"
+    assert "margin-block: calc(" in simpan, "tombol harus ditarik keluar dari alur"
+
+
 # --- R-F02-04: badge sumber sesuai token --------------------------------
 
 @pytest.mark.parametrize("sumber", ["dealls", "kalibrr", "remotive"])
@@ -131,6 +165,56 @@ def test_skeleton_state(catalog) -> None:
     assert 'class="company"' not in body
 
 
+def test_error_state(catalog) -> None:
+    """State error memakai AlertBanner dengan saran memuat ulang (§3.1).
+
+    Track A mensimulasikannya lewat `?error=1`; PRD-04 akan memicunya dari
+    kegagalan service.
+    """
+    body = _html(catalog.get("/preview/jobs?error=1"))
+    assert 'class="banner banner-error"' in body
+    assert "gagal dimuat" in body
+    assert "Muat ulang" in body
+    # Tidak boleh menampilkan kartu atau skeleton saat gagal.
+    assert 'class="job-card"' not in body
+    assert "skeleton-card" not in body
+
+
+# --- R-F02-15 / §3.1: isi right rail ------------------------------------
+
+def test_right_rail_has_metric_cells(catalog) -> None:
+    """Right rail memuat MetricCell dari data yang tersedia (§3.1).
+
+    Hanya angka yang konsisten dengan halaman ini. Total perusahaan seluruh
+    dataset sengaja tidak dipakai: "213 perusahaan" di samping "6 lowongan"
+    terbaca seolah 213 perusahaan punya 6 lowongan.
+    """
+    body = _html(catalog.get("/preview/jobs"))
+    assert body.count('class="metric-cell') >= 2
+    assert "Lowongan ditemukan" in body
+    assert "Filter aktif" in body
+    assert "hari terakhir" in body
+
+
+def test_rail_metrics_match_page(catalog) -> None:
+    """Angka di rail sama dengan isi halaman, bukan total dataset."""
+    body = _html(catalog.get("/preview/jobs?city=Bandung"))
+    # Satu lowongan cocok, satu filter aktif.
+    assert re.search(r'<div class="big"><span>1</span></div>\s*<div class="cap">Lowongan ditemukan', body)
+    assert "213" not in body.split('aria-label="Ringkasan"')[1].split("</aside>")[0]
+
+
+def test_right_rail_has_skill_panel(catalog) -> None:
+    """Right rail memuat SkillPanel; tanpa login dirender keadaan kosong (§4.13)."""
+    body = _html(catalog.get("/preview/jobs"))
+    assert 'class="person"' in body
+    assert "Skill terkonfirmasi" in body
+    # Pengunjung publik tidak punya skill, jadi panel tidak boleh mengarang isi.
+    assert "Belum ada skill terkonfirmasi." in body
+    # Larangan §4.13: tidak ada persentase kelengkapan profil.
+    assert "kelengkapan profil" not in body.lower()
+
+
 # --- R-F02-07: pagination ----------------------------------------------
 
 def test_pagination_meta(catalog) -> None:
@@ -187,6 +271,19 @@ def test_search_and_filter_narrow_results(catalog) -> None:
 
 # --- R-F02-11 / R-F02-12: detail lowongan ------------------------------
 
+def test_filters_have_no_divider(catalog) -> None:
+    """Bar filter tidak lagi memakai garis pemisah di bawahnya (§12.6).
+
+    Garis itu memotong halaman tepat di atas "6 Lowongan" dan terbaca sebagai
+    batas tabel, bukan pemisah kelompok filter.
+    """
+    css = open("static/css/components.css", encoding="utf-8").read()
+    blok = css.split(".filters {")[1].split("}")[0]
+    assert "border-bottom" not in blok
+    # Jarak ke judul hasil tetap ada, tapi lewat margin bukan padding garis.
+    assert "margin-bottom" in blok
+
+
 def test_job_detail_renders(catalog) -> None:
     """Detail merender seluruh field dan tautan asli."""
     body = _html(catalog.get("/preview/jobs/1"))
@@ -207,7 +304,93 @@ def test_job_detail_not_found(catalog) -> None:
     assert catalog.get("/preview/jobs/9999").status_code == 404
 
 
+def test_detail_salary_has_gaji_label(catalog) -> None:
+    """Blok gaji diberi judul "Gaji" agar angkanya punya konteks."""
+    body = _html(catalog.get("/preview/jobs/1"))
+    blok = body.split('class="detail-salary"')[1]
+    assert 'class="boxtitle"' in blok
+    assert "Gaji" in blok.split("</div>")[0]
+
+
+def test_detail_save_is_in_card_corner(catalog) -> None:
+    """Tombol simpan berada di pojok kartu, bukan di baris aksi bawah.
+
+    Juga: keterangan "Tautan menuju lowongan asli" sudah dihapus karena
+    mengulang informasi yang sudah dibawa tombol sumber.
+    """
+    body = _html(catalog.get("/preview/jobs/1"))
+    assert "Tautan menuju lowongan asli" not in body
+
+    css = open("static/css/components.css", encoding="utf-8").read()
+    blok = css.split(".job-card .detail-save {")[1].split("}")[0]
+    assert "position: absolute" in blok
+    assert "top:" in blok and "right:" in blok
+    # Tombol tidak boleh lagi berada di dalam wadah aksi.
+    aksi = body.split('class="detail-actions"')[1].split("</div>")[0]
+    assert "save-btn" not in aksi
+
+
+def test_detail_has_no_divider_gap(catalog) -> None:
+    """Garis pemisah beserta jarak besar di atasnya dihapus (§12.4)."""
+    css = open("static/css/components.css", encoding="utf-8").read()
+    for kelas in (".detail-body {", ".detail-actions {"):
+        blok = css.split(kelas)[1].split("}")[0]
+        assert "border-top: 0" in blok, f"{kelas} masih memakai garis pemisah"
+        assert "padding-top: 0" in blok, f"{kelas} masih menyisakan jarak di atas garis"
+
+
+def test_detail_back_link_is_a_control(catalog) -> None:
+    """Tautan kembali bergaya kendali, bukan teks telanjang."""
+    body = _html(catalog.get("/preview/jobs/1"))
+    assert 'class="back-link"' in body
+    assert "Kembali ke daftar lowongan" in body
+    assert "<svg" in body.split('class="back-link"')[1].split("</a>")[0]
+
+    css = open("static/css/components.css", encoding="utf-8").read()
+    blok = css.split(".back-link {")[1].split("}")[0]
+    for properti in ("padding:", "border:", "border-radius:", "background:"):
+        assert properti in blok, f".back-link tidak punya {properti}"
+
+
+def test_company_panel_gap_is_tight(catalog) -> None:
+    """Jarak person → tombol di panel perusahaan dipersempit (§12.4)."""
+    body = _html(catalog.get("/preview/jobs/1"))
+    assert 'panel panel-company' in body
+
+    css = open("static/css/components.css", encoding="utf-8").read()
+    assert ".panel-company .person {" in css
+    blok = css.split(".panel-company .person {")[1].split("}")[0]
+    assert "margin-bottom: 0" in blok
+    tombol = css.split(".panel-company .btn {")[1].split("}")[0]
+    assert "margin-top: 9px" in tombol
+
+
 # --- R-F02-13 / R-F02-14: halaman perusahaan ---------------------------
+
+def test_company_back_link_matches_detail(catalog) -> None:
+    """Halaman perusahaan memakai kendali kembali yang sama dengan detail."""
+    perusahaan = _html(catalog.get("/preview/companies/novatech-labs"))
+    detail = _html(catalog.get("/preview/jobs/1"))
+
+    for body in (perusahaan, detail):
+        assert 'class="back-link"' in body
+        assert "Kembali ke daftar lowongan" in body
+
+    # Bukan lagi teks telanjang di dalam field-hint.
+    assert 'class="field-hint">\n      <a href' not in perusahaan
+
+
+def test_company_subtitle_has_small_gap(catalog) -> None:
+    """Nama perusahaan dan baris jumlah·lokasi diberi jarak kecil, bukan 0."""
+    body = _html(catalog.get("/preview/companies/novatech-labs"))
+    assert 'class="company-sub"' in body
+
+    css = open("static/css/components.css", encoding="utf-8").read()
+    blok = css.split(".company-head h1 {")[1].split("}")[0]
+    assert "margin-bottom: 6px" in blok
+    sub = css.split(".company-sub {")[1].split("}")[0]
+    assert "margin: 0" in sub, "margin bawaan <p> akan menambah jarak lagi"
+
 
 def test_company_page_no_external_profile(catalog) -> None:
     """Tidak ada logo, rating, jumlah karyawan, atau alamat di markup."""

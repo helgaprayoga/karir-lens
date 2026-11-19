@@ -429,6 +429,8 @@ img {
   border-radius: var(--r-card);
   text-decoration: none;
   color: inherit;
+  /* Titik acuan tautan yang menutupi seluruh kartu. */
+  position: relative;
   transition: border-color var(--dur-fast) var(--ease-out),
     transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
@@ -457,8 +459,8 @@ img {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: 9px;
-  min-height: 24px;
+  margin-bottom: 6px;
+  min-height: 0;
 }
 
 .job-card .company {
@@ -556,7 +558,30 @@ img {
   color: var(--ink-4);
   cursor: pointer;
   padding: 0;
+  /* Area sentuh 44px tetap memenuhi §5, tetapi tingginya tidak boleh
+     menggelembungkan baris atas kartu. Margin negatif menariknya keluar dari
+     alur visual, sehingga .card-top kembali setinggi teksnya. */
+  margin-block: calc((var(--touch-min) - 20px) / -2);
   transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  z-index: 2;
+}
+
+/* Seluruh kartu dapat diklik. Tautan ini menutupi kartu; ia berada di bawah
+   tombol simpan dan tautan lain (z-index 1) agar keduanya tetap dapat diklik
+   sendiri, dan di atas teks agar area klik mencakup seluruh permukaan. */
+.job-card .card-link {
+  position: absolute;
+  /* `inset: 0` relatif terhadap padding box, sehingga border 1px tetap menjadi
+     zona mati. -1px membuat seluruh tepi kartu ikut dapat diklik. */
+  inset: -1px;
+  z-index: 1;
+  border-radius: inherit;
+  text-indent: -9999px;
+  overflow: hidden;
+}
+
+.job-card .card-link:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .job-card .save-btn:hover {
@@ -739,8 +764,8 @@ a.tag:hover {
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  padding: 0 0 18px;
-  border-bottom: 1px solid var(--line);
+  padding: 0;
+  margin-bottom: var(--space-4);
 }
 
 .chip {
@@ -1965,30 +1990,54 @@ a.insight:hover {
 }
 
 .detail-card {
-  gap: var(--space-3);
+  gap: var(--space-2);
+  position: relative;
 }
 
-.detail-tags {
-  margin-top: var(--space-3);
+/* Tombol simpan di pojok kanan atas kartu (bukan di baris aksi).
+   Spesifisitas .job-card dinaikkan agar menang atas `margin-block` negatif
+   milik .save-btn — di sini tombolnya sudah keluar dari alur karena absolute. */
+.job-card .detail-save {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin: 0;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
 }
 
-.detail-save {
-  margin-left: 0;
+.job-card .detail-save:hover {
+  border-color: var(--line-2);
 }
 
+/* Ruang kanan agar gaji tidak pernah berada di bawah tombol simpan. */
+.detail-salary {
+  padding-right: 48px;
+}
+
+/* Jarak antar blok di kartu detail diatur oleh `gap`, bukan margin anak. */
+.detail-card .detail-tags {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Garis pemisah dihapus: jarak di atasnya terbaca sebagai lubang kosong, bukan
+   pemisah. Hirarki dibawa oleh ukuran teks judul bagian. */
 .detail-body {
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
+  margin-top: var(--space-2);
+  padding-top: 0;
+  border-top: 0;
 }
 
 .detail-body h2 {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .detail-body p {
   color: var(--ink-2);
-  line-height: 1.65;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .detail-actions {
@@ -1996,9 +2045,53 @@ a.insight:hover {
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
+  margin-top: var(--space-1);
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Tautan kembali: kendali yang jelas, bukan teks telanjang. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: var(--space-3);
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
+  background: var(--sheet);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.back-link:hover {
+  background: var(--sunken);
+  border-color: var(--line-2);
+  color: var(--ink);
+}
+
+.back-link:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.back-link svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Panel perusahaan: rapatkan jarak person → tombol. */
+.panel-company .person {
+  margin-bottom: 0;
+  align-items: center;
+}
+
+.panel-company .btn {
+  margin-top: 9px;
 }
 
 .detail-similar-head {
@@ -2010,8 +2103,16 @@ a.insight:hover {
   align-items: flex-start;
 }
 
-.company-head .field-hint {
+/* Jarak kecil saja antara nama perusahaan dan baris jumlah · lokasi. Sebelumnya
+   .field-hint di sini di-nol-kan sehingga keduanya menempel. */
+.company-head h1 {
+  margin-bottom: 6px;
+}
+
+.company-sub {
   margin: 0;
+  font-size: var(--text-meta);
+  color: var(--ink-3);
 }
 
 .company-facts {

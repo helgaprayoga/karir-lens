@@ -25,6 +25,14 @@
 
 {% macro job_card(job, show_match=False, href=None) -%}
   <article class="job-card">
+    {# Seluruh permukaan kartu dapat diklik (R-F02-02). Satu tautan penutup
+       dipakai alih-alih membungkus kartu dengan <a>, karena kartu berisi
+       <button> simpan — <button> di dalam <a> tidak sah. Judul sengaja bukan
+       tautan agar tidak ada dua tujuan tab yang sama. #}
+    {%- if href -%}
+      <a class="card-link" href="{{ href }}" aria-label="{{ job.title }} di {{ job.company_name }}"></a>
+    {%- endif -%}
+
     <div class="card-top">
       <span class="company">{{ job.company_name or "Perusahaan tidak disebutkan" }}</span>
       {{ source_badge(job.source) }}
@@ -36,7 +44,7 @@
       </button>
     </div>
 
-    <h3>{% if href %}<a href="{{ href }}">{{ job.title }}</a>{% else %}{{ job.title }}{% endif %}</h3>
+    <h3>{{ job.title }}</h3>
 
     <div class="meta">
       {%- set type_label = employment_label(job.employment_type) -%}

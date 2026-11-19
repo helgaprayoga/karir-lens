@@ -11,20 +11,21 @@
 {% from "components/skill_tag.html" import skill_tags %}
 {% from "components/employment_type_badge.html" import employment_type_badge %}
 {% from "components/empty_state.html" import empty_state %}
+{% from "components/icons.html" import icon_arrow_left %}
 
 {% block title %}{{ company.name }} — KarirLens{% endblock %}
 
 {% block content %}
 <div class="layout">
   <main class="feed">
-    <p class="field-hint">
-      <a href="{{ url_for('preview.jobs') }}">← Kembali ke daftar lowongan</a>
-    </p>
+    <a class="back-link" href="{{ url_for('preview.jobs') }}">
+      {{ icon_arrow_left() }} Kembali ke daftar lowongan
+    </a>
 
     <div class="page-head company-head">
       <div>
         <h1>{{ company.name }}</h1>
-        <p class="field-hint">
+        <p class="company-sub">
           {{ company.job_count }} lowongan tersedia · {{ company.locations|join(", ") }}
         </p>
       </div>

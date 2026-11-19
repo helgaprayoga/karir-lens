@@ -110,8 +110,29 @@ def jobs():
     halaman = request.args.get("page", type=int) or 1
     loading = request.args.get("loading") == "1"
     kosong = request.args.get("empty") == "1"
+    gagal = request.args.get("error") == "1"
+
+    if gagal:
+        # State error wajib dimiliki setiap daftar (§3.1). Pada Track A
+        # kegagalan disimulasikan lewat query string.
+        return render_template(
+            "jobs/list.html",
+            items=[],
+            meta={"page": 1, "per_page": PER_PAGE, "total": 0, "has_next": False},
+            filters=aktif,
+            options=_options(aktif),
+            active_count=_active_count(aktif),
+            is_loading=False,
+            is_error=True,
+            url_params={},
+            stats={"total_jobs": 0, "total_companies": 0},
+            sparkline=[],
+            categories=[],
+        )
 
     page = fixtures.jobs_page_empty() if kosong else fixtures.jobs_page(aktif, halaman, PER_PAGE)
+    rumah = fixtures.home()
+    profil = fixtures.profile()
 
     return render_template(
         "jobs/list.html",
@@ -121,8 +142,12 @@ def jobs():
         options=_options(aktif),
         active_count=_active_count(aktif),
         is_loading=loading,
+        is_error=False,
         url_params=_url_params(aktif),
-        categories=fixtures.home().get("categories", []),
+        stats=rumah.get("stats", {}),
+        sparkline=rumah.get("sparkline", []),
+        current_skills=profil.get("skills", []),
+        categories=rumah.get("categories", []),
     )
 
 

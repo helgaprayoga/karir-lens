@@ -14,6 +14,8 @@
 {% from "components/empty_state.html" import empty_state %}
 {% from "components/skeleton_card.html" import skeleton_card %}
 {% from "components/icons.html" import icon_filter, icon_arrow_out %}
+{% from "components/skill_panel.html" import skill_panel %}
+{% from "components/alert_banner.html" import alert_banner %}
 
 {% block title %}{{ meta.total }} Lowongan — KarirLens{% endblock %}
 
@@ -64,7 +66,14 @@
       <span class="sub">Dari Dealls, Kalibrr, dan Remotive</span>
     </div>
 
-    {%- if is_loading -%}
+    {%- if is_error -%}
+      {{ alert_banner(
+           "<b>Data lowongan gagal dimuat.</b> Sumber mungkin sedang tidak dapat diakses. Coba muat ulang halaman.",
+           "error", html=true) }}
+      <p>
+        <a class="btn btn-line" href="{{ url_for('preview.jobs') }}">Muat ulang</a>
+      </p>
+    {%- elif is_loading -%}
       <div class="cards" aria-busy="true">
         {%- for _ in range(meta.per_page) -%}{{ skeleton_card() }}{%- endfor -%}
       </div>
@@ -86,8 +95,43 @@
 
   <aside class="rail" aria-label="Ringkasan">
     <div class="hint">
-      <span><b>{{ meta.total }} lowongan</b> tersedia dari Dealls, Kalibrr, dan Remotive.</span>
+      {%- if is_error -%}
+        <span>Sumber lowongan tidak dapat diakses saat ini.</span>
+      {%- else -%}
+        <span><b>{{ meta.total }} lowongan</b> tersedia dari Dealls, Kalibrr, dan Remotive.</span>
+      {%- endif -%}
     </div>
+
+    {# ── MetricCell: hanya angka yang konsisten dengan halaman ini. Total
+       perusahaan seluruh dataset sengaja tidak ditampilkan di sini agar tidak
+       terbaca sebagai "213 perusahaan pada 6 lowongan". Saat gagal dimuat,
+       angka tidak ditampilkan sama sekali — nol adalah klaim, bukan ketiadaan. #}
+    {%- if not is_error -%}
+      <section class="panel">
+        <h4>Ringkasan</h4>
+        <div class="metric-grid">
+          <div class="metric-cell">
+            <div class="big"><span>{{ meta.total }}</span></div>
+            <div class="cap">Lowongan ditemukan</div>
+          </div>
+          <div class="metric-cell">
+            <div class="big"><span>{{ active_count }}</span></div>
+            <div class="cap">Filter aktif</div>
+          </div>
+          {%- if sparkline -%}
+            <div class="metric-cell wide">
+              <div class="skill-row">
+                <div class="big"><span>{{ sparkline|sum }}</span></div>
+                <div class="cap">Lowongan baru {{ sparkline|length }} hari terakhir</div>
+              </div>
+              <div class="spark" aria-hidden="true">
+                {%- for tinggi in sparkline -%}<i data-height="{{ tinggi }}"></i>{%- endfor -%}
+              </div>
+            </div>
+          {%- endif -%}
+        </div>
+      </section>
+    {%- endif -%}
 
     {%- if categories -%}
       <section class="panel">
@@ -106,11 +150,36 @@
       </section>
     {%- endif -%}
 
-    <section class="panel">
-      <h4>Butuh rekomendasi?</h4>
-      <p class="field-hint">Masuk dan konfirmasi skill dari CV untuk mendapat rekomendasi yang relevan.</p>
-      <a class="btn btn-soft" href="{{ url_for('auth.login') }}">Masuk</a>
-    </section>
+    {# ── SkillPanel: katalog publik tidak punya pengguna login, jadi yang
+       dirender adalah keadaan "belum masuk". Menampilkan skill karangan akan
+       melanggar prinsip jujur terhadap data (§2 butir 3). ───────────────── #}
+    {%- if current_user.is_authenticated -%}
+      {{ skill_panel(
+           {"name": current_user.display_name, "role": "Skill terkonfirmasi Anda"},
+           current_skills,
+           action_label="Kelola skill dari CV",
+           action_href=url_for("auth.login")) }}
+    {%- else -%}
+      {{ skill_panel(
+           None,
+           [],
+           action_label="Masuk untuk mengelola skill",
+           note="Rekomendasi dihitung dari skill yang Anda konfirmasi.") }}
+    {%- endif -%}
   </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Tinggi batang sparkline berasal dari data, bukan token visual, sehingga
+   diterapkan di sini agar tidak ada atribut style= di template. */
+(function () {
+  "use strict";
+  document.querySelectorAll(".spark i[data-height]").forEach(function (bar) {
+    var tinggi = parseInt(bar.getAttribute("data-height"), 10);
+    if (!isNaN(tinggi)) bar.style.height = tinggi + "px";
+  });
+})();
+</script>
 {% endblock %}

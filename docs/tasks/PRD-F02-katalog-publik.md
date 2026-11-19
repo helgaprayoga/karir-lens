@@ -194,14 +194,14 @@ Task ini membangun seluruh tampilan katalog tanpa query database. Data berasal d
 
 | Berkas | Isi |
 |---|---|
-| `templates/jobs/list.html` | Pencarian, chip filter, urutan, grid kartu, pagination, empty/loading state, right rail |
+| `templates/jobs/list.html` | Pencarian, chip filter, urutan, grid kartu, pagination, empty/loading/error state, right rail |
 | `templates/jobs/detail.html` | Judul di luar kartu, gaji, skill, deskripsi, tautan sumber, lowongan serupa |
 | `templates/jobs/home.html` | Hero, `StatTile`, lowongan terbaru, pintasan kategori |
 | `templates/companies/detail.html` | Ringkasan perusahaan dari data lowongan, tanpa profil eksternal |
 | `app/preview/routes.py` | Route `home`, `jobs`, `jobs/<id>`, `companies/<slug>` beserta penyusun tautan chip |
 | `app/preview/fixtures.py` | Filter naif, pagination, perusahaan per slug, lowongan serupa, opsi chip |
 | `tests/fixtures/ui/` | `jobs.json` (6 item), `home.json`, `companies.json`, `jobs_empty.json` |
-| `tests/unit/test_catalog.py` | 27 test untuk §7.1 |
+| `tests/unit/test_catalog.py` | 30 test untuk §7.1 |
 
 Tiga keputusan yang diambil saat implementasi:
 
@@ -209,9 +209,106 @@ Tiga keputusan yang diambil saat implementasi:
 2. **Tautan toggle disiapkan route, bukan template.** `_options()` mengembalikan `{value, label, active, href}` sehingga template tidak perlu tahu aturan "bila aktif, hapus filter".
 3. **`height: 100%` pada `JobCard` dipindah ke `.cards .job-card`.** Di halaman detail, kartu berada di luar grid dan memanjang mengisi sisa tinggi `.feed` — ruang kosong sekitar 450px. Grid yang menetapkan tinggi, bukan kartunya.
 
+### 12.1 Right Rail
+
+`/preview/jobs` memuat seluruh isi rail yang disebut §3.1:
+
+| Isi | Sumber data |
+|---|---|
+| Hint bar | `meta.total` |
+| `MetricCell` | lowongan ditemukan, filter aktif, sparkline lowongan baru |
+| `InsightCard` (kategori) | `home.json` → `categories` |
+| `SkillPanel` | keadaan "belum masuk" untuk pengunjung publik |
+
+**`SkillPanel` sengaja tidak menampilkan skill karangan.** Katalog publik tidak punya pengguna login, jadi yang dirender adalah keadaan kosong dengan ajakan masuk — menampilkan skill fiktif akan melanggar §2 prinsip 3.
+
+**`MetricCell` hanya memuat angka yang konsisten dengan halaman.** Total perusahaan seluruh dataset (213) sengaja dibuang: di samping "6 lowongan" ia terbaca seolah 213 perusahaan punya 6 lowongan. Yang ditampilkan kini jumlah hasil dan jumlah filter aktif, plus sparkline 12 hari.
+
+### 12.2 Tiga State Daftar
+
+§3.1 mewajibkan state kosong, loading, dan error. Ketiganya kini ada dan diuji:
+
+| State | Pemicu pada Track A | Test |
+|---|---|---|
+| Kosong | `?empty=1` | `test_empty_state_rendered` |
+| Loading | `?loading=1` | `test_skeleton_state` |
+| Error | `?error=1` | `test_error_state` |
+
+Saat error, panel angka dan hint jumlah **tidak dirender** — "0 lowongan" adalah klaim, padahal datanya tidak diketahui. Hint berubah menjadi "Sumber lowongan tidak dapat diakses saat ini."
+
 Dua bug visual ditemukan lewat audit browser dan langsung diperbaiki:
 
 - **Judul detail tidak sejajar** (51px vs 32px) karena berada di dalam `.job-card` yang punya padding sendiri. Judul dipindah ke `.page-head` di luar kartu.
 - **Footer menimpa tombol** pada halaman detail, akibat kartu yang melar tadi.
 
-Total test setelah task ini: **163 lulus**.
+### 12.3 Perbaikan Setelah Uji Coba Pengguna
+
+Dua keluhan nyata saat halaman dipakai, keduanya sudah diperbaiki:
+
+**1. Hanya judul kartu yang dapat diklik.** Seluruh permukaan kartu kini menuju detail. Satu tautan penutup (`.card-link`, `position: absolute; inset: -1px; z-index: 1`) dipakai alih-alih membungkus kartu dengan `<a>`, karena kartu berisi `<button>` simpan dan `<button>` di dalam `<a>` tidak sah. Judul sengaja bukan tautan agar tidak ada dua tujuan tab yang sama. Tombol simpan diberi `z-index: 2` sehingga tetap dapat diklik sendiri.
+
+`inset: -1px`, bukan `0`, karena `inset: 0` relatif terhadap padding box — border 1px tetap menjadi zona mati.
+
+**2. Padding atas-bawah `.card-top` terlalu besar.** Penyebabnya tombol simpan: area sentuh 44×44 (§5) menggelembungkan baris dari 21px menjadi 44px. Area sentuh dipertahankan, tetapi tombol ditarik keluar dari alur visual dengan `margin-block: calc((var(--touch-min) - 20px) / -2)`. Hasil terukur di browser: **tinggi `.card-top` 44px → 21px**, tinggi kartu 237px.
+
+Dua test baru menjaga keduanya: `test_whole_card_is_clickable` dan `test_card_top_not_inflated_by_save_button`.
+
+**3. Tombol simpan tidak bereaksi.** Ia hanya mengubah `aria-pressed` dan ikon secara lokal, tanpa backend (PRD-F02 §9). Terverifikasi di browser: klik tombol tidak menavigasi dan `aria-pressed` berubah `false → true`.
+
+### 12.4 Perapatan Halaman Detail
+
+Enam keluhan pada halaman detail, semuanya diperbaiki dan diukur di browser:
+
+| Keluhan | Perbaikan | Sesudah (terukur) |
+|---|---|---|
+| Jarak gaji → deskripsi terlalu tinggi | `gap` kartu 12px → 8px; margin anak dihapus | **16px** |
+| Garis pemisah punya lubang besar di atasnya | `border-top` + `padding-top` dihapus dari `.detail-body` dan `.detail-actions` | **tanpa garis**, 0px |
+| Gaji tanpa judul | `<div class="boxtitle">Gaji</div>` di atas `salary_range` | label tampil |
+| Tombol simpan di baris aksi bawah | `position: absolute` di pojok kanan atas kartu (`top/right: 12px`) | 44×44, 13px dari tepi |
+| Keterangan "Tautan menuju lowongan asli…" | dihapus — mengulang info yang sudah dibawa tombol sumber | hilang |
+| "← Kembali ke daftar lowongan" teks telanjang | `.back-link`: border, radius chip, padding, ikon panah, hover | 32px tinggi |
+| Jarak person → "Lihat semua lowongan" | `.panel-company`: `margin-bottom: 0` + `margin-top: 9px` | **9px** |
+
+Catatan teknis:
+
+- **`margin-block` negatif `.save-btn` mengalahkan `.detail-save`.** Karena `.job-card .save-btn` spesifisitasnya lebih tinggi, tombol pojok awalnya menempel 1px dari tepi atas. Diperbaiki dengan menulis selektor `.job-card .detail-save`.
+- **`inset` vs `top/right`:** tombol pojok memakai `top`/`right` biasa karena ia satu-satunya anak absolute di kartu.
+- **Jarak diatur `gap`, bukan margin anak.** `.tags` punya `margin-bottom: 12px` global yang menambah gap menjadi 20px; di kartu detail margin itu dinolkan.
+- **Handler tombol simpan dipindah ke `base.html`.** Sebelumnya hanya ada di `list.html`, sehingga tombol di halaman detail tidak bereaksi. Satu handler di shell melayani kedua halaman.
+- **Handler tidak lagi memanggil `stopPropagation()`.** Diperlukan saat tombol berada di dalam kartu bertautan; di halaman detail tidak, dan `preventDefault()` saja cukup.
+
+Terukur pada 1280px: tombol pojok 44×44 dengan jarak 13px dari tepi atas dan kanan, gaji tidak pernah berada di bawahnya. Pada 360px: `scrollWidth` 360 = viewport, tanpa tumpang tindih.
+
+Total test setelah §12.4: **174 lulus**.
+
+### 12.5 Penyelarasan Halaman Perusahaan
+
+Halaman perusahaan disamakan dengan halaman detail:
+
+| Bagian | Sebelum | Sesudah |
+|---|---|---|
+| Tautan kembali | `<a>` telanjang di dalam `<p class="field-hint">` | `.back-link` — kendali 32px dengan ikon panah, sama persis dengan detail |
+| Jarak nama → "2 lowongan tersedia · Jakarta Selatan" | **0px** (`.company-head .field-hint { margin: 0 }`) | **6px** |
+
+Penyebabnya `.company-head .field-hint { margin: 0 }` yang menol-kan margin paragraf. Diganti dengan `margin-bottom: 6px` pada `h1` dan kelas `.company-sub` baru — memakai `.field-hint` di situ keliru karena teks ini bukan petunjuk isian, melainkan subjudul halaman.
+
+Terukur: gap 6px pada 1280px maupun 360px, tanpa overflow.
+
+Dua test baru menjaga keduanya: `test_company_back_link_matches_detail` dan `test_company_subtitle_has_small_gap`.
+
+Total test setelah §12.5: **176 lulus**.
+
+### 12.6 Garis Pemisah Bar Filter Dihapus
+
+Garis horizontal tepat di atas "6 Lowongan" berasal dari `.filters`:
+
+```css
+padding: 0 0 18px;
+border-bottom: 1px solid var(--line);
+```
+
+Garis itu memotong halaman persis di bawah kelompok chip dan terbaca sebagai batas tabel, bukan pemisah kelompok filter. Dihapus, diganti `margin-bottom: var(--space-4)` agar jarak ke judul hasil tidak hilang.
+
+Terukur di browser: `border-bottom` menjadi `0px none`, jarak `.filters` → `.section-head` tetap **16px**.
+
+Total test setelah task ini: **177 lulus**.

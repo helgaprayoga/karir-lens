@@ -6,16 +6,16 @@
 {% from "components/skill_tag.html" import skill_tags %}
 {% from "components/salary_range.html" import salary_range %}
 {% from "components/employment_type_badge.html" import employment_type_badge %}
-{% from "components/icons.html" import icon_arrow_out, icon_bookmark %}
+{% from "components/icons.html" import icon_arrow_out, icon_arrow_left, icon_bookmark %}
 
 {% block title %}{{ job.title }} — {{ job.company_name }} — KarirLens{% endblock %}
 
 {% block content %}
 <div class="layout">
   <main class="feed">
-    <p class="field-hint">
-      <a href="{{ url_for('preview.jobs') }}">← Kembali ke daftar lowongan</a>
-    </p>
+    <a class="back-link" href="{{ url_for('preview.jobs') }}">
+      {{ icon_arrow_left() }} Kembali ke daftar lowongan
+    </a>
 
     {# Judul berada di luar kartu agar tepi kirinya sejajar dengan header dan
        kartu lain — satu level padding (design system §3.4). #}
@@ -35,7 +35,18 @@
     </div>
 
     <article class="job-card detail-card">
-      {{ salary_range(job.salary_min, job.salary_max, job.salary_currency, job.salary_period) }}
+      {# Simpan di pojok kanan atas kartu, bukan di baris aksi bawah. #}
+      <button type="button" class="save-btn detail-save"
+              aria-pressed="{{ 'true' if job.is_saved else 'false' }}"
+              aria-label="{{ 'Hapus dari tersimpan' if job.is_saved else 'Simpan lowongan' }}"
+              data-job-id="{{ job.id }}">
+        {{ icon_bookmark(job.is_saved) }}
+      </button>
+
+      <div class="detail-salary">
+        <div class="boxtitle">Gaji</div>
+        {{ salary_range(job.salary_min, job.salary_max, job.salary_currency, job.salary_period) }}
+      </div>
 
       {%- if job.skills -%}
         <div class="tags detail-tags">{{ skill_tags(job.skills, limit=99) }}</div>
@@ -50,15 +61,6 @@
         <a class="btn btn-primary" href="{{ job.source_url }}" target="_blank" rel="noopener noreferrer">
           {{ icon_arrow_out() }} Buka di {{ job.source|capitalize }}
         </a>
-        <button type="button" class="save-btn detail-save"
-                aria-pressed="{{ 'true' if job.is_saved else 'false' }}"
-                aria-label="{{ 'Hapus dari tersimpan' if job.is_saved else 'Simpan lowongan' }}"
-                data-job-id="{{ job.id }}">
-          {{ icon_bookmark(job.is_saved) }}
-        </button>
-        <span class="field-hint">
-          Tautan menuju lowongan asli. Atribusi sumber: {{ job.source|capitalize }}.
-        </span>
       </div>
     </article>
 
@@ -80,7 +82,7 @@
       <span>Data perusahaan diambil dari lowongan yang tersimpan.</span>
     </div>
 
-    <section class="panel">
+    <section class="panel panel-company">
       <div class="person">
         <div class="pic" aria-hidden="true"></div>
         <div>

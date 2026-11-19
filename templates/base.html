@@ -109,6 +109,22 @@
     <span id="toast-text"></span>
   </div>
 
+  <script>
+  /* Tombol simpan hanya mengubah state lokal sampai PRD-06 menyediakan
+     backend (PRD-F02 §9). Dipasang di shell karena tombol ini muncul di
+     katalog maupun halaman detail. */
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".save-btn");
+    if (!button || button.disabled) return;
+    event.preventDefault();
+    var aktif = button.getAttribute("aria-pressed") === "true";
+    button.setAttribute("aria-pressed", aktif ? "false" : "true");
+    button.setAttribute("aria-label", aktif ? "Simpan lowongan" : "Hapus dari tersimpan");
+    var svg = button.querySelector("svg");
+    if (svg) svg.setAttribute("fill", aktif ? "none" : "currentColor");
+  });
+  </script>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>
