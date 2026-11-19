@@ -1,0 +1,24 @@
+{#
+  EmploymentTypeBadge — design system §4.3, R-03-04 / R-04-07.
+
+  Nilai baku: full-time | part-time | contract | internship | freelance | unknown.
+  `unknown` TIDAK dirender sebagai badge; cukup dihilangkan.
+
+  Parameter:
+    value  string  employment_type dari database
+#}
+
+{% macro employment_label(value) -%}
+  {%- set labels = {
+    "full-time": "Penuh waktu", "part-time": "Paruh waktu",
+    "contract": "Kontrak", "internship": "Magang", "freelance": "Lepas"
+  } -%}
+  {{- labels.get((value or "")|lower, "") -}}
+{%- endmacro %}
+
+{% macro employment_type_badge(value) -%}
+  {%- set label = employment_label(value) -%}
+  {%- if label -%}
+    <span class="type-badge">{{ label }}</span>
+  {%- endif -%}
+{%- endmacro %}

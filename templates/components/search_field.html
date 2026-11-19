@@ -1,0 +1,27 @@
+{#
+  SearchField — design system §4, R-04-01.
+
+  Satu kontrol pencarian untuk header dan halaman katalog. Ikon dan pintasan
+  keyboard berada di dalam bingkai, sehingga input memakai padding kiri/kanan
+  yang tetap (lihat .search-field di components.css).
+
+  Parameter:
+    name         string  atribut name, default "q"
+    value        string|null  isi awal dari query string
+    placeholder  string
+    label        string  aria-label
+    shortcut     string|null  teks kbd, mis. "Ctrl K"; None menyembunyikan
+    action       string|null  bila diisi, dibungkus <form method="get">
+#}
+
+{% from "components/icons.html" import icon_search %}
+
+{% macro search_field(name="q", value=None, placeholder="Cari...", label="Cari lowongan", shortcut="Ctrl K", action=None, autofocus=False) -%}
+  {%- if action -%}<form class="search-field" method="get" action="{{ action }}" role="search">{%- else -%}<div class="search-field">{%- endif -%}
+    {{ icon_search() }}
+    <input type="search" name="{{ name }}" value="{{ value or '' }}"
+           placeholder="{{ placeholder }}" aria-label="{{ label }}"
+           {%- if autofocus %} autofocus{% endif %}>
+    {%- if shortcut -%}<kbd>{{ shortcut }}</kbd>{%- endif -%}
+  {%- if action -%}</form>{%- else -%}</div>{%- endif -%}
+{%- endmacro %}

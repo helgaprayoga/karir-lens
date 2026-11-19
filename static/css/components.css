@@ -863,6 +863,16 @@ a.tag:hover {
 .search-field {
   position: relative;
   width: var(--search-w);
+  /* Dapat berupa <div> (header) atau <form> (halaman katalog). Reset margin
+     agar keduanya berperilaku sama. */
+  display: block;
+  margin: 0;
+}
+
+/* Di dalam /styleguide kontrol ditampilkan sendiri, bukan di header, sehingga
+   boleh lebih lebar agar placeholder tidak terpotong. */
+.styleguide-section .search-field {
+  width: min(100%, 380px);
 }
 
 .search-field input {
@@ -1787,6 +1797,8 @@ a.tag:hover {
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   background: var(--sheet);
+  /* <figure> punya margin bawaan peramban. */
+  margin: 0;
 }
 
 .chart-card h4 {
@@ -1797,12 +1809,17 @@ a.tag:hover {
 
 .chart-card .canvas {
   position: relative;
+  /* Chart.js mengukur tinggi dari elemen induk. Tanpa min-height, <canvas>
+     tanpa atribut tinggi kolaps menjadi ~1px sebelum Chart.js memuat. */
   min-height: 240px;
   max-height: 360px;
+  height: 240px;
 }
 
 .chart-card canvas {
+  display: block;
   width: 100% !important;
+  height: 100% !important;
   max-height: 360px;
 }
 
@@ -1813,6 +1830,14 @@ a.tag:hover {
   border-top: 1px solid var(--line);
   color: var(--ink-3);
   font-size: var(--text-meta);
+}
+
+/* Panel yang ditampilkan di luar konteks .rail (mis. /styleguide), agar tidak
+   mewarisi border pemisah dan padding rail. */
+.rail-flat {
+  border-left: 0;
+  padding: 0;
+  display: block;
 }
 
 .styleguide-section {

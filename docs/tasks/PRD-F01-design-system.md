@@ -227,6 +227,27 @@ Hasil akhir setelah perbaikan, diukur ulang di browser:
 
 Keyboard: 53 kontrol dapat difokus, **semuanya** menampilkan indikator fokus, dan skip-link terlihat saat difokus.
 
+### 9.3 Celah yang Ditutup Setelah Audit
+
+Audit di §9.2 sempat menyatakan "semua komponen §4 tersedia", padahal kelengkapan barunya 20 dari 24. Empat komponen hanya punya CSS tanpa partial maupun bagian di `/styleguide`:
+
+| Komponen | Yang ditambahkan |
+|---|---|
+| `ChartCard` | `templates/components/chart_card.html` — bingkai `<figure>`, kanvas 240px, dan EmptyState saat data kosong. Chart.js sendiri tetap dimuat pada PRD-F05. |
+| `SkillPanel` | `templates/components/skill_panel.html` — dua varian: pengguna login (daftar skill terkonfirmasi) dan belum login. Tanpa persentase "kelengkapan profil". |
+| `SearchField` | `templates/components/search_field.html` — `<div>` di header, `<form>` bila diberi `action`. |
+| `EmploymentTypeBadge` | `templates/components/employment_type_badge.html` — `employment_label()` dipindah ke sini dari `job_card.html`, sehingga label tipe kerja punya satu sumber. |
+
+Dua bug visual juga ditemukan saat verifikasi ulang dan langsung diperbaiki:
+
+- **Kanvas ChartCard kolaps ~1px.** `<canvas>` tanpa atribut tinggi tidak punya tinggi intrinsik sebelum Chart.js memuat; `.chart-card .canvas` diberi `height: 240px`.
+- **Placeholder SearchField terpotong.** Lebar `--search-w` (236px) cocok untuk header, tidak untuk halaman audit; di dalam `.styleguide-section` lebarnya `min(100%, 380px)`.
+
+Supaya kelas kesalahan yang sama tidak terulang, `tests/unit/test_ui_rules.py` kini punya dua test yang **membuktikan render**, bukan sekadar keberadaan kelas CSS:
+
+- `test_every_section_component_rendered` — setiap komponen §4 punya penanda di HTML `/styleguide`.
+- `test_styleguide_has_section_for_each_component` — setiap komponen punya bagian `<h2>` tersendiri.
+
 ## 10. Referensi Proyek
 
 | Berkas rujukan | Bagian yang diadopsi |

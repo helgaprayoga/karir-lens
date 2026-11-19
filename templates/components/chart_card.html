@@ -1,0 +1,41 @@
+{#
+  ChartCard — design system §4.8, R-05-13.
+
+  Membungkus grafik Chart.js. Pada PRD-F01 (Track A) belum ada data maupun
+  Chart.js, sehingga yang disediakan adalah kerangka: judul, kanvas, dan
+  EmptyState bila data kosong. Chart.js dimuat pada PRD-F05.
+
+  Aturan (§4.8):
+    - tinggi kanvas minimal 240px, maksimal 360px (ditegakkan .chart-card)
+    - setiap grafik punya judul dan label sumbu
+    - satu registry chart per halaman; destroy() sebelum membuat yang baru
+    - legenda turun ke bawah pada 360px
+
+  Parameter:
+    title       string
+    chart_id    string   id canvas, dipakai Chart.js sebagai selector
+    has_data    bool     False -> tampilkan EmptyState, bukan kanvas kosong
+    empty_text  string   pesan saat data kosong
+    caption     string|null  keterangan di bawah grafik (mis. jumlah sampel)
+#}
+
+{% from "components/icons.html" import icon_info %}
+
+{% macro chart_card(title, chart_id="chart", has_data=True, empty_text="Data belum mencukupi untuk menampilkan grafik.", caption=None) -%}
+  <figure class="chart-card">
+    <h4>{{ title }}</h4>
+    {%- if has_data -%}
+      <div class="canvas">
+        <canvas id="{{ chart_id }}" role="img" aria-label="{{ title }}"></canvas>
+      </div>
+    {%- else -%}
+      <div class="empty">
+        <div class="empty-icon" aria-hidden="true">{{ icon_info() }}</div>
+        <p>{{ empty_text }}</p>
+      </div>
+    {%- endif -%}
+    {%- if caption -%}
+      <figcaption class="foot-note">{{ caption }}</figcaption>
+    {%- endif -%}
+  </figure>
+{%- endmacro %}

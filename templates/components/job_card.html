@@ -20,14 +20,7 @@
 {% from "components/source_badge.html" import source_badge %}
 {% from "components/skill_tag.html" import skill_tags %}
 {% from "components/salary_range.html" import salary_range %}
-
-{% macro employment_label(value) -%}
-  {%- set labels = {
-    "full-time": "Penuh waktu", "part-time": "Paruh waktu",
-    "contract": "Kontrak", "internship": "Magang", "freelance": "Lepas"
-  } -%}
-  {{ labels.get((value or "")|lower, "") }}
-{%- endmacro %}
+{% from "components/employment_type_badge.html" import employment_label %}
 
 {% macro job_card(job, show_match=False) -%}
   <article class="job-card">

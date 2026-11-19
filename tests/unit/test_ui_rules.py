@@ -241,6 +241,10 @@ def test_styleguide_available_in_preview() -> None:
         ("components/skeleton_card.html", {}),
         ("components/alert_banner.html", {"message": "Halo", "variant": "info"}),
         ("components/stat_tile.html", {"value": 10, "label": "Total"}),
+        ("components/employment_type_badge.html", {"value": "full-time"}),
+        ("components/search_field.html", {}),
+        ("components/chart_card.html", {"title": "Grafik", "chart_id": "c1"}),
+        ("components/skill_panel.html", {"user": {"name": "A", "role": "Dev"}, "skills": ["python"]}),
     ],
 )
 def test_components_rendered(app, partial, konteks) -> None:
@@ -264,6 +268,10 @@ def test_components_rendered(app, partial, konteks) -> None:
         "components/skeleton_card.html": "skeleton_card",
         "components/alert_banner.html": "alert_banner",
         "components/stat_tile.html": "stat_tile",
+        "components/employment_type_badge.html": "employment_type_badge",
+        "components/search_field.html": "search_field",
+        "components/chart_card.html": "chart_card",
+        "components/skill_panel.html": "skill_panel",
     }[partial]
 
     with app.test_request_context("/"):
@@ -294,3 +302,68 @@ def test_no_application_tracking_language() -> None:
     body = _preview_app().test_client().get("/preview/styleguide").get_data(as_text=True)
     for dilarang in ("proposals", "Kelengkapan profil", "Performa Anda", "under review"):
         assert dilarang not in body, f"Pola terlarang muncul: {dilarang}"
+
+
+# --- Acceptance: SEMUA komponen §4 benar-benar tampil ---------------------
+
+# Daftar komponen design system §4 beserta penanda yang membuktikan dirinya
+# dirender di /styleguide. Daftar ini sengaja eksplisit: versi pertama test
+# hanya memeriksa nama kelas pada HTML sehingga ChartCard, SkillPanel,
+# SearchField, dan EmploymentTypeBadge lolos meski tidak pernah dirender.
+STYLEGUIDE_MARKERS = {
+    "JobCard": "job-card",
+    "SourceBadge": "source-badge",
+    "EmploymentTypeBadge": "type-badge",
+    "SkillTag": 'class="tag"',
+    "MatchBadge": 'class="match ',
+    "FilterChip": 'class="chip"',
+    "SearchField": "search-field",
+    "Pagination": 'class="pager"',
+    "EmptyState": 'class="empty"',
+    "SalaryRange": 'class="amount"',
+    "StatTile": "stat-tile",
+    "MetricCell": "metric-cell",
+    "ChartCard": "chart-card",
+    "InsightCard": 'class="insight"',
+    "SkillPanel": "person",
+    "SkeletonCard": "skeleton-card",
+    "Toast": 'class="toast"',
+    "DataTable": "data-table",
+    "StatusPill": "status-pill",
+    "Button": "btn-primary",
+    "NavPill": "nav-pill",
+    "AlertBanner": "banner",
+}
+
+
+def test_every_section_component_rendered() -> None:
+    """Setiap komponen design system §4 muncul di /styleguide (R-F01-08)."""
+    body = _preview_app().test_client().get("/preview/styleguide").get_data(as_text=True)
+    hilang = [nama for nama, penanda in STYLEGUIDE_MARKERS.items() if penanda not in body]
+    assert not hilang, f"Komponen tidak dirender di /styleguide: {hilang}"
+
+
+def test_styleguide_has_section_for_each_component() -> None:
+    """Setiap komponen punya bagian <h2> tersendiri di /styleguide."""
+    body = _preview_app().test_client().get("/preview/styleguide").get_data(as_text=True)
+    judul = [
+        "Button", "FilterChip", "SearchField", "EmploymentTypeBadge", "JobCard",
+        "SalaryRange", "MatchBadge", "SourceBadge", "Pagination", "EmptyState",
+        "SkeletonCard", "AlertBanner", "StatTile", "InsightCard", "ChartCard",
+        "SkillPanel", "DataTable", "Toast",
+    ]
+    hilang = [nama for nama in judul if f"<h2>{nama}" not in body and f"<h2>{nama} " not in body
+              and f"<h2>{nama}&amp;" not in body]
+    assert not hilang, f"Bagian <h2> tidak ditemukan di /styleguide: {hilang}"
+
+
+def test_employment_type_unknown_not_rendered() -> None:
+    """`unknown` tidak boleh menjadi badge kosong (§4.3)."""
+    from app import create_app as factory
+
+    CONFIG_MAP["preview_unk"] = type(
+        "PreviewUnk", (CONFIG_MAP["testing"],), {"PREVIEW_UI": True}
+    )
+    body = factory("preview_unk").test_client().get("/preview/styleguide").get_data(as_text=True)
+    assert "Tidak disebutkan</span>" not in body
+    assert 'class="type-badge"></span>' not in body

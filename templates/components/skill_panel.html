@@ -1,0 +1,47 @@
+{#
+  SkillPanel — design system §4.13, R-06-01.
+
+  Panel profil di right rail: data akun dan daftar skill TERRKONFIRMASI.
+  Larangan tegas (§4.13): jangan menampilkan persentase "kelengkapan profil" —
+  PRD tidak mendefinisikan itu, sehingga angkanya karangan.
+
+  Parameter:
+    user    dict   {name, role}          (boleh None saat belum login)
+    skills  list   skill terkonfirmasi
+    action_label, action_href  tombol menuju pengelolaan skill
+    note    string|null  keterangan di bawah tombol
+#}
+
+{% from "components/skill_tag.html" import skill_tags %}
+
+{% macro skill_panel(user, skills=None, action_label="Kelola skill dari CV", action_href=None, note="Dipakai untuk menghitung rekomendasi") -%}
+  {%- set skills = skills or [] -%}
+  <section class="panel" aria-label="Profil dan skill terkonfirmasi">
+    <div class="person">
+      <div class="pic" aria-hidden="true"></div>
+      <div>
+        <div class="nm">{{ user.name if user else "Belum masuk" }}</div>
+        <div class="role">{{ user.role if user and user.role else "Masuk untuk menyimpan skill" }}</div>
+      </div>
+    </div>
+
+    <div class="boxtitle">Skill terkonfirmasi</div>
+    {%- if skills -%}
+      <div class="tags">{{ skill_tags(skills, limit=99) }}</div>
+    {%- else -%}
+      <p class="field-hint">Belum ada skill terkonfirmasi.</p>
+    {%- endif -%}
+
+    {%- if action_label -%}
+      {%- if action_href -%}
+        <a class="btn btn-soft" href="{{ action_href }}">{{ action_label }}</a>
+      {%- else -%}
+        <button type="button" class="btn btn-soft" disabled>{{ action_label }}</button>
+      {%- endif -%}
+    {%- endif -%}
+
+    {%- if note -%}
+      <div class="foot-note">{{ note }}</div>
+    {%- endif -%}
+  </section>
+{%- endmacro %}

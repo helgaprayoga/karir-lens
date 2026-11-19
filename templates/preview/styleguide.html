@@ -20,6 +20,10 @@
 {% from "components/source_badge.html" import source_badge %}
 {% from "components/skill_tag.html" import skill_tags %}
 {% from "components/salary_range.html" import salary_range %}
+{% from "components/employment_type_badge.html" import employment_type_badge %}
+{% from "components/search_field.html" import search_field %}
+{% from "components/chart_card.html" import chart_card %}
+{% from "components/skill_panel.html" import skill_panel %}
 
 {% block title %}Style Guide — KarirLens{% endblock %}
 
@@ -93,6 +97,40 @@
       {{ filter_chip("Penuh waktu", "applied", "employment_type", "full-time") }}
       {{ sort_control() }}
     </div>
+  </section>
+
+  <!-- ═══════════ SearchField §4 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>SearchField</h2>
+    <p class="field-hint">
+      Satu kontrol untuk header dan halaman katalog. Dapat berdiri sendiri
+      (<code>div</code>) atau menjadi <code>form</code> bila diberi <code>action</code>.
+    </p>
+
+    <p class="styleguide-label">Berdiri sendiri — seperti di header</p>
+    {{ search_field() }}
+
+    <p class="styleguide-label">Sebagai form — halaman katalog</p>
+    {{ search_field(name="q", action=url_for("main.index"), placeholder="Cari posisi, perusahaan, skill...", label="Cari lowongan") }}
+  </section>
+
+  <!-- ═══════════ EmploymentTypeBadge §4.3 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>EmploymentTypeBadge</h2>
+    <p class="field-hint">
+      Nilai baku diterjemahkan ke bahasa manusia. <code>unknown</code> sengaja
+      tidak dirender — tidak ada badge kosong.
+    </p>
+    <p>
+      {{ employment_type_badge("full-time") }}
+      {{ employment_type_badge("part-time") }}
+      {{ employment_type_badge("contract") }}
+      {{ employment_type_badge("internship") }}
+      {{ employment_type_badge("freelance") }}
+      <span class="field-hint">unknown, None, dan nilai asing →
+        {{ employment_type_badge("unknown") }}{{ employment_type_badge(None) }}{{ employment_type_badge("lainnya") }}
+        tidak dirender</span>
+    </p>
   </section>
 
   <!-- ═══════════ JobCard §4.1 ═══════════ -->
@@ -300,6 +338,37 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ═══════════ ChartCard §4.8 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>ChartCard</h2>
+    <p class="field-hint">
+      Kerangka grafik Chart.js. Chart.js sendiri dimuat pada PRD-F05; di sini
+      yang diperiksa adalah bingkai, judul, dan state data kosong.
+      Tinggi kanvas 240–360px, legenda turun ke bawah pada 360px.
+    </p>
+    <div class="styleguide-grid">
+      {{ chart_card("Skill paling sering diminta", "chart-skill", has_data=True, caption="Dari 1.842 lowongan aktif") }}
+      {{ chart_card("Median gaji per kategori", "chart-salary", has_data=False, empty_text="Statistik gaji belum dapat ditampilkan: sampel baru 3 dari minimum 5.") }}
+    </div>
+  </section>
+
+  <!-- ═══════════ SkillPanel §4.13 ═══════════ -->
+  <section class="styleguide-section">
+    <h2>SkillPanel</h2>
+    <p class="field-hint">
+      Panel profil di right rail. Menampilkan daftar skill terkonfirmasi, bukan
+      persentase “kelengkapan profil” yang tidak didefinisikan PRD.
+    </p>
+    <div class="styleguide-grid">
+      <div class="rail-flat">
+        {{ skill_panel(profile.user, profile.skills, action_href=url_for("main.index")) }}
+      </div>
+      <div class="rail-flat">
+        {{ skill_panel(None, [], action_label="Masuk untuk mengelola skill", note="Rekomendasi tersedia setelah skill dikonfirmasi.") }}
+      </div>
     </div>
   </section>
 
