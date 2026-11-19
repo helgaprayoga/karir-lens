@@ -1,0 +1,34 @@
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "text": "Halo! Saya bisa membantu membandingkan lowongan, menjelaskan istilah di iklan kerja, atau menyusun ringkasan skill Anda. Apa yang ingin Anda tanyakan?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "text": "Lowongan mana yang cocok untuk skill python dan sql?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "text": "Dua lowongan paling dekat dengan kombinasi python dan sql: Data Engineer di Northwind Data, dan Backend Engineer di NovaTech Labs. Keduanya meminta python sebagai syarat utama.",
+      "sources": [
+        {"label": "Data Engineer — Northwind Data", "url": "/preview/jobs/5"},
+        {"label": "Backend Engineer (Python) — NovaTech Labs", "url": "/preview/jobs/3"}
+      ]
+    }
+  ],
+  "suggestions": [
+    "Skill apa yang paling sering diminta untuk data engineer?",
+    "Bandingkan gaji Data Engineer dan Product Designer",
+    "Lowongan mana yang cocok untuk skill python dan sql?"
+  ],
+  "reply": {
+    "text": "Untuk posisi data engineer, skill yang paling sering muncul di lowongan yang tersimpan adalah python, sql, dan airflow. Ketiganya muncul di lebih dari satu sumber, jadi bukan pola satu platform saja. Saya kutip dua lowongan yang memuat kombinasi itu.",
+    "sources": [
+      {"label": "Data Engineer — Northwind Data", "url": "/preview/jobs/5"},
+      {"label": "Backend Engineer (Python) — NovaTech Labs", "url": "/preview/jobs/3"}
+    ]
+  }
+}

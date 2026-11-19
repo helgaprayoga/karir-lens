@@ -221,3 +221,74 @@ def saved():
         meta=page["meta"],
         url_params={},
     )
+
+
+@bp.get("/cv")
+def cv():
+    """Alur CV (PRD-F04 §4.1): unggah → pratinjau skill → konfirmasi → rekomendasi.
+
+    ``?state=`` memilih keadaan yang dirender: ``idle`` (belum unggah),
+    ``extracted`` (kandidat skill tersedia), ``no_skills`` (pengguna belum punya
+    skill terkonfirmasi), ``ready`` (rekomendasi dapat dihitung).
+    """
+    data = fixtures.cv()
+    keadaan = request.args.get("state", data.get("state", "extracted"))
+    if keadaan not in {"idle", "extracted", "no_skills", "ready"}:
+        keadaan = "extracted"
+
+    profil = fixtures.profile()
+    terkonfirmasi = [s for s in profil.get("skills", []) if s.get("is_confirmed")]
+
+    return render_template(
+        "cv/index.html",
+        state=keadaan,
+        suggested_skills=data.get("suggested_skills", []) if keadaan != "idle" else [],
+        ambiguous=data.get("ambiguous", []) if keadaan == "extracted" else [],
+        confirmed_skills=terkonfirmasi,
+        recommendations=data.get("recommendations", []) if keadaan == "ready" else [],
+        max_size_mb=data.get("max_size_mb", 5),
+        accepted_types=data.get("accepted_types", [".pdf", ".docx"]),
+    )
+
+
+@bp.get("/assistant")
+def assistant():
+    """Asisten AI (PRD-F04 R-F04-10 s.d. R-F04-14)."""
+    data = fixtures.assistant()
+    return render_template(
+        "assistant/index.html",
+        messages=data.get("messages", []),
+        suggestions=data.get("suggestions", []),
+        error=None,
+    )
+
+
+# --- API tiruan untuk Track A -------------------------------------------
+# Kontrak §4.1 menyebut POST /api/cv/extract dan POST /api/assistant. Endpoint
+# produksi itu belum ada (PRD-07/PRD-08). Tiruan ini hidup di blueprint preview
+# sehingga URL-nya /preview/api/... dan tidak pernah terdaftar di produksi.
+# Template memakai url_for, jadi bentuk responsnya tetap satu kontrak.
+
+@bp.post("/api/cv/extract")
+def api_cv_extract():
+    """Meniru hasil ekstraksi CV: ``{"data": {"skills": [...], "ambiguous": []}}``."""
+    data = fixtures.cv()
+    return {
+        "data": {
+            "skills": data.get("suggested_skills", []),
+            "ambiguous": data.get("ambiguous", []),
+        }
+    }
+
+
+@bp.post("/api/assistant")
+def api_assistant():
+    """Meniru jawaban asisten: ``{"data": {"reply": "...", "sources": []}}``."""
+    data = fixtures.assistant()
+    balasan = data.get("reply", {})
+    return {
+        "data": {
+            "reply": balasan.get("text", ""),
+            "sources": balasan.get("sources", []),
+        }
+    }

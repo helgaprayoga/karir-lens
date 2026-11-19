@@ -288,13 +288,15 @@ Halaman perusahaan disamakan dengan halaman detail:
 | Bagian | Sebelum | Sesudah |
 |---|---|---|
 | Tautan kembali | `<a>` telanjang di dalam `<p class="field-hint">` | `.back-link` — kendali 32px dengan ikon panah, sama persis dengan detail |
-| Jarak nama → "2 lowongan tersedia · Jakarta Selatan" | **0px** (`.company-head .field-hint { margin: 0 }`) | **6px** |
+| Jarak nama → "2 lowongan tersedia · Jakarta Selatan" | **0px** (`.company-head .field-hint { margin: 0 }`) | **10px** |
 
-Penyebabnya `.company-head .field-hint { margin: 0 }` yang menol-kan margin paragraf. Diganti dengan `margin-bottom: 6px` pada `h1` dan kelas `.company-sub` baru — memakai `.field-hint` di situ keliru karena teks ini bukan petunjuk isian, melainkan subjudul halaman.
+Penyebabnya `.company-head .field-hint { margin: 0 }` yang menol-kan margin paragraf. Diganti dengan margin pada `.company-sub` — kelas baru, karena memakai `.field-hint` di situ keliru: teks ini bukan petunjuk isian, melainkan subjudul halaman.
 
-Terukur: gap 6px pada 1280px maupun 360px, tanpa overflow.
+Terukur: gap 10px pada 1280px maupun 360px, tanpa overflow.
 
 Dua test baru menjaga keduanya: `test_company_back_link_matches_detail` dan `test_company_subtitle_has_small_gap`.
+
+**Diperluas ke semua halaman (PRD-F04 §12.5).** Aturan jarak tadinya menempel pada `.company-head h1`, sehingga hanya halaman perusahaan yang mendapatkannya — profil, tersimpan, CV, dan asisten tampil dengan jarak 0 meski memakai kelas `.company-sub` yang sama. Aturan dipindah ke `.company-sub` itu sendiri.
 
 Total test setelah §12.5: **176 lulus**.
 

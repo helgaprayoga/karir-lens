@@ -8,7 +8,7 @@
 | Prioritas | P0 |
 | Dependensi | PRD-F01, PRD-F02 |
 | Task yang bergantung | PRD-F06 |
-| Status | Belum dimulai |
+| Status | Selesai (Track A, fixture) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Backend pasangan | [PRD-07](./PRD-07-cv-rekomendasi.md), [PRD-08](./PRD-08-asisten-ai.md) |
 | Design system | [Design System KarirLens](../design-system.md) |
@@ -87,20 +87,25 @@ Bentuk respons ini adalah kontrak yang harus dipenuhi PRD-07 dan PRD-08.
 
 ## 5. Acceptance Criteria
 
-- [ ] `/cv` dapat dipakai dengan keyboard saja sampai konfirmasi skill.
-- [ ] Batas 5 MB dan tipe berkas dijelaskan sebelum unggah.
-- [ ] Berkas tipe salah atau terlalu besar mendapat pesan jelas.
-- [ ] Pratinjau skill menampilkan semua kandidat terpilih secara bawaan.
-- [ ] Tombol simpan disabled sampai ada skill dipilih.
-- [ ] Halaman menyatakan berkas dan teks CV tidak disimpan.
-- [ ] Pengguna tanpa skill terkonfirmasi mendapat arahan jelas.
-- [ ] Rekomendasi memakai `JobCard` + `MatchBadge` + alasan.
-- [ ] Skor rendah tidak berwarna merah.
-- [ ] `/assistant` mengirim pertanyaan dan menampilkan jawaban dalam sesi berjalan.
-- [ ] Indikator memproses tampil dan tombol disabled selama permintaan.
-- [ ] Galat jaringan tampil sebagai banner ramah tanpa detail internal.
-- [ ] Tautan sumber yang dikutip asisten dapat diklik.
-- [ ] Tidak ada UI yang menyiratkan penyimpanan CV.
+- [x] `/cv` dapat dipakai dengan keyboard saja sampai konfirmasi skill.
+- [x] Batas 5 MB dan tipe berkas dijelaskan sebelum unggah.
+- [x] Berkas tipe salah atau terlalu besar mendapat pesan jelas.
+- [x] Pratinjau skill menampilkan semua kandidat terpilih secara bawaan.
+- [x] Tombol simpan disabled sampai ada skill dipilih.
+- [x] Halaman menyatakan berkas dan teks CV tidak disimpan.
+- [x] Pengguna tanpa skill terkonfirmasi mendapat arahan jelas.
+- [x] Rekomendasi memakai `JobCard` + `MatchBadge` + alasan.
+- [x] Skor rendah tidak berwarna merah.
+- [x] `/assistant` mengirim pertanyaan dan menampilkan jawaban dalam sesi berjalan.
+- [x] Indikator memproses tampil dan tombol disabled selama permintaan.
+- [x] Galat jaringan tampil sebagai banner ramah tanpa detail internal.
+- [x] Tautan sumber yang dikutip asisten dapat diklik.
+- [x] Tidak ada UI yang menyiratkan penyimpanan CV.
+
+Catatan kejujuran: pada Track A halaman berada di `/preview/cv` dan
+`/preview/assistant`. Endpoint `/api/cv/extract` dan `/api/assistant` yang
+disebut §4.1 **belum ada**; tiruannya hidup di `/preview/api/...` agar tidak
+pernah terdaftar di produksi. PRD-07 dan PRD-08 yang mengisi versi aslinya.
 
 ## 6. Dependensi
 
@@ -172,3 +177,76 @@ Bentuk respons ini adalah kontrak yang harus dipenuhi PRD-07 dan PRD-08.
 - Test otomatis pada §7.1 lulus.
 - `/cv` dan `/assistant` dapat ditinjau di browser dengan fixture.
 - Kontrak template dan bentuk respons API pada §4.1 tertulis serta dipakai PRD-07 dan PRD-08.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `templates/cv/index.html` | Empat state, zona unggah, konfirmasi skill, rekomendasi |
+| `templates/assistant/index.html` | Percakapan, saran, form, indikator memproses |
+| `templates/components/upload_zone.html` | Drop zone + input berkas yang dapat difokus keyboard |
+| `templates/components/skill_confirm_list.html` | Checklist kandidat, tombol konfirmasi, daftar ambigu |
+| `templates/components/chat_message.html` | Satu pesan beserta sumber yang dikutip |
+| `templates/base.html` | `<meta name="csrf-token">` untuk permintaan AJAX |
+| `app/preview/routes.py` | Route `cv`, `assistant`, dan dua endpoint API tiruan |
+| `static/css/components.css` | Upload, skill confirm, chat, perbaikan nav |
+| `tests/fixtures/ui/cv.json`, `assistant.json` | Data contoh kedua halaman |
+| `tests/unit/test_cv_assistant_ui.py` | 24 test untuk §7.1 |
+
+### 12.2 Keputusan
+
+**Input berkas disembunyikan secara visual, bukan `display: none`.** `display: none` membuat input tidak dapat difokus keyboard, sehingga alur unggah mustahil diselesaikan tanpa mouse (R-F04-01). Pola yang dipakai: input diposisikan 1×1px dengan `clip`, label berperan sebagai tombol, dan `:focus-visible` pada input memindahkan cincin fokus ke label.
+
+**`accept` tidak cukup, jadi validasi diulang di JavaScript.** `accept` hanya menyaring dialog berkas; berkas yang dijatuhkan lewat drag-and-drop tidak melewatinya. R-F04-03 tetap dipenuhi karena tipe dan ukuran diperiksa di `change` dan `drop`.
+
+**Semua kandidat skill terpilih sebagai bawaan**, termasuk yang sudah tersimpan (R-F04-04). Pilihan disimpan di checkbox asli, bukan kelas, agar dapat dioperasikan keyboard dan dibaca pembaca layar.
+
+**Jawaban asisten disisipkan lewat `textContent`, bukan `innerHTML`.** Teks berasal dari server; menyisipkannya sebagai HTML membuka celah XSS. Tautan sumber dibangun dengan `createElement`.
+
+**Pesan galat jaringan tidak menyebut kode status.** R-F04-12 meminta pesan ramah; `catch` hanya menampilkan "Maaf, jawaban gagal diambil" tanpa `HTTP 500` atau nama exception.
+
+### 12.3 Bug yang Ditemukan Lewat Audit Browser
+
+**Permintaan AJAX ditolak 400 oleh CSRF.** CSRF aktif di development; hanya konfigurasi `testing` yang mematikannya. Test otomatis lolos karena test client tidak memakai CSRF, sementara browser sungguhan gagal — jawaban asisten tidak pernah muncul dan selalu jatuh ke pesan galat. Diperbaiki dengan `<meta name="csrf-token">` di `base.html` dan header `X-CSRFToken` pada kedua `fetch`.
+
+**Halaman melebar 421px pada viewport 360px.** Penyebabnya chip saran asisten: satu kalimat panjang menjadi chip 382px karena `.chip` memakai `white-space: nowrap` dan tidak punya batas lebar. Chip saran sekarang `width: fit-content`, `max-width: 100%`, dan `white-space: normal`.
+
+**Navigasi mendorong halaman melebar.** Setelah menu bertambah menjadi lima, `<nav>` tidak dapat menyusut di dalam header sehingga totalnya 403px. `.top nav` diberi `min-width: 0` dan `overflow-x: auto`, sehingga nav menyusut dan menggulir sendiri di layar sempit alih-alih menyeret halaman.
+
+Ketiganya tidak tertangkap test lama karena test memeriksa markup, bukan hasil render. Empat test baru: `test_fetch_carries_csrf_token`, `test_chat_suggestions_wrap_at_narrow_width`, `test_nav_cannot_widen_page`, dan `test_chat_uses_escaping_not_innerhtml`.
+
+### 12.4 Verifikasi Terukur di Browser
+
+| Pemeriksaan | Hasil |
+|---|---|
+| Kandidat skill di `?state=extracted` | 7 dari 7 terpilih |
+| Tombol konfirmasi saat semua terpilih | aktif (`disabled=false`) |
+| Kirim pertanyaan asisten | 200, jawaban muncul, riwayat 3 → 5 pesan |
+| Saat berjalan | indikator tampil (`display: flex`), tombol disabled, `aria-busy="true"`, label "Mengirim…" |
+| Validasi berkas `.txt` | "Berkas harus PDF atau DOCX. Berkas Anda: text/plain." |
+| Validasi berkas 6 MB | "Ukuran berkas 6.0 MB melebihi batas 5 MB." |
+| Skor 47% | tier `match-low` (abu-abu), bukan merah |
+| `scrollWidth` pada 360px | **360** (sebelum perbaikan: 421) |
+| 768px, 1024px, 1280px | tanpa overflow, garis lurus 18/24/32 |
+
+Total test setelah task ini: **223 lulus** (199 → 223).
+
+### 12.5 Jarak Judul ke Subjudul
+
+Kelima halaman dengan pola `h1` + subjudul memakai `.company-sub`, tetapi jaraknya tadinya hanya diberikan pada `.company-head h1` di halaman perusahaan. Empat halaman lain — profil, tersimpan, CV, asisten — tampil dengan jarak **0**, sehingga subjudul menempel pada judul 38px.
+
+Aturan dipindah ke `.company-sub` itu sendiri, jadi satu kelas memberi jarak yang sama di mana pun ia dipakai:
+
+```css
+.company-sub { margin: 10px 0 0; }
+```
+
+10px, bukan 6px: h1 memakai `line-height: 1.05` pada ukuran 38px, sehingga jarak 6px masih terbaca menempel.
+
+Terukur di browser pada kelima halaman: gap **10px**, konsisten. Dua test menjaga: `test_company_subtitle_has_small_gap` (nilai margin) dan `test_company_sub_used_consistently` (kelima halaman memakai kelas yang sama) — tanpa test kedua, satu halaman bisa kembali menulis paragraf sendiri dan jaraknya jadi 0 lagi.
+
+Total test setelah §12.5: **224 lulus**.

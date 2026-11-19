@@ -175,6 +175,10 @@ def cv() -> dict:
     return _load("cv") or {}
 
 
+def assistant() -> dict:
+    return _load("assistant") or {}
+
+
 def saved() -> list[dict]:
     """Lowongan tersimpan contoh, bentuk ``job`` yang sama dengan katalog."""
     data = _load("saved") or {}

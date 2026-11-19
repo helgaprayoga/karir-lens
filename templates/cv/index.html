@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% from "components/upload_zone.html" import upload_zone %}
+{% from "components/skill_confirm_list.html" import skill_confirm_list %}
+{% from "components/job_card.html" import job_card %}
+{% from "components/empty_state.html" import empty_state %}
+{% from "components/icons.html" import icon_verified %}
+
+{% block title %}CV dan rekomendasi — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>CV dan rekomendasi</h1>
+        <p class="company-sub">
+          Unggah CV untuk mendeteksi skill, lalu pilih yang ingin dipakai
+          menghitung rekomendasi.
+        </p>
+      </div>
+    </div>
+
+    {# R-F04-06: pernyataan tidak menyimpan berkas harus terbaca sebelum
+       pengguna mengunggah, bukan setelahnya di catatan kaki. #}
+    <div class="banner banner-info" role="status">
+      {{ icon_verified() }}
+      <div>
+        Berkas dan teks CV <b>tidak disimpan</b>. Yang disimpan hanya skill
+        yang Anda setujui, dan itu pun bisa dihapus dari halaman profil.
+      </div>
+    </div>
+
+    {{ upload_zone(max_size_mb=max_size_mb, accepted=accepted_types,
+                   action=url_for("preview.api_cv_extract")) }}
+
+    {%- if state == "idle" -%}
+      <p class="field-hint cv-idle">
+        Belum ada berkas dipilih. Rekomendasi muncul setelah skill dikonfirmasi.
+      </p>
+
+    {%- elif state == "extracted" -%}
+      <div class="cv-grid">
+        {{ skill_confirm_list(suggested_skills, confirmed_skills, ambiguous) }}
+
+        <section class="panel">
+          <div class="panel-head">
+            <h4>Skill tersimpan</h4>
+            <span class="sub">{{ confirmed_skills|length }}</span>
+          </div>
+          {%- if confirmed_skills -%}
+            <div class="tags">
+              {%- for skill in confirmed_skills -%}
+                <span class="tag">{{ skill.skill }}</span>
+              {%- endfor -%}
+            </div>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('preview.profile') }}">
+              Kelola di profil
+            </a>
+          {%- else -%}
+            <p class="field-hint">Belum ada skill tersimpan.</p>
+          {%- endif -%}
+        </section>
+      </div>
+
+    {%- elif state == "no_skills" -%}
+      {{ empty_state(
+           "Belum ada skill terkonfirmasi",
+           "Rekomendasi dihitung dari skill yang Anda konfirmasi. Unggah CV di atas untuk mendeteksi skill, atau tambahkan sendiri dari halaman profil.",
+           "Tambahkan skill manual",
+           url_for('preview.profile')) }}
+
+    {%- elif state == "ready" -%}
+      <div class="section-head cv-rec-head">
+        <h2>{{ recommendations|length }} Rekomendasi</h2>
+        <span class="sub">Dihitung dari skill yang Anda konfirmasi</span>
+      </div>
+      <div class="cards">
+        {%- for job in recommendations -%}
+          {# R-F04-08: MatchBadge selalu disertai alasan lewat partial kartu. #}
+          {{ job_card(job, show_match=True,
+                      href=url_for("preview.job_detail", job_id=job.id)) }}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </main>
+
+  <aside class="rail" aria-label="Tentang CV">
+    <div class="hint">
+      <span>Berkas diproses di server sekali pakai, lalu dibuang. Tidak ada
+      salinan yang dapat dibuka kembali.</span>
+    </div>
+
+    <section class="panel">
+      <h4>Yang terjadi setelah unggah</h4>
+      <ol class="step-list">
+        <li><b>Ekstraksi</b> — teks CV dibaca untuk mencari nama skill.</li>
+        <li><b>Konfirmasi</b> — Anda yang memutuskan skill mana yang disimpan.</li>
+        <li><b>Rekomendasi</b> — skor dihitung dari skill terkonfirmasi saja.</li>
+      </ol>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  var zona = document.querySelector("[data-upload-zone]");
+  if (!zona) return;
+
+  var input = zona.querySelector("[data-upload-input]");
+  var galat = zona.querySelector("[data-upload-error]");
+  var namaBerkas = zona.querySelector("[data-upload-filename]");
+  var progres = zona.querySelector("[data-upload-progress]");
+  var bar = zona.querySelector("[data-upload-bar]");
+  var maks = parseInt(zona.getAttribute("data-max-bytes"), 10);
+  var tipeSah = ["application/pdf",
+                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+
+  function tampilkanPesan(pesan) {
+    galat.textContent = pesan;
+    galat.hidden = !pesan;
+  }
+
+  /* R-F04-03: tipe dan ukuran diperiksa di klien untuk umpan balik cepat.
+     Validasi otoritatif tetap di server (PRD-07). */
+  function periksa(berkas) {
+    if (!berkas) return "Tidak ada berkas dipilih.";
+    if (tipeSah.indexOf(berkas.type) === -1) {
+      return "Berkas harus PDF atau DOCX. Berkas Anda: " + (berkas.type || "tidak dikenal") + ".";
+    }
+    if (berkas.size > maks) {
+      var mb = (berkas.size / 1048576).toFixed(1);
+      return "Ukuran berkas " + mb + " MB melebihi batas " + (maks / 1048576) + " MB.";
+    }
+    return null;
+  }
+
+  function unggah(berkas) {
+    var pesan = periksa(berkas);
+    if (pesan) {
+      tampilkanPesan(pesan);
+      namaBerkas.hidden = true;
+      progres.hidden = true;
+      return;
+    }
+
+    tampilkanPesan(null);
+    namaBerkas.textContent = berkas.name + " (" + (berkas.size / 1024).toFixed(0) + " KB)";
+    namaBerkas.hidden = false;
+    progres.hidden = false;
+    bar.style.width = "15%";
+
+    var data = new FormData();
+    data.append("file", berkas);
+    var token = document.querySelector('meta[name="csrf-token"]');
+    var kepala = {};
+    if (token) kepala["X-CSRFToken"] = token.getAttribute("content");
+
+    fetch(zona.getAttribute("data-endpoint"), {
+      method: "POST",
+      headers: kepala,
+      body: data
+    })
+      .then(function (respons) {
+        if (!respons.ok) throw new Error("HTTP " + respons.status);
+        return respons.json();
+      })
+      .then(function (hasil) {
+        bar.style.width = "100%";
+        window.setTimeout(function () {
+          window.location.reload();
+        }, 260);
+      })
+      .catch(function () {
+        progres.hidden = true;
+        tampilkanPesan("Berkas gagal diproses. Coba lagi sebentar lagi.");
+      });
+  }
+
+  input.addEventListener("change", function () {
+    unggah(input.files && input.files[0]);
+  });
+
+  /* Drag-and-drop: `accept` tidak menolak berkas yang dijatuhkan. */
+  ["dragenter", "dragover"].forEach(function (jenis) {
+    zona.addEventListener(jenis, function (event) {
+      event.preventDefault();
+      zona.classList.add("is-dragging");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(function (jenis) {
+    zona.addEventListener(jenis, function (event) {
+      event.preventDefault();
+      zona.classList.remove("is-dragging");
+    });
+  });
+
+  zona.addEventListener("drop", function (event) {
+    var berkas = event.dataTransfer && event.dataTransfer.files[0];
+    unggah(berkas);
+  });
+
+  /* --- Konfirmasi skill (R-F04-05) -------------------------------------- */
+  var kotak = document.querySelectorAll("[data-skill-choices] input[type=checkbox]");
+  var tombol = document.querySelector("[data-confirm-skills]");
+  var petunjuk = document.querySelector("[data-confirm-hint]");
+
+  function hitung() {
+    var terpilih = Array.prototype.filter.call(kotak, function (k) { return k.checked; });
+    if (tombol) tombol.disabled = terpilih.length === 0;
+    if (petunjuk) {
+      petunjuk.textContent = terpilih.length === 0
+        ? "Pilih minimal satu skill untuk disimpan."
+        : terpilih.length + " skill akan disimpan.";
+    }
+  }
+
+  Array.prototype.forEach.call(kotak, function (k) {
+    k.addEventListener("change", hitung);
+  });
+  if (kotak.length) hitung();
+})();
+</script>
+{% endblock %}

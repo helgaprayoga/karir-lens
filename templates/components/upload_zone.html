@@ -1,0 +1,51 @@
+{#
+  UploadZone — PRD-F04 R-F04-01, R-F04-02, R-F04-06.
+
+  Drop zone yang dapat dipakai keyboard. `accept` membatasi tipe di dialog
+  berkas; validasi ukuran dan tipe tetap diulang di JavaScript karena `accept`
+  tidak menolak berkas yang dipilih lewat drag-and-drop.
+
+  Parameter:
+    max_size_mb   int     batas ukuran yang ditampilkan SEBELUM memilih berkas
+    accepted      list    ekstensi yang diterima, mis. [".pdf", ".docx"]
+    action        string  endpoint POST untuk unggah
+#}
+
+{% from "components/icons.html" import icon_upload %}
+
+{% macro upload_zone(max_size_mb=5, accepted=None, action="/api/cv/extract") -%}
+  {%- set accepted = accepted or [".pdf", ".docx"] -%}
+  <div class="upload" data-upload-zone
+       data-max-bytes="{{ max_size_mb * 1024 * 1024 }}"
+       data-endpoint="{{ action }}">
+    <div class="upload-body">
+      <div class="upload-icon" aria-hidden="true">{{ icon_upload() }}</div>
+      <p class="upload-title">Tarik berkas CV ke sini, atau pilih dari perangkat</p>
+      <p class="field-hint">
+        PDF atau DOCX, maksimum {{ max_size_mb }} MB.
+        Berkas dan teks CV tidak disimpan.
+      </p>
+
+      {# Input asli tetap ada dan dapat difokus; label dibuat menyerupai tombol
+         agar drag-and-drop dan pemilih berkas memakai kontrol yang sama. #}
+      <input class="upload-input" type="file" id="cv-file" name="file"
+             accept="{{ accepted|join(',') }}"
+             aria-describedby="cv-file-hint"
+             data-upload-input>
+      <label class="btn btn-line" for="cv-file">Pilih berkas</label>
+      <p class="field-hint" id="cv-file-hint">
+        Hanya {{ accepted|join(' atau ') }}. Berkas lebih besar dari
+        {{ max_size_mb }} MB akan ditolak.
+      </p>
+    </div>
+
+    {# Pesan galat diisi JavaScript; kosong di render awal agar tidak ada
+       peringatan palsu sebelum pengguna memilih apa pun. #}
+    <p class="field-error upload-error" role="alert" hidden data-upload-error></p>
+    <p class="upload-file" hidden data-upload-filename></p>
+
+    <div class="upload-progress" hidden data-upload-progress>
+      <div class="upload-bar" data-upload-bar></div>
+    </div>
+  </div>
+{%- endmacro %}

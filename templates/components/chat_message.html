@@ -1,0 +1,41 @@
+{#
+  ChatMessage — PRD-F04 R-F04-13, R-F04-14.
+
+  Satu pesan dalam percakapan. Riwayat hanya ada di memori halaman (R-F04-14);
+  partial ini tidak menyimpan apa pun dan tidak punya tombol "muat riwayat".
+
+  Parameter:
+    role      "user" | "assistant"
+    text      string
+    sources   list[{label, url}]  tautan lowongan yang dikutip (R-F04-13)
+#}
+
+{% from "components/icons.html" import icon_ai, icon_arrow_out %}
+
+{% macro chat_message(role="assistant", text="", sources=None) -%}
+  {%- set sources = sources or [] -%}
+  {%- set dari_ai = role != "user" -%}
+  <div class="msg {{ 'msg-ai' if dari_ai else 'msg-user' }}">
+    <div class="msg-av" aria-hidden="true">{{ icon_ai() if dari_ai else "Anda" }}</div>
+    <div class="msg-body">
+      {# Teks di-escape; hanya baris baru yang dipertahankan agar jawaban
+         multi-baris tidak menempel jadi satu paragraf. #}
+      <div class="msg-text">{{ text }}</div>
+
+      {%- if sources -%}
+        <div class="msg-sources">
+          <span class="msg-sources-label">Sumber</span>
+          <ul>
+            {%- for source in sources -%}
+              <li>
+                <a href="{{ source.url }}">
+                  {{ source.label }}{{ icon_arrow_out() }}
+                </a>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+{%- endmacro %}

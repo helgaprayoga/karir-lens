@@ -32,6 +32,8 @@ PREVIEW_LINKS = (
     ("preview.jobs", "Lowongan"),
     ("preview.profile", "Profil"),
     ("preview.saved", "Tersimpan"),
+    ("preview.cv", "CV"),
+    ("preview.assistant", "Asisten"),
 )
 
 # Endpoint yang bukan menu, tetapi tetap milik sebuah menu. Halaman detail dan

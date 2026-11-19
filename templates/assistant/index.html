@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% from "components/chat_message.html" import chat_message %}
+{% from "components/alert_banner.html" import alert_banner %}
+{% from "components/icons.html" import icon_ai, icon_arrow_right %}
+
+{% block title %}Asisten AI — KarirLens{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <main class="feed">
+    <div class="page-head">
+      <div>
+        <h1>Asisten AI</h1>
+        <p class="company-sub">
+          Tanya soal lowongan, istilah di iklan kerja, atau bandingkan skill Anda.
+        </p>
+      </div>
+    </div>
+
+    {%- if error -%}
+      {{ alert_banner(error, "error") }}
+    {%- endif -%}
+
+    {# R-F04-10: area pesan adalah live region. R-F04-14: riwayat hanya di
+       memori halaman — tidak ada tombol muat riwayat, tidak ada localStorage. #}
+    <div class="chat" data-chat>
+      <div class="chat-log" role="log" aria-live="polite" aria-label="Percakapan"
+           data-chat-log>
+        {%- for pesan in messages -%}
+          {{ chat_message(pesan.role, pesan.text, pesan.sources) }}
+        {%- endfor -%}
+      </div>
+
+      {# Indikator memproses disembunyikan sampai permintaan benar-benar
+         berjalan (R-F04-11); menampilkannya di render awal adalah kebohongan. #}
+      <div class="chat-typing" hidden data-chat-typing>
+        <span class="msg-av" aria-hidden="true">{{ icon_ai() }}</span>
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="sr-only">Asisten sedang menyusun jawaban</span>
+      </div>
+
+      {%- if suggestions -%}
+        <div class="chat-suggest" data-chat-suggest>
+          {%- for saran in suggestions -%}
+            <button type="button" class="chip" data-chat-suggestion>
+              {{ saran }}
+            </button>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      <form class="chat-form" data-chat-form method="post"
+            action="{{ url_for('preview.api_assistant') }}">
+        <label class="sr-only" for="chat-input">Pertanyaan untuk asisten</label>
+        <textarea id="chat-input" name="message" rows="1" required
+                  placeholder="Tulis pertanyaan Anda…"
+                  data-chat-input></textarea>
+        <button type="submit" class="btn btn-primary" data-chat-send>
+          <span data-chat-send-label>Kirim</span>
+        </button>
+      </form>
+
+      <p class="field-hint chat-note">
+        Riwayat percakapan hanya ada selama halaman ini terbuka dan tidak disimpan.
+      </p>
+    </div>
+  </main>
+
+  <aside class="rail" aria-label="Tentang asisten">
+    <div class="hint">
+      <span>Jawaban disusun dari data lowongan yang tersimpan di KarirLens, bukan
+      dari sumber luar.</span>
+    </div>
+
+    <section class="panel">
+      <h4>Asisten tidak melakukan</h4>
+      <ul class="plain-list">
+        <li>Menuliskan atau mengubah isi CV Anda</li>
+        <li>Mengirim lamaran atas nama Anda</li>
+        <li>Menyimpan percakapan untuk sesi berikutnya</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  var akar = document.querySelector("[data-chat]");
+  if (!akar) return;
+
+  var form = akar.querySelector("[data-chat-form]");
+  var log = akar.querySelector("[data-chat-log]");
+  var input = akar.querySelector("[data-chat-input]");
+  var kirim = akar.querySelector("[data-chat-send]");
+  var labelKirim = akar.querySelector("[data-chat-send-label]");
+  var mengetik = akar.querySelector("[data-chat-typing]");
+  var saran = akar.querySelector("[data-chat-suggest]");
+  var endpoint = form.getAttribute("action");
+  var token = document.querySelector('meta[name="csrf-token"]');
+
+  /* Escaping manual: jawaban server tidak boleh disisipkan sebagai HTML.
+     Sumber tautan dibangun lewat createElement, bukan string HTML. */
+  function buatPesan(role, teks, sumber) {
+    var bungkus = document.createElement("div");
+    bungkus.className = "msg " + (role === "user" ? "msg-user" : "msg-ai");
+
+    var av = document.createElement("div");
+    av.className = "msg-av";
+    av.setAttribute("aria-hidden", "true");
+    av.textContent = role === "user" ? "Anda" : "AI";
+
+    var isi = document.createElement("div");
+    isi.className = "msg-body";
+
+    var teksEl = document.createElement("div");
+    teksEl.className = "msg-text";
+    teksEl.textContent = teks;
+    isi.appendChild(teksEl);
+
+    if (sumber && sumber.length) {
+      var kotakSumber = document.createElement("div");
+      kotakSumber.className = "msg-sources";
+      var label = document.createElement("span");
+      label.className = "msg-sources-label";
+      label.textContent = "Sumber";
+      kotakSumber.appendChild(label);
+
+      var daftar = document.createElement("ul");
+      sumber.forEach(function (item) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = item.url;
+        a.textContent = item.label;
+        li.appendChild(a);
+        daftar.appendChild(li);
+      });
+      kotakSumber.appendChild(daftar);
+      isi.appendChild(kotakSumber);
+    }
+
+    bungkus.appendChild(av);
+    bungkus.appendChild(isi);
+    return bungkus;
+  }
+
+  function aturSibuk(sibuk) {
+    mengetik.hidden = !sibuk;
+    kirim.disabled = sibuk;
+    input.disabled = sibuk;
+    labelKirim.textContent = sibuk ? "Mengirim…" : "Kirim";
+    if (sibuk) {
+      kirim.setAttribute("aria-busy", "true");
+    } else {
+      kirim.removeAttribute("aria-busy");
+    }
+  }
+
+  function kirimPertanyaan(teks) {
+    if (!teks.trim()) return;
+
+    log.appendChild(buatPesan("user", teks, []));
+    if (saran) saran.hidden = true;
+    input.value = "";
+    aturSibuk(true);
+
+    var kepala = { "Content-Type": "application/json" };
+    if (token) kepala["X-CSRFToken"] = token.getAttribute("content");
+
+    fetch(endpoint, {
+      method: "POST",
+      headers: kepala,
+      body: JSON.stringify({ message: teks })
+    })
+      .then(function (respons) {
+        if (!respons.ok) throw new Error("HTTP " + respons.status);
+        return respons.json();
+      })
+      .then(function (hasil) {
+        var data = hasil.data || {};
+        log.appendChild(buatPesan("assistant", data.reply || "", data.sources || []));
+      })
+      .catch(function () {
+        /* R-F04-12: pesan ramah, tanpa kode status atau detail internal. */
+        log.appendChild(buatPesan(
+          "assistant",
+          "Maaf, jawaban gagal diambil. Periksa koneksi Anda lalu coba lagi.",
+          []
+        ));
+      })
+      .then(function () {
+        aturSibuk(false);
+        input.focus();
+      });
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    kirimPertanyaan(input.value);
+  });
+
+  /* Enter mengirim, Shift+Enter membuat baris baru. */
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      kirimPertanyaan(input.value);
+    }
+  });
+
+  Array.prototype.forEach.call(
+    akar.querySelectorAll("[data-chat-suggestion]"),
+    function (tombol) {
+      tombol.addEventListener("click", function () {
+        kirimPertanyaan(tombol.textContent.trim());
+      });
+    }
+  );
+})();
+</script>
+{% endblock %}

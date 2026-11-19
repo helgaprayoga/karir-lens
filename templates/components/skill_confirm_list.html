@@ -1,0 +1,78 @@
+{#
+  SkillConfirmList — PRD-F04 R-F04-04, R-F04-05.
+
+  Setiap kandidat skill adalah checkbox yang dapat dipilih, semua terpilih pada
+  render awal (R-F04-04). Tombol simpan disabled sampai minimal satu dipilih
+  (R-F04-05) — diatur skrip, bukan hanya atribut, karena pilihan berubah.
+
+  Parameter:
+    suggested   list[string]  kandidat hasil ekstraksi
+    confirmed   list[dict]    skill yang sudah tersimpan {skill}
+    ambiguous   list[dict]    {text, reason} yang perlu diputuskan pengguna
+#}
+
+{% macro skill_confirm_list(suggested, confirmed=None, ambiguous=None) -%}
+  {%- set suggested = suggested or [] -%}
+  {%- set confirmed = confirmed or [] -%}
+  {%- set ambiguous = ambiguous or [] -%}
+  {%- set sudah = confirmed|map(attribute="skill")|list if confirmed and confirmed[0] is mapping
+                  else confirmed -%}
+
+  <section class="panel panel-confirm" aria-label="Konfirmasi skill">
+    <div class="panel-head">
+      <h4>Skill terdeteksi</h4>
+      <span class="sub">{{ suggested|length }} kandidat</span>
+    </div>
+    <p class="field-hint">
+      Lepas centang skill yang tidak ingin dipakai. Hanya skill terpilih yang
+      disimpan untuk menghitung rekomendasi.
+    </p>
+
+    {%- if suggested -%}
+      <ul class="skill-choices" data-skill-choices>
+        {%- for skill in suggested -%}
+          {# R-F04-04: semua kandidat terpilih sebagai bawaan, termasuk yang
+             sudah tersimpan — pengguna tidak perlu mencentang ulang. #}
+          <li>
+            <label class="skill-choice">
+              <input type="checkbox" name="skills" value="{{ skill }}" checked>
+              <span>{{ skill }}</span>
+              {%- if skill in sudah -%}
+                <span class="skill-choice-note">sudah tersimpan</span>
+              {%- endif -%}
+            </label>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- else -%}
+      <p class="field-hint">Belum ada skill terdeteksi.</p>
+    {%- endif -%}
+
+    {%- if ambiguous -%}
+      <div class="ambiguous">
+        <div class="boxtitle">Perlu diputuskan</div>
+        <ul class="ambiguous-list">
+          {%- for item in ambiguous -%}
+            <li>
+              <b>{{ item.text }}</b>
+              <span>{{ item.reason }}</span>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+
+    <button type="button" class="btn btn-primary btn-block"
+            data-confirm-skills
+            {{ "disabled" if not suggested }}>
+      Simpan skill terpilih
+    </button>
+    <div class="foot-note" data-confirm-hint>
+      {%- if suggested -%}
+        {{ suggested|length }} skill akan disimpan.
+      {%- else -%}
+        Belum ada skill yang dapat disimpan.
+      {%- endif -%}
+    </div>
+  </section>
+{%- endmacro %}

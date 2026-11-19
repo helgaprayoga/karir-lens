@@ -381,15 +381,36 @@ def test_company_back_link_matches_detail(catalog) -> None:
 
 
 def test_company_subtitle_has_small_gap(catalog) -> None:
-    """Nama perusahaan dan baris jumlah·lokasi diberi jarak kecil, bukan 0."""
+    """Nama perusahaan dan baris jumlah·lokasi diberi jarak kecil, bukan 0.
+
+    Jarak ini milik `.company-sub`, bukan `.company-head h1`, supaya halaman
+    lain yang memakai kelas yang sama (profil, tersimpan, CV, asisten) ikut
+    mendapat jarak yang sama.
+    """
     body = _html(catalog.get("/preview/companies/novatech-labs"))
     assert 'class="company-sub"' in body
 
     css = open("static/css/components.css", encoding="utf-8").read()
-    blok = css.split(".company-head h1 {")[1].split("}")[0]
-    assert "margin-bottom: 6px" in blok
     sub = css.split(".company-sub {")[1].split("}")[0]
-    assert "margin: 0" in sub, "margin bawaan <p> akan menambah jarak lagi"
+    assert "margin: 10px 0 0" in sub
+
+
+def test_company_sub_used_consistently(catalog) -> None:
+    """Semua halaman yang punya h1 + subjudul memakai kelas yang sama.
+
+    Kalau salah satu halaman menulis paragrafnya sendiri, jaraknya kembali 0 dan
+    tidak ada yang menangkapnya sampai dilihat di browser.
+    """
+    halaman = [
+        "/preview/companies/novatech-labs",
+        "/preview/profile",
+        "/preview/saved",
+        "/preview/cv",
+        "/preview/assistant",
+    ]
+    for path in halaman:
+        body = _html(catalog.get(path))
+        assert 'class="company-sub"' in body, f"{path} tidak memakai .company-sub"
 
 
 def test_company_page_no_external_profile(catalog) -> None:
