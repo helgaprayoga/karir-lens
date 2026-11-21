@@ -120,17 +120,33 @@ def finish_run(
 
 # --- jobs ----------------------------------------------------------------
 
-def exists(source_url: str) -> bool:
-    """True bila ``source_url`` sudah tersimpan (R-02-09)."""
+# Kolom yang boleh diperbarui saat `source_url` yang sama diambil ulang.
+# `source_url` dan `source_id` tidak ada di sini: keduanya identitas baris, dan
+# mengubahnya berarti membuat baris baru secara diam-diam.
+FIELD_DIPERBARUI = (
+    "title", "company_name", "company_slug", "location", "employment_type",
+    "description", "skills", "salary_min", "salary_max", "salary_currency",
+    "salary_period", "source_job_id", "posted_at", "dedup_hash", "scraped_at",
+)
+
+
+def find_by_source_url(source_url: str) -> dict | None:
+    """Baris ``jobs`` yang sudah ada untuk ``source_url`` ini, atau ``None``."""
     hasil = (
         core_db.get_db()
         .table(JOBS)
-        .select("id")
+        .select("id,source_url")
         .eq("source_url", source_url)
         .limit(1)
         .execute()
     )
-    return bool(getattr(hasil, "data", None))
+    baris = getattr(hasil, "data", None) or []
+    return baris[0] if baris else None
+
+
+def exists(source_url: str) -> bool:
+    """True bila ``source_url`` sudah tersimpan (R-02-09)."""
+    return find_by_source_url(source_url) is not None
 
 
 def insert(job: dict) -> bool:
@@ -141,12 +157,79 @@ def insert(job: dict) -> bool:
     return True
 
 
-def insert_many(rows: list[dict]) -> int:
-    """Simpan sekumpulan baris; kembalikan jumlah yang benar-benar baru.
+def find_duplicate(job: dict) -> dict | None:
+    """Baris lain dengan ``dedup_hash`` sama, dari **sumber berbeda** (R-03-09).
 
-    Duplikat di dalam satu eksekusi disaring lebih dulu: ``source_url`` unik di
-    database, dan mengirim dua baris dengan URL sama dalam satu batch akan
-    menggagalkan seluruh batch (acceptance §5: tidak ada duplikasi).
+    Satu sumber biasanya tidak menduplikasi dirinya sendiri: dua lowongan dari
+    Dealls dengan judul dan perusahaan sama biasanya memang dua lowongan
+    berbeda (satu perusahaan, dua lokasi). Tetapi Remotive **terbukti** memuat
+    lowongan kembar — dua ID berbeda, judul dan perusahaan identik
+    ("Content Reviewer - United States" 2091166 dan 2091177). Karena itu
+    pencarian tidak menyaring per sumber.
+
+    Yang disaring hanya ``source_url`` yang sama, karena itu baris yang sama,
+    bukan duplikat.
+    """
+    dedup_hash = job.get("dedup_hash")
+    if not dedup_hash:
+        return None
+
+    hasil = (
+        core_db.get_db()
+        .table(JOBS)
+        .select("id,source_url,source_id,dedup_hash")
+        .eq("dedup_hash", dedup_hash)
+        .limit(5)
+        .execute()
+    )
+    for baris in getattr(hasil, "data", None) or []:
+        if baris.get("source_url") != job.get("source_url"):
+            return baris
+    return None
+
+
+def _tandai_duplikat(job: dict, induk: dict) -> dict:
+    """Tambahkan penanda duplikat pada baris yang akan disimpan."""
+    return {
+        **job,
+        "duplicate_of": induk.get("id"),
+        "dedup_source": induk.get("source_url"),
+    }
+
+
+def upsert(job: dict) -> str:
+    """Simpan lowongan secara idempoten (R-03-09, R-03-12).
+
+    Kembalian:
+      ``"inserted"``  baris baru
+      ``"updated"``   baris dengan ``source_url`` sama sudah ada, isinya diperbarui
+      ``"duplicate"`` ``dedup_hash`` sama dengan baris sumber lain; disimpan
+                      dengan penanda, bukan digabung diam-diam (R-03-10)
+    """
+    lama = find_by_source_url(job["source_url"])
+
+    if lama is not None:
+        perubahan = {k: v for k, v in job.items() if k in FIELD_DIPERBARUI}
+        if not perubahan:
+            return "updated"
+        core_db.get_db().table(JOBS).update(perubahan).eq("id", lama["id"]).execute()
+        return "updated"
+
+    induk = find_duplicate(job)
+    if induk is not None:
+        core_db.get_db().table(JOBS).insert(_tandai_duplikat(job, induk)).execute()
+        return "duplicate"
+
+    core_db.get_db().table(JOBS).insert(job).execute()
+    return "inserted"
+
+
+def insert_many(rows: list[dict]) -> dict[str, int]:
+    """Simpan sekumpulan baris; kembalikan jumlah per hasil.
+
+    Duplikat ``source_url`` di dalam satu eksekusi disaring lebih dulu: kolomnya
+    unik di database, dan mengirim dua baris dengan URL sama dalam satu batch
+    akan menggagalkan seluruh batch.
     """
     unik: dict[str, dict] = {}
     for baris in rows:
@@ -154,17 +237,12 @@ def insert_many(rows: list[dict]) -> int:
         if url and url not in unik:
             unik[url] = baris
 
-    tersimpan = 0
-    for url, baris in unik.items():
-        if insert(baris):
-            tersimpan += 1
-    return tersimpan
+    hasil = {"inserted": 0, "updated": 0, "duplicate": 0}
+    for baris in unik.values():
+        hasil[upsert(baris)] += 1
+    return hasil
 
 
 def insert_or_update(job: dict) -> str:
-    """Simpan lowongan; kembalikan ``"inserted"`` atau ``"existing"``.
-
-    Pembaruan sungguhan (dan ``dedup_hash``) datang di PRD-03. Nama fungsi
-    dipertahankan agar pemanggilnya tidak berubah saat itu terjadi.
-    """
-    return "inserted" if insert(job) else "existing"
+    """Nama lama; sekarang meneruskan ke :func:`upsert`."""
+    return upsert(job)

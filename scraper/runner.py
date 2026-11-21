@@ -33,6 +33,8 @@ class SourceOutcome:
     status: str = "failed"
     jobs_found: int = 0
     jobs_inserted: int = 0
+    jobs_updated: int = 0
+    jobs_duplicate: int = 0
     error_message: str | None = None
     jobs: list[RawJob] = field(default_factory=list)
 
@@ -86,7 +88,10 @@ def _outcome_for(source: str, max_pages: int, dry_run: bool, with_detail: bool =
         return hasil
 
     try:
-        hasil.jobs_inserted = pipeline.persist_run(source, jobs)
+        hasil_data = pipeline.persist_run(source, jobs)
+        hasil.jobs_inserted = hasil_data.get("inserted", 0)
+        hasil.jobs_updated = hasil_data.get("updated", 0)
+        hasil.jobs_duplicate = hasil_data.get("duplicate", 0)
         hasil.status = "success"
     except Exception as exc:
         hasil.status = "partial"
@@ -94,8 +99,9 @@ def _outcome_for(source: str, max_pages: int, dry_run: bool, with_detail: bool =
         logger.exception("%s: gagal menyimpan", source)
 
     logger.info(
-        "%s: %d ditemukan, %d baru, %.1f detik",
-        source, hasil.jobs_found, hasil.jobs_inserted, durasi,
+        "%s: %d ditemukan, %d baru, %d diperbarui, %d duplikat, %.1f detik",
+        source, hasil.jobs_found, hasil.jobs_inserted, hasil.jobs_updated,
+        hasil.jobs_duplicate, durasi,
     )
     return hasil
 
@@ -142,6 +148,10 @@ def run(
 
     berhasil = [h for h in hasil if h.status in {"success", "partial"}]
     for h in hasil:
-        logger.info("  %-9s %-8s ditemukan=%d baru=%d", h.source, h.status, h.jobs_found, h.jobs_inserted)
+        logger.info(
+            "  %-9s %-8s ditemukan=%d baru=%d diperbarui=%d duplikat=%d",
+            h.source, h.status, h.jobs_found, h.jobs_inserted,
+            h.jobs_updated, h.jobs_duplicate,
+        )
 
     return 0 if berhasil else 1

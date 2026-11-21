@@ -8,7 +8,7 @@
 | Milestone | M2 Data pipeline (2-3 hari) |
 | Dependensi | PRD-01, PRD-02 |
 | Task yang bergantung | PRD-04, PRD-05, PRD-07, PRD-08 |
-| Status | Belum dimulai |
+| Status | Selesai (terbukti di Supabase) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 
 ---
@@ -94,14 +94,16 @@ RawJob
 
 ## 5. Acceptance Criteria
 
-- [ ] Tidak ada baris ganda berdasarkan `source_url`.
-- [ ] Baris dengan `dedup_hash` sama dan sumber berbeda tertandai sebagai duplikat, bukan dihapus diam-diam.
-- [ ] Semua lowongan yang tampil memiliki format konsisten (tipe kerja baku, skill lowercase, gaji valid).
-- [ ] Ingestion dijalankan dua kali berturut-turut tidak menambah baris baru untuk data yang sama.
-- [ ] `jobs_updated` bertambah saat data yang sama diambil ulang dengan perubahan.
-- [ ] Data tidak lengkap tersimpan dengan nilai kosong yang jelas.
-- [ ] Setiap baris tetap memiliki `source_url` asli.
-- [ ] Unit test normalizer dan deduplikator lulus dan tidak memerlukan jaringan.
+- [x] Tidak ada baris ganda berdasarkan `source_url`.
+- [x] Baris dengan `dedup_hash` sama dan sumber berbeda tertandai sebagai duplikat, bukan dihapus diam-diam.
+- [x] Semua lowongan yang tampil memiliki format konsisten (tipe kerja baku, skill lowercase, gaji valid).
+- [x] Ingestion dijalankan dua kali berturut-turut tidak menambah baris baru untuk data yang sama.
+- [x] `jobs_updated` bertambah saat data yang sama diambil ulang dengan perubahan.
+- [x] Data tidak lengkap tersimpan dengan nilai kosong yang jelas.
+- [x] Setiap baris tetap memiliki `source_url` asli.
+- [x] Unit test normalizer dan deduplikator lulus dan tidak memerlukan jaringan.
+
+Bukti terukur ada di §12.
 
 ## 6. Dependensi
 
@@ -180,3 +182,85 @@ Tidak ada proyek referensi yang melakukan deduplikasi lintas sumber. Yang tersed
 - Test otomatis pada §7.1 lulus.
 - Proses ingestion terbukti idempoten.
 - `dedup_hash` dan aturan normalisasi terdokumentasi di README teknis.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `core/text.py` | Bersihkan teks, `slugify`, `split_location` |
+| `core/skills.py` | `normalize_skills` untuk skill deklaratif (dari PRD-02 lanjutan) |
+| `scraper/pipeline/normalize.py` | Seluruh aturan §4.1, fungsi murni |
+| `scraper/pipeline/dedup.py` | `compute_hash` SHA-256, `is_duplicate`, `group_by_hash` |
+| `scraper/pipeline/persist.py` | `upsert`, `find_duplicate`, penandaan duplikat |
+| `scraper/pipeline/__init__.py` | Menyambungkan `normalize` + `dedup` ke `persist_run` |
+| `scraper/runner.py` | Hitungan `inserted`/`updated`/`duplicate` per sumber |
+| `migrations/003_dedup_marker.sql` | Kolom `duplicate_of` dan `dedup_source` |
+| `tests/unit/test_normalize.py` | 22 test untuk §7.1 |
+
+### 12.2 Keputusan
+
+**SHA-256, bukan `hash()`.** ``hash()`` untuk string diacak per proses sejak
+Python 3.3 (PYTHONHASHSEED). Hash yang berubah setiap proses akan membuat
+seluruh baris terlihat baru pada setiap eksekusi — tepat masalah yang ingin
+dicegah R-03-12.
+
+**Pemisah `\x1f` antar-field.** Tanpa itu, ``title="AB"`` + ``company="C"``
+bertabrakan dengan ``title="A"`` + ``company="BC"``. Diuji
+(`test_dedup_hash_field_separator`).
+
+**Gaji `min > max` ditukar, bukan dibuang.** Kemungkinan besar urutannya
+tertukar di sumber, dan datanya tetap berguna. Nol dan negatif dibuang: itu
+ketiadaan data, bukan gaji.
+
+**`employment_type` mengeluarkan `unknown`, bukan `None`.** Tampilan perlu
+membedakan "tidak disebutkan" dari "belum dicoba"; `None` menyamakan keduanya.
+
+**`slugify` terpisah dari `normalize_text`.** `normalize_text` sengaja
+mempertahankan `+`, `#`, `.` untuk nama skill (`c++`, `node.js`). Pada slug,
+"PT. Digivana" harus menjadi `pt-digivana`, bukan `pt.-digivana`. Bug ini
+ditemukan dari data nyata, bukan dari test.
+
+### 12.3 Satu Asumsi yang Terbukti Salah
+
+Rencana awal: "satu sumber tidak menduplikasi dirinya sendiri", sehingga
+`find_duplicate` menyaring per `source_id`. Data nyata membantahnya — Remotive
+memuat **dua lowongan kembar** dengan ID berbeda:
+
+| `source_job_id` | Judul | Perusahaan |
+|---|---|---|
+| 2091166 | Content Reviewer - United States | TELUS Digital |
+| 2091177 | Content Reviewer - United States | TELUS Digital |
+
+Penyaringan per sumber karena itu dihapus; yang disaring hanya `source_url`
+yang sama, karena itu baris yang sama. Sekarang keduanya tersimpan dengan
+`duplicate_of` menunjuk yang pertama.
+
+### 12.4 Verifikasi Terukur
+
+Dua eksekusi berturut-turut dari database kosong:
+
+| Run | Dealls | Kalibrr | Remotive |
+|---|---|---|---|
+| 1 | 18 baru | 15 baru | 15 baru + **1 duplikat** |
+| 2 | 0 baru, 18 diperbarui | 0 baru, 15 diperbarui | 0 baru, 16 diperbarui |
+
+Total tetap **49 baris** setelah run kedua. Isi database:
+
+| Pemeriksaan | Hasil |
+|---|---|
+| `dedup_hash` terisi | 49/49, panjang 64 karakter |
+| `company_slug` terisi | 49/49 |
+| `title`/`company_name`/`description` berisi HTML | 0 |
+| `employment_type` di luar himpunan baku | 0 |
+| Baris bertanda duplikat | 1, `duplicate_of` menunjuk baris induk |
+
+`employment_type` akhir: `full-time` 36, `contract` 6, `part-time` 2,
+`freelance` 1, `internship` 1, `unknown` 3. Ketiga `unknown` berasal dari
+Remotive yang memang tidak mencantumkan tipe kerja pada kartunya — bukan bug
+pemetaan.
+
+Total test setelah task ini: **349 lulus**.

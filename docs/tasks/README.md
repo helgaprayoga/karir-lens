@@ -71,7 +71,7 @@ Satu-satunya titik temu keduanya adalah **kontrak template**: nama variabel kont
 |---|---|---|---|---|---|
 | [PRD-01](./PRD-01-fondasi-proyek.md) | Fondasi Proyek | P0 | M1 | — | Selesai |
 | [PRD-02](./PRD-02-data-ingestion.md) | Data Ingestion | P0 | M2 | PRD-01 | Selesai |
-| [PRD-03](./PRD-03-normalisasi-deduplikasi.md) | Normalisasi dan Deduplikasi | P0 | M2 | PRD-01, PRD-02 | Belum dimulai |
+| [PRD-03](./PRD-03-normalisasi-deduplikasi.md) | Normalisasi dan Deduplikasi | P0 | M2 | PRD-01, PRD-02 | Selesai |
 | [PRD-04](./PRD-04-katalog-publik.md) | Katalog Publik (backend) | P0 | M3 | PRD-01, PRD-03, F02 | Belum dimulai |
 | [PRD-05](./PRD-05-perusahaan-insight.md) | Perusahaan dan Insight (backend) | P0 | M4 | PRD-03, PRD-04, F05 | Belum dimulai |
 | [PRD-06](./PRD-06-akun-bookmark.md) | Akun dan Bookmark (backend) | P0 | M5 | PRD-01, PRD-04, F03 | Belum dimulai |
@@ -105,7 +105,7 @@ Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan pre
 ## Status
 
 - **Track A**: PRD-F01 s.d. PRD-F06 **selesai**. Track A siap menerima Track B.
-- **Track B**: PRD-01 **selesai** (tabel terbukti ada di Supabase). PRD-02 **selesai** (58 lowongan tersimpan dari 3 sumber). PRD-03 s.d. PRD-10 **Belum dimulai**.
+- **Track B**: PRD-01 s.d. PRD-03 **selesai** (49 lowongan tersimpan, idempoten, duplikat tertandai). PRD-04 s.d. PRD-10 **Belum dimulai**.
 
 ## Referensi Proyek Sebelumnya
 

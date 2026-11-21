@@ -283,7 +283,10 @@ bug ini lolos dari 23 test karena fixture saya menggambarkan HTML yang saya
 
 ### 12.6 Verifikasi Terukur
 
-`python -m scraper run --source all --pages 1` terhadap Supabase sungguhan:
+`python -m scraper run --source all --pages 1` terhadap Supabase sungguhan.
+Angka di bawah adalah hasil **sebelum** revisi parser HTML (§12.7); lihat §12.8
+untuk angka sesudahnya. Keduanya dipertahankan sebagai jejak, bukan dua
+kebenaran yang bersaing.
 
 | Sumber | Status | Ditemukan | Baru |
 |---|---|---|---|
@@ -301,7 +304,7 @@ Isi database setelahnya, dibaca langsung lewat PostgREST:
 
 Sebaran `jobs.source_id`: 18 / 20 / 20.
 
-Kualitas field pada 58 baris:
+Kualitas field pada 58 baris (sebelum revisi):
 
 | Field | Terisi | Catatan |
 |---|---|---|
@@ -312,8 +315,9 @@ Kualitas field pada 58 baris:
 | `posted_at` | 20/58 | hanya Remotive yang menyertakan tanggal |
 | `salary_min` | 2/58 | Dealls menulis "Tidak Ditampilkan" untuk sebagian besar |
 
-Keenam angka itu bukan kegagalan: sumbernya memang tidak menyediakan datanya,
-dan nilai kosong dibiarkan `None` sesuai R-02-02 alih-alih diisi tebakan.
+Angka itu bukan kegagalan parser, tetapi **keterbatasan sumber**: pada versi
+itu Remotive hanya dibaca dari JSON-LD yang berisi judul dan URL. §12.7
+memperbaikinya dengan membaca HTML.
 
 **Idempotensi.** Menjalankan perintah yang sama dua kali menghasilkan
 `baru=0` untuk ketiga sumber; jumlah baris tetap 58. `source_url` unik bekerja

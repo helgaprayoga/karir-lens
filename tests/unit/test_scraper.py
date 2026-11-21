@@ -422,7 +422,11 @@ def test_failure_isolation(monkeypatch) -> None:
 
     from scraper import pipeline
 
-    monkeypatch.setattr(pipeline, "persist_run", lambda s, j: disimpan.setdefault(s, len(j)))
+    def catat(sumber, jobs):
+        disimpan[sumber] = len(jobs)
+        return {"inserted": len(jobs), "updated": 0, "duplicate": 0}
+
+    monkeypatch.setattr(pipeline, "persist_run", catat)
     monkeypatch.setattr(pipeline, "record_outcome", lambda o: dicatat.append(o))
 
     kode = runner.run(source="all", max_pages=1)
@@ -555,14 +559,17 @@ def test_persist_run_resolves_source_id(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         persist, "insert_many",
-        lambda rows: tersimpan.extend(rows) or len(rows),
+        lambda rows: tersimpan.extend(rows) or {"inserted": len(rows), "updated": 0, "duplicate": 0},
     )
 
     job = RawJob(title="Uji", source_url="https://contoh.test/2", source="dealls")
-    jumlah = pipeline.persist_run("dealls", [job])
+    hasil = pipeline.persist_run("dealls", [job])
 
-    assert jumlah == 1
+    assert hasil["inserted"] == 1
     assert tersimpan[0]["source_id"] == 42
+    # Normalisasi ikut berjalan: baris yang disimpan bukan lagi data mentah.
+    assert tersimpan[0]["dedup_hash"], "dedup_hash harus diisi"
+    assert tersimpan[0]["scraped_at"]
 
 
 def test_runner_configures_database(monkeypatch) -> None:
