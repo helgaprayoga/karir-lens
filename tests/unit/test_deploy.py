@@ -1,0 +1,89 @@
+"""Uji entry point produksi: default aman dan dapat diimpor gunicorn."""
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _jalankan(kode: str, env: dict | None = None) -> tuple[int, str]:
+    """Jalankan potongan Python di proses baru, dengan cwd root proyek."""
+    lingkungan = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    lingkungan.pop("FLASK_ENV", None)
+    lingkungan.update(env or {})
+    hasil = subprocess.run(
+        [sys.executable, "-c", kode],
+        cwd=ROOT, capture_output=True, text=True, env=lingkungan, timeout=120,
+    )
+    return hasil.returncode, (hasil.stdout + hasil.stderr).strip()
+
+
+def test_wsgi_defaults_to_production() -> None:
+    """Tanpa `FLASK_ENV`, aplikasi berjalan sebagai production.
+
+    Sebelumnya bawaannya `development`, sehingga lupa mengisi `FLASK_ENV` di
+    Render berarti `DEBUG=True`: traceback lengkap terbuka ke publik pada setiap
+    galat. Test ini menjaga bawaannya tetap aman.
+    """
+    kode, keluaran = _jalankan(
+        "import wsgi; print(wsgi.app.config.get('DEBUG'));"
+        "print(wsgi.app.config.get('SESSION_COOKIE_SECURE'))"
+    )
+    assert kode == 0, keluaran
+
+    baris = keluaran.splitlines()
+    assert baris[-2] == "False", f"DEBUG harus mati, dapat {baris[-2]}"
+
+
+def test_wsgi_can_be_imported_by_gunicorn() -> None:
+    """`gunicorn wsgi:app` hanya butuh modul `wsgi` dan atribut `app`."""
+    kode, keluaran = _jalankan(
+        "import wsgi;"
+        "assert callable(wsgi.app), 'app bukan WSGI callable';"
+        "print(type(wsgi.app).__name__)"
+    )
+    assert kode == 0, keluaran
+
+
+def test_wsgi_honours_explicit_flask_env() -> None:
+    """`FLASK_ENV=development` tetap dihormati saat pengembangan lokal."""
+    kode, keluaran = _jalankan(
+        "import wsgi; print(wsgi.app.config.get('DEBUG'))",
+        {"FLASK_ENV": "development"},
+    )
+    assert kode == 0, keluaran
+    assert keluaran.splitlines()[-1] == "True"
+
+
+def test_deploy_files_exist() -> None:
+    """Berkas yang dibutuhkan Render ada dan tidak kosong."""
+    for nama in ("Procfile", ".python-version"):
+        berkas = ROOT / nama
+        assert berkas.is_file(), f"{nama} tidak ada"
+        assert berkas.read_text(encoding="utf-8").strip(), f"{nama} kosong"
+
+    procfile = (ROOT / "Procfile").read_text(encoding="utf-8")
+    assert procfile.startswith("web: gunicorn wsgi:app"), procfile
+    assert "$PORT" in procfile, "Render memberi port lewat $PORT"
+
+
+def test_gunicorn_is_declared() -> None:
+    """`gunicorn` ada di requirements, karena Procfile memanggilnya."""
+    isi = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    assert "gunicorn" in isi.lower()
+
+
+def test_scrape_workflow_exists() -> None:
+    """Workflow cron ada, memakai `--detail`, dan menjalankan clustering."""
+    jalur = ROOT / ".github" / "workflows" / "scrape.yml"
+    assert jalur.is_file(), "workflow scraping belum dibuat"
+
+    isi = jalur.read_text(encoding="utf-8")
+    assert "cron:" in isi
+    # `--detail` bawaannya mati; tanpa flag ini deskripsi dan skill tidak
+    # pernah diperbarui, dan statusnya tetap `success` sehingga tidak ada yang
+    # memberi tahu.
+    assert "--detail" in isi, "workflow harus memakai --detail"
+    assert "scraper cluster" in isi, "cluster harus dibentuk ulang setelah scrape"

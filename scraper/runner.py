@@ -28,6 +28,12 @@ logger = logging.getLogger(__name__)
 # saat diperiksa; 300 memberi ruang tanpa membuka loop tak berujung.
 MAX_PAGES_ALL = 300
 
+# Ambang pengaman `--replace`: penghapusan dibatalkan bila lowongan yang
+# terkumpul hari ini kurang dari 60% isi database. Penurunan sebesar itu hampir
+# selalu berarti pengambilan hanya berhasil sebagian, bukan lowongan yang
+# benar-benar hilang.
+MIN_REPLACE_RATIO = 0.6
+
 
 @dataclass
 class SourceOutcome:
@@ -215,6 +221,13 @@ def _replace_if_successful(
         ke sana (menghapus lalu memasukkan ulang akan memutus bookmark).
       - Bila sebuah sumber gagal, lowongannya tidak ikut terhapus, karena kita
         tidak punya dasar untuk menyatakan lowongan itu sudah tidak tersedia.
+
+    **Ambang pengaman.** Bila hasil hari ini jauh lebih kecil daripada yang
+    tersimpan, penghapusan dibatalkan. Penyebabnya bukan lowongan yang benar-benar
+    hilang, melainkan pengambilan yang setengah berhasil — situs membatasi
+    jumlah halaman, atau struktur berubah di tengah jalan. Menghapus ratusan
+    baris karena satu kegagalan sementara jauh lebih mahal daripada
+    mempertahankan data yang belum segar sehari lagi.
     """
     from . import pipeline
 
@@ -234,6 +247,21 @@ def _replace_if_successful(
     if not url_terbaru:
         logger.warning("Ganti data dilewati: tidak ada satu pun lowongan baru.")
         return
+
+    tersimpan = pipeline.persist_hitung_tersimpan()
+    if tersimpan:
+        rasio = len(url_terbaru) / tersimpan
+        if rasio < MIN_REPLACE_RATIO:
+            logger.warning(
+                "Ganti data DIBATALKAN: hasil hari ini %d lowongan, sementara "
+                "database berisi %d (%.0f%%, di bawah ambang %.0f%%). "
+                "Kemungkinan pengambilan hanya berhasil sebagian.",
+                len(url_terbaru),
+                tersimpan,
+                rasio * 100,
+                MIN_REPLACE_RATIO * 100,
+            )
+            return
 
     dihapus = pipeline.persist_hapus_di_luar(url_terbaru, abaikan_sumber=gagal)
     logger.info("Ganti data: %d lowongan lama dihapus, %d dipertahankan.", dihapus, len(url_terbaru))

@@ -59,6 +59,15 @@ def persist_run(source: str, jobs: list) -> dict[str, int]:
     return persist.insert_many(baris)
 
 
+def persist_hitung_tersimpan() -> int:
+    """Jumlah baris ``jobs`` saat ini, untuk ambang pengaman ``--replace``."""
+    from core import db as core_db
+
+    hasil = core_db.get_db().table(persist.JOBS).select("id", count="exact").execute()
+    jumlah = getattr(hasil, "count", None)
+    return jumlah if jumlah is not None else len(hasil.data or [])
+
+
 def persist_hapus_di_luar(url_dipertahankan: set[str], abaikan_sumber: set[str] | None = None) -> int:
     """Teruskan ke :func:`persist.hapus_di_luar` (dipakai ``--replace``)."""
     return persist.hapus_di_luar(url_dipertahankan, abaikan_sumber=abaikan_sumber)

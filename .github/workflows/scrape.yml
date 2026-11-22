@@ -1,0 +1,69 @@
+name: Scrape harian
+
+# Pembaruan data otomatis: ambil lowongan dari tiga sumber, ganti baris yang sudah
+# tidak tersedia, lalu bentuk ulang cluster.
+#
+# Kenapa GitHub Actions, bukan scheduler di dalam aplikasi: Render Free dapat
+# tidur saat tidak ada permintaan, dan proses terjadwal di dalam container akan
+# mati bersamanya. Actions berjalan di mesin terpisah, sehingga tetap jalan.
+
+on:
+  schedule:
+    # 00:00 UTC = 07:00 WIB. Cron GitHub SELALU dalam UTC.
+    # Catat: jadwal tidak dijamin tepat; GitHub dapat menunda beberapa menit
+    # sampai puluhan menit saat antrean padat.
+    - cron: "0 0 * * *"
+  # Tombol "Run workflow" untuk menguji tanpa menunggu jadwal.
+  workflow_dispatch: {}
+
+# Satu eksekusi pada satu waktu. Dua run yang tumpang tindih akan menulis ke
+# tabel yang sama bersamaan.
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    # Pipeline penuh ±4 menit; 30 menit memberi ruang bila sumber lambat.
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+          cache: pip
+
+      - name: Pasang dependensi
+        run: pip install -r requirements.txt
+
+      - name: Ambil lowongan, saring IT, ganti data lama
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SCRAPER_MAX_RETRY: "3"
+          SCRAPER_USER_AGENT: "KarirLensBot/1.0 (agregator lowongan; hubungi pemilik aplikasi)"
+        # `--detail` WAJIB: bawaannya mati, dan tanpa flag itu deskripsi serta
+        # skill tidak pernah diperbarui. `--replace` menghapus baris yang sudah
+        # tidak muncul di pengambilan hari ini; sumber yang gagal tidak dihapus.
+        #
+        # `--pages 0` berarti ambil sampai daftar habis.
+        run: python -m scraper run --source all --pages 0 --detail --replace
+
+      - name: Bentuk ulang cluster
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        # Tanpa langkah ini, `/insights` menampilkan nol kategori sampai ada yang
+        # menjalankannya manual.
+        run: python -m scraper cluster
+
+      - name: Ringkas hasil
+        if: always()
+        run: |
+          echo "### Hasil scrape" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status langkah sebelumnya menentukan isi tabel \`scrape_runs\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "Periksa https://supabase.com/dashboard untuk angka terbarunya." >> "$GITHUB_STEP_SUMMARY"

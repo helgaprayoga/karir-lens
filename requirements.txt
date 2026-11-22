@@ -8,6 +8,11 @@ Flask-Login>=0.6            # sesi pengguna dan decorator login_required
 email-validator>=2.1        # validasi field Email WTForms (R-01-09)
 python-dotenv>=1.0          # memuat .env saat pengembangan lokal
 
+# --- Server produksi --------------------------------------------------------
+# `flask run` bukan untuk produksi: single-threaded dan tanpa timeout. Render
+# menjalankan aplikasi lewat Procfile, yang memanggil gunicorn.
+gunicorn>=21.2              # WSGI server untuk Render (PRD-10)
+
 # --- Database ---------------------------------------------------------------
 supabase>=2.0               # client PostgREST ke Supabase (PRD §10.3)
 psycopg[binary]>=3.1        # koneksi Postgres langsung untuk migrasi (`python -m db`)
@@ -26,3 +31,6 @@ python-docx>=1.1            # teks dari berkas DOCX (PRD-07)
 
 # --- Pengujian --------------------------------------------------------------
 pytest>=8.0                 # kerangka pengujian
+
+# --- Server produksi --------------------------------------------------------
+gunicorn>=21.2              # WSGI server untuk Render (PRD-10)
