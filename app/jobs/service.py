@@ -74,6 +74,9 @@ def _criteria(filters: dict) -> dict:
         # Nama sumber tak dikenal dibuang, bukan menghasilkan halaman kosong:
         # R-04-02 meminta filter salah direset, bukan error.
         "source_id": [sumber[n] for n in filters["source"] if n in sumber],
+        # Kategori disaring lewat `cluster_id`, bukan teks: label cluster
+        # berbentuk "Data & Ai & Python" dan tidak akan cocok dengan `q`.
+        "cluster_id": filters["category"],
         "sort": filters["sort"],
     }
 
@@ -108,17 +111,22 @@ def search_jobs(
     city: str | None = None,
     employment_type: str | None = None,
     source: str | None = None,
+    category: str | int | None = None,
     sort: str | None = None,
     page: str | int | None = None,
     per_page: str | int | None = None,
 ) -> dict:
     """Cari lowongan dan kembalikan ``{items, meta, filters, options}`` (R-04-01..R-04-05).
 
-    ``city``, ``employment_type``, dan ``source`` menerima **banyak nilai**;
-    lihat :func:`_as_list` untuk bentuk yang diterima. Hasilnya adalah OR di
-    dalam satu dimensi (Bandung *atau* Jakarta) dan AND antar dimensi (kota
-    *dan* tipe kerja) — perilaku yang diharapkan pengguna saat memilih beberapa
-    chip.
+    ``city``, ``employment_type``, ``source``, dan ``category`` menerima
+    **banyak nilai**; lihat :func:`_as_list` untuk bentuk yang diterima.
+    Hasilnya adalah OR di dalam satu dimensi (Bandung *atau* Jakarta) dan AND
+    antar dimensi (kota *dan* tipe kerja).
+
+    ``category`` berisi ``cluster_id`` dari tabel ``clusters``, bukan teks.
+    Menyaring kategori lewat pencarian kata tidak mungkin: label cluster
+    berbentuk "Data & Ai & Python", gabungan kata pembeda yang tidak muncul
+    sebagai satu frasa di judul mana pun.
 
     Nilai di luar himpunan baku dibuang, bukan menghasilkan error (R-04-02).
     Ini yang membuat ``?employment_type=ngawur`` tetap menampilkan halaman normal.
@@ -126,12 +134,22 @@ def search_jobs(
     kota = _as_list(city)
     tipe = [t for t in _as_list(employment_type) if t in VALID_EMPLOYMENT_TYPES]
     sumber_terpilih = [s for s in _as_list(source) if s in VALID_SOURCES]
+    # cluster_id berasal dari database, jadi tidak ada himpunan baku di sini.
+    # Yang bukan angka dibuang; yang tidak ada di database tidak menghasilkan
+    # error, hanya halaman kosong yang jujur.
+    kategori = []
+    for nilai in _as_list(category):
+        try:
+            kategori.append(int(nilai))
+        except (TypeError, ValueError):
+            continue
 
     susunan = {
         "q": _clean_text(q),
         "city": kota,
         "employment_type": tipe,
         "source": sumber_terpilih,
+        "category": kategori,
         "sort": _clean_text(sort) or DEFAULT_SORT,
     }
 
@@ -178,6 +196,7 @@ def _options(filters: dict, sumber: list[dict] | None = None) -> dict:
     """
     sumber = sumber if sumber is not None else repository.list_sources()
     lokasi = repository.distinct_locations()
+    klaster = repository.list_clusters()
 
     return {
         "cities": [
@@ -200,6 +219,17 @@ def _options(filters: dict, sumber: list[dict] | None = None) -> dict:
             }
             for row in sumber
         ],
+        # Kategori berasal dari hasil clustering (PRD-05). Nilainya `cluster_id`,
+        # bukan label: label tidak dapat dipakai sebagai kata kunci pencarian.
+        "categories": [
+            {
+                "value": c["id"],
+                "label": c["label"],
+                "job_count": c["job_count"],
+                "active": c["id"] in filters["category"],
+            }
+            for c in klaster
+        ],
     }
 
 
@@ -220,14 +250,19 @@ def get_job(job_id: int) -> dict:
 
 
 def get_home() -> dict:
-    """Beranda: ``stats``, ``latest``, dan ``categories`` (kontrak §4.1).
+    """Beranda: ``stats``, ``latest``, ``categories``, dan ``sparkline``.
 
-    ``categories`` diisi PRD-05. Sampai cluster sungguhan ada, daftarnya kosong
-    — bukan kategori karangan yang membuat halaman terlihat lengkap.
+    ``categories`` diambil dari ``app.insights.service``, bukan dihitung ulang
+    di sini: kategori adalah hasil clustering, dan menghitungnya di dua tempat
+    akan menghasilkan dua angka yang bisa berbeda. Impor dilakukan di dalam
+    fungsi karena ``insights`` sudah mengimpor ``app.jobs`` (menghindari
+    impor melingkar di tingkat modul).
     """
+    from app.insights import service as insights_service
+
     return {
         "stats": repository.totals(),
         "latest": repository.newest(limit=6),
-        "categories": [],
+        "categories": insights_service.get_categories(),
         "sparkline": repository.posted_sparkline(days=7),
     }

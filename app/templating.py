@@ -23,6 +23,7 @@ ALIASES = {
     "preview.job_detail": "jobs.detail",
     "preview.company_detail": "insights.company",
     "preview.home": "main.index",
+    "preview.insights": "insights.index",
 }
 
 

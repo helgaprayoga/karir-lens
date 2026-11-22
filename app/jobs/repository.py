@@ -17,6 +17,7 @@ from core import db as core_db
 
 TABLE = "jobs"
 SOURCES = "sources"
+CLUSTERS = "clusters"
 
 # Karakter yang merusak tata bahasa PostgREST bila diteruskan apa adanya ke
 # ekspresi `or_()`. Koma memisahkan kondisi, kurung mengelompokkan, kurung
@@ -71,6 +72,7 @@ def _apply_criteria(query, criteria: dict):
     _terapkan("location", criteria.get("city") or [])
     _terapkan("employment_type", criteria.get("employment_type") or [])
     _terapkan("source_id", criteria.get("source_id") or [])
+    _terapkan("cluster_id", criteria.get("cluster_id") or [])
 
     return query
 
@@ -244,6 +246,40 @@ def distinct_locations(limit: int = 10) -> list[str]:
     return [lokasi for lokasi, _ in urut[:limit]]
 
 
+def list_clusters() -> list[dict]:
+    """Cluster yang **punya lowongan**, untuk chip kategori (PRD-05).
+
+    Hanya yang ``job_count > 0``: cluster kosong adalah sisa eksekusi lama, dan
+    menjadikannya chip yang selalu menghasilkan nol hasil hanya membingungkan.
+    Jumlahnya dihitung dari tabel ``jobs``, bukan dari kolom tersimpan yang
+    bisa basi setelah lowongan dihapus.
+    """
+    klaster = (
+        _client().table(CLUSTERS).select("id,label").order("id").execute().data or []
+    )
+    if not klaster:
+        return []
+
+    pasangan = _client().table(TABLE).select("cluster_id").execute().data or []
+    hitung: dict[int, int] = {}
+    for baris in pasangan:
+        cid = baris.get("cluster_id")
+        if cid is not None:
+            hitung[cid] = hitung.get(cid, 0) + 1
+
+    hasil = [
+        {
+            "id": c["id"],
+            "label": c.get("label") or f"Kategori {c['id']}",
+            "job_count": hitung[c["id"]],
+        }
+        for c in klaster
+        if hitung.get(c["id"])
+    ]
+    hasil.sort(key=lambda c: (-c["job_count"], c["id"]))
+    return hasil
+
+
 def list_sources() -> list[dict]:
     """Sumber yang benar-benar tercatat, untuk chip filter."""
     return (
@@ -276,8 +312,9 @@ def totals() -> dict:
     slugs = klien.table(TABLE).select("company_slug").execute().data or []
     perusahaan = {row["company_slug"] for row in slugs if row.get("company_slug")}
 
-    # Kategori/cluster diisi PRD-05. Sampai cluster benar-benar ada, angkanya
-    # nol — bukan jumlah kategori yang dikarang dari skill.
+    # Kategori berasal dari `clusters` yang diisi `python -m scraper cluster`
+    # (PRD-05). Tanpa clustering, angkanya nol — bukan jumlah kategori yang
+    # dikarang dari skill.
     jumlah_kategori = getattr(
         klien.table("clusters").select("id", count="exact").execute(), "count", None
     ) or 0

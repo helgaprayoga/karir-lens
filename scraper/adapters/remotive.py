@@ -146,6 +146,55 @@ def _judul_dan_perusahaan(li) -> tuple[str | None, str | None]:
     return teks or None, None
 
 
+def parse_salary_jsonld(posting: dict) -> tuple[float | None, float | None, str | None, str | None]:
+    """Gaji dari ``baseSalary`` JSON-LD halaman detail.
+
+    **Kenapa ini diperlukan.** Teks gaji pada kartu daftar **dipotong di sisi
+    server** menjadi ~95 karakter: "$130,000-$140,0..". Satuan periodenya ada di
+    bagian yang terpotong, sehingga ``parse_salary`` membaca 130000-140000
+    tanpa periode — dan angka per tahun itu kemudian tercampur dengan angka per
+    jam dalam satu kelompok statistik. Terukur: median USD menjadi 141, nilai
+    yang tidak bermakna untuk mata uang mana pun.
+
+    JSON-LD menyimpan gaji secara terstruktur beserta satuannya:
+
+        "baseSalary": {"currency": "USD",
+                       "value": {"minValue": 130000, "maxValue": 140000,
+                                 "unitText": "YEAR"}}
+
+    ``unitText`` dipetakan ke periode baku; nilai yang tidak dikenal menjadi
+    ``None``, bukan ditebak.
+    """
+    gaji = posting.get("baseSalary")
+    if not isinstance(gaji, dict):
+        return None, None, None, None
+
+    nilai = gaji.get("value")
+    if not isinstance(nilai, dict):
+        # Bentuk lama: `value` berupa angka tunggal.
+        return None, None, _clean(gaji.get("currency")), None
+
+    def _angka(kunci):
+        try:
+            n = float(nilai.get(kunci))
+        except (TypeError, ValueError):
+            return None
+        return n if n > 0 else None
+
+    satuan = _clean(str(nilai.get("unitText") or "")).lower() if nilai.get("unitText") else None
+    periode = {
+        "hour": "hour", "day": "day", "week": "day", "month": "month",
+        "year": "year", "annual": "year",
+    }.get(satuan or "")
+
+    return (
+        _angka("minValue"),
+        _angka("maxValue"),
+        _clean(gaji.get("currency")),
+        periode,
+    )
+
+
 def parse_card(li, source: str = "remotive") -> RawJob | None:
     """Urai satu ``<li data-joburl>`` dari halaman daftar."""
     url = _url_absolut(li.get("data-joburl"))
@@ -330,7 +379,14 @@ class RemotiveAdapter(BaseAdapter):
         return job.source_url if job.source_url else None
 
     def parse_detail(self, job: RawJob, html: str) -> RawJob:
-        """Lengkapi deskripsi dan lokasi dari ``JobPosting`` halaman detail."""
+        """Lengkapi deskripsi, lokasi, dan **gaji bersatuan** dari JSON-LD.
+
+        Gaji ditimpa hanya bila JSON-LD memberi periode yang jelas. Gaji dari
+        kartu sering tidak lengkap karena teksnya dipotong server (lihat
+        ``parse_salary_jsonld``), dan angka tanpa satuan lebih buruk daripada
+        angka yang tidak ditampilkan: ia tercampur dengan satuan lain dalam
+        statistik.
+        """
         posting = parse_detail(html)
         if not posting:
             return job
@@ -338,6 +394,13 @@ class RemotiveAdapter(BaseAdapter):
         deskripsi = _teks(posting.get("description"))
         if deskripsi:
             job.description = deskripsi
+
+        smin, smax, mata_uang, periode = parse_salary_jsonld(posting)
+        if periode and (smin is not None or smax is not None):
+            job.salary_min = smin
+            job.salary_max = smax
+            job.salary_currency = mata_uang or job.salary_currency
+            job.salary_period = periode
 
         tipe = _clean(posting.get("employmentType"))
         if tipe and not job.employment_type:

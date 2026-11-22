@@ -12,7 +12,7 @@ from flask import render_template, request, url_for
 
 from . import bp, service
 
-FILTER_KEYS = ("q", "city", "employment_type", "source", "sort")
+FILTER_KEYS = ("q", "city", "employment_type", "source", "category", "sort")
 
 
 def _params(filters: dict, **timpa) -> dict[str, str]:
@@ -28,7 +28,10 @@ def _params(filters: dict, **timpa) -> dict[str, str]:
     gabung = {}
     for kunci in FILTER_KEYS:
         nilai = filters.get(kunci, "")
-        gabung[kunci] = ",".join(nilai) if isinstance(nilai, list) else nilai
+        # Nilai filter dapat berupa list (multipilih) atau string. `category`
+        # berisi `cluster_id` berupa int, jadi setiap elemen dijadikan str
+        # sebelum digabung — `",".join()` menolak int.
+        gabung[kunci] = ",".join(str(v) for v in nilai) if isinstance(nilai, list) else nilai
     gabung.update(timpa)
     return {
         kunci: nilai
@@ -49,6 +52,7 @@ def _with_href(options: dict, filters: dict) -> dict:
         "cities": "city",
         "employment_types": "employment_type",
         "sources": "source",
+        "categories": "category",
     }
     hasil = {}
     for kunci, daftar in options.items():
@@ -63,9 +67,12 @@ def _with_href(options: dict, filters: dict) -> dict:
                         filters,
                         **{
                             nama: ",".join(
-                                [v for v in terpilih if v != chip["value"]]
-                                if chip["active"]
-                                else terpilih + [chip["value"]]
+                                str(v)
+                                for v in (
+                                    [v for v in terpilih if v != chip["value"]]
+                                    if chip["active"]
+                                    else terpilih + [chip["value"]]
+                                )
                             )
                         },
                     ),
@@ -95,6 +102,7 @@ def index():
         city=request.args.getlist("city"),
         employment_type=request.args.getlist("employment_type"),
         source=request.args.getlist("source"),
+        category=request.args.getlist("category"),
         sort=request.args.get("sort"),
         page=request.args.get("page"),
         per_page=request.args.get("per_page"),
@@ -105,7 +113,7 @@ def index():
     # `active_count` menghitung nilai yang terpilih, bukan dimensi: memilih dua
     # kota berarti dua filter aktif, sama seperti yang dilakukan pengguna.
     aktif = len([filters["q"]]) if filters.get("q") else 0
-    for kunci in ("city", "employment_type", "source"):
+    for kunci in ("city", "employment_type", "source", "category"):
         aktif += len(filters.get(kunci) or [])
 
     return render_template(

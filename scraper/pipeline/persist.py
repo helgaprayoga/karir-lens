@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 JOBS = "jobs"
 RUNS = "scrape_runs"
 SOURCES = "sources"
+CLUSTERS = "clusters"
 
 # Status yang dipakai kolom `scrape_runs.status` (PRD-02 §4.2, PRD-F05 §4.1).
 STATUS_RUNNING = "running"
@@ -315,3 +316,49 @@ def hapus_di_luar(
             dihapus += len(potong)
 
     return dihapus
+
+
+# --- clusters (PRD-05) ---------------------------------------------------
+
+def simpan_clusters(ringkasan: list[dict], jobs_berlabel: list[dict]) -> int:
+    """Tulis ulang ``clusters`` lalu perbarui ``jobs.cluster_id`` (R-05-04/05).
+
+    Idempoten: menjalankan dua kali menghasilkan jumlah cluster yang sama,
+    bukan dua kali lipat, karena baris lama dihapus lebih dulu.
+
+    ``jobs.cluster_id`` dikosongkan sebelum dipetakan ulang. Tanpa langkah itu,
+    lowongan yang tidak lagi masuk cluster mana pun (mis. text-nya kosong)
+    akan tetap menunjuk cluster lama yang sudah tidak ada — relasi menggantung
+    yang membuat halaman kategori menghitung lowongan hantu.
+    """
+    klien = core_db.get_db()
+
+    klien.table(JOBS).update({"cluster_id": None}).neq("id", 0).execute()
+    klien.table(CLUSTERS).delete().neq("id", 0).execute()
+
+    peta_id: dict[int, int] = {}
+    for item in ringkasan:
+        hasil = (
+            klien.table(CLUSTERS)
+            .insert(
+                {
+                    "label": item["label"],
+                    "keywords": list(item.get("keywords") or []),
+                    "job_count": item.get("job_count", 0),
+                }
+            )
+            .execute()
+        )
+        baris = getattr(hasil, "data", None) or []
+        if baris:
+            peta_id[item["cluster_index"]] = baris[0]["id"]
+
+    diperbarui = 0
+    for job in jobs_berlabel:
+        cluster_id = peta_id.get(job.get("cluster_index"))
+        if cluster_id is None or job.get("id") is None:
+            continue
+        klien.table(JOBS).update({"cluster_id": cluster_id}).eq("id", job["id"]).execute()
+        diperbarui += 1
+
+    return diperbarui

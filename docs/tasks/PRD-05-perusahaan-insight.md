@@ -9,7 +9,7 @@
 | Milestone | M4 Insight (2 hari) |
 | Dependensi | PRD-03, PRD-04, PRD-F05 |
 | Task yang bergantung | PRD-08, PRD-09 |
-| Status | Belum dimulai |
+| Status | Selesai (terbukti di Supabase) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Frontend pasangan | [PRD-F05](./PRD-F05-insight-admin.md) |
 
@@ -93,16 +93,18 @@ Keluaran task ini wajib memenuhi **kontrak template PRD-F05 §4.1**.
 
 ## 5. Acceptance Criteria
 
-- [ ] Proses clustering menghasilkan cluster yang dapat ditampilkan dan ditinjau.
-- [ ] Setiap lowongan memiliki paling banyak satu `cluster_id` utama.
-- [ ] Menjalankan clustering dua kali tidak menggandakan cluster.
-- [ ] Service mengembalikan kategori dan skill yang sesuai isi database.
-- [ ] Statistik gaji tidak dikembalikan bila sampel < 5, dan tidak ada nilai prediksi.
-- [ ] Mata uang dan periode tidak dicampur dalam satu kelompok statistik.
-- [ ] `sample_sufficient` bernilai `false` saat data belum mencukupi.
-- [ ] `get_company` hanya mengembalikan data turunan `jobs`.
-- [ ] Keluaran service memenuhi kontrak PRD-F05 §4.1 tanpa mengubah template.
-- [ ] Clustering hanya berjalan lewat CLI, tidak dari request web.
+- [x] Proses clustering menghasilkan cluster yang dapat ditampilkan dan ditinjau.
+- [x] Setiap lowongan memiliki paling banyak satu `cluster_id` utama.
+- [x] Menjalankan clustering dua kali tidak menggandakan cluster.
+- [x] Service mengembalikan kategori dan skill yang sesuai isi database.
+- [x] Statistik gaji tidak dikembalikan bila sampel < 5, dan tidak ada nilai prediksi.
+- [x] Mata uang dan periode tidak dicampur dalam satu kelompok statistik.
+- [x] `sample_sufficient` bernilai `false` saat data belum mencukupi.
+- [x] `get_company` hanya mengembalikan data turunan `jobs`.
+- [x] Keluaran service memenuhi kontrak PRD-F05 §4.1 tanpa mengubah template.
+- [x] Clustering hanya berjalan lewat CLI, tidak dari request web.
+
+Bukti terukur ada di §12.
 
 ## 6. Dependensi
 
@@ -206,3 +208,157 @@ Dua proyek referensi, dipakai untuk bagian yang berbeda.
 - Test otomatis pada §7.1 lulus.
 - Insight sesuai isi database dan tidak memuat prediksi.
 - Hasil clustering tersimpan di `clusters` dan `jobs.cluster_id`.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `app/insights/salary.py` | Titik tengah rentang, ambang sampel, kuartil, pemisahan |
+| `app/insights/repository.py` | Agregasi kategori, skill, gaji, perusahaan |
+| `app/insights/service.py` | Kontrak PRD-F05 §4.1 dan `summary` |
+| `app/insights/routes.py` | `/insights` dan `/companies/<slug>` |
+| `scraper/cluster.py` | TF-IDF → PCA → KMeans, label, kata kunci |
+| `scraper/pipeline/persist.py` | `simpan_clusters` (idempoten) |
+| `tests/unit/test_salary.py` | 17 test aturan gaji |
+| `tests/unit/test_cluster.py` | 15 test clustering |
+| `tests/unit/test_insights.py` | 19 test service dan route |
+
+### 12.2 Keputusan
+
+**Titik tengah rentang, bukan batas bawah.** Memakai `salary_min` saja
+menurunkan median secara sistematis pada lowongan yang punya batas atas.
+Gaji parsial (hanya satu sisi) tetap dipakai apa adanya — itu fakta, bukan
+tebakan.
+
+**Persentil dihitung sendiri, bukan lewat numpy.** Interpolasi linear sepuluh
+baris, dan hasilnya dapat diuji tanpa dependensi. Nilai 1..6 memberi median
+3,5; P25 2,25; P75 4,75 — sama dengan `numpy.percentile`.
+
+**Periode tak dikenal TIDAK dilabeli "bulanan".** Template dulu memakai
+"bulanan" sebagai nilai cadangan. Pada data nyata, 5 lowongan IDR punya sampel
+cukup tetapi tanpa periode — menampilkannya sebagai bulanan adalah klaim yang
+tidak dimiliki data. Sekarang kartunya berbunyi "Gaji · IDR (periode tidak
+disebutkan)".
+
+**`job_count` kategori dihitung ulang dari `jobs`.** Kolom
+`clusters.job_count` ditulis saat clustering berjalan; bila lowongan dihapus
+sesudahnya, angkanya basi. Halaman harus menampilkan angka yang sama dengan isi
+database saat dibuka.
+
+**Kata pembeda, bukan kata tersering.** Mengikuti acuan PRD §10.1: selisih
+rata-rata vektor cluster terhadap cluster lain. Tanpa pengurangan itu, semua
+cluster menampilkan kata yang sama.
+
+### 12.3 Bug yang Ditemukan Verifikasi
+
+**`min_df=2` menggagalkan clustering pada data kecil.** Scikit-learn melempar
+`max_df corresponds to < documents than min_df` bila `min_df` lebih besar
+daripada `max_df` dalam jumlah dokumen. Pada 3 dokumen, 60% berarti 1,8.
+Clustering gagal total justru saat datanya sedikit — saat admin paling butuh
+melihat hasilnya. `min_df` dan `max_df` kini menyesuaikan jumlah dokumen.
+
+**Stopword Inggris dua huruf terlewat seluruhnya.** Hanya `"at"` yang masuk,
+sehingga `"or"` menjadi kata kunci cluster pertama dan labelnya berbunyi
+"Python & Or & Code".
+
+**Kata kerja prosa menjadi kata kunci.** "on your own", "to own our roadmap",
+"ticket ownership" menghasilkan cluster "Developer & Person & Own" — label yang
+tidak menyebut satu teknologi pun. Daftar stopword diperluas dari data, bukan
+dari daftar standar.
+
+**Label mengulang kata.** `["project", "project manager", "information"]`
+menghasilkan "Project & Project Manager". Kata yang sudah terkandung di kata
+lain kini dibuang lebih dulu.
+
+**Gaji Remotive tercampur satuan — bug paling serius di task ini.** Teks gaji
+pada kartu **dipotong di sisi server** menjadi ~95 karakter:
+
+```
+"$130,000-$140,0.."
+```
+
+Satuan periodenya ada di bagian yang hilang, sehingga 130000 (per tahun)
+tercampur dengan $4–8 (per jam) dalam satu kelompok. Median USD menjadi **141**
+— angka yang tidak bermakna untuk mata uang mana pun, dan tampil di halaman
+sebagai "Gaji · USD (periode tidak disebutkan)".
+
+JSON-LD halaman detail menyimpan gaji secara terstruktur beserta satuannya:
+
+```json
+"baseSalary": {"currency": "USD",
+               "value": {"minValue": 130000, "maxValue": 140000,
+                         "unitText": "YEAR"}}
+```
+
+`parse_salary_jsonld` membaca itu, dan `parse_detail` menimpa gaji kartu hanya
+bila periodenya jelas. Sesudah perbaikan, kelompoknya terpisah benar:
+
+| Sebelum | Sesudah |
+|---|---|
+| USD tanpa periode, n=6, median 141 | USD **tahunan**, n=28, median 125.000 |
+| — | USD per jam, n=1 |
+
+### 12.4 Verifikasi Terukur
+
+Clustering pada 356 lowongan, dua kali berturut-turut — jumlah cluster tetap 6
+dan pembagiannya sama (`random_state=42`):
+
+| Label | Lowongan | Kata kunci |
+|---|---|---|
+| Data & Ai & Python | 101 | data, ai, python, architect, etl |
+| Developer & Java & Code | 73 | developer, java, code, applications |
+| … | | |
+
+Halaman `/insights` terhadap Supabase sungguhan:
+
+| Bagian | Isi |
+|---|---|
+| StatTile | 363 lowongan, 195 skill unik, 6 kategori |
+| Kategori | 6 baris, kata kunci dan jumlah terisi |
+| Skill | 6 baris teratas: python 36, sql 33, unit testing 33 |
+| Gaji | IDR bulanan 49 sampel (median 10.690.329), USD tahunan 28 sampel (median 125.000), IDR tanpa periode 5 sampel |
+| Tanpa prediksi | tidak ada kunci `predict`/`forecast`/`estimate` |
+
+Diperiksa di browser: grafik kategori dan skill terisi, tiga kartu gaji
+terpisah, dan tidak ada luberan horizontal pada 360px (`scrollWidth` 360).
+`?sample=low` memunculkan banner data terbatas, bukan grafik kosong.
+
+Total test setelah task ini: **502 lulus**.
+
+### 12.5 Di Mana Hasil Clustering Tampil
+
+Sebelum bagian ini, hasil clustering **hanya** muncul di `/insights`. Tiga
+tempat lain belum terisi, dan salah satunya sudah rusak:
+
+| Lokasi | Sebelum | Sesudah |
+|---|---|---|
+| `/insights` | Grafik + tabel | Sama, ditambah tautan per kategori |
+| `/` beranda | `categories` dikirim route tapi **tidak dipakai template** | 6 kartu "Pintasan kategori" |
+| Panel filter `/jobs` | Tidak ada | Fieldset "Kategori", 6 kotak centang |
+| Kartu kategori (F02) | Menaut ke `?q=<label>` → **0 hasil** | `?category=<cluster_id>` |
+
+**Bug yang ditutup.** `jobs/home.html` menaut kartu kategori ke
+`?q={{ kategori.label }}`. Label cluster berbentuk `"Data & Ai & Python"` —
+gabungan tiga kata pembeda — dan pencarian `q` mencocokkan seluruh string ke
+`title`/`company_name`/`skills` dengan `ilike`. Hasilnya selalu nol. Kartu yang
+menghasilkan halaman kosong lebih buruk daripada tidak ada kartu.
+
+Kategori kini disaring lewat `cluster_id`, yang juga satu-satunya cara yang
+benar secara semantik: cluster adalah hasil pengelompokan, bukan hasil
+pencarian kata.
+
+**Diverifikasi di browser** pada data sungguhan:
+
+| Kartu beranda | Tautan | Hasil |
+|---|---|---|
+| Data & Ai & Python (101) | `?category=37` | 101 Lowongan |
+| Infrastructure & Devops & Security (47) | `?category=40` | 47 Lowongan |
+| Teknik & Informasi & Bisnis (41) | `?category=42` | 41 Lowongan |
+
+Angka kartu, angka halaman, dan hitungan langsung di Supabase ketiganya sama
+(101/47/41). Chip filter aktif muncul dan dapat dihapus, dan 360px tidak
+meluber.

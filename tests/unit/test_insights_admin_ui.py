@@ -295,11 +295,19 @@ def test_data_table_has_caption(uiClient) -> None:
 
 
 def test_admin_routes_not_in_production() -> None:
-    """Seluruh halaman admin pada Track A hanya ada di blueprint preview."""
+    """Halaman admin masih hanya ada di blueprint preview.
+
+    ``/insights`` sudah punya route produksi sejak PRD-05, jadi ia tidak lagi
+    termasuk daftar ini — sebelumnya test memeriksanya karena backend-nya belum
+    ada. Panel admin tetap di pratinjau sampai PRD-09.
+    """
     jalur = {rule.rule for rule in create_app("testing").url_map.iter_rules()}
 
-    for path in ("/insights", "/admin", "/admin/jobs", "/admin/runs"):
+    for path in ("/admin", "/admin/jobs", "/admin/runs", "/admin/users"):
         assert path not in jalur, f"{path} bocor ke produksi"
+
+    # Insight sudah produksi, dan itu disengaja.
+    assert "/insights" in jalur, "/insights seharusnya sudah tersedia"
 
 
 def test_nav_marks_one_active_for_new_pages(ui, monkeypatch) -> None:

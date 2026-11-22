@@ -117,7 +117,7 @@ class FakeQuery:
             return FakeResult(list(self._sumber))
 
         if self._table == "clusters":
-            return FakeResult([], 0)
+            return FakeResult(list(getattr(self, "_clusters", [])), 0)
 
         baris = [r for r in self._rows if all(p(r) for p in self._predikat)]
         total = len(baris)
@@ -148,20 +148,27 @@ class FakeTable:
     def select(self, *_kolom, count=None):
         q = FakeQuery(self._db.baris, self._db.sumber)
         q._table = self._nama
+        q._clusters = getattr(self._db, "clusters", [])
         q._count = count == "exact"
         return q
 
 
 class FakeDB:
-    def __init__(self, rows: list[dict]):
+    def __init__(self, rows: list[dict], clusters: list[dict] | None = None):
         self.baris = rows
         self.sumber = [
             {"id": 1, "name": "dealls"},
             {"id": 2, "name": "kalibrr"},
             {"id": 3, "name": "remotive"},
         ]
+        self.clusters = clusters or [
+            {"id": 11, "label": "Data & Ai & Python"},
+            {"id": 12, "label": "Developer & Java"},
+        ]
 
     def table(self, nama: str):
+        if nama == "clusters":
+            return FakeTable(self, "clusters")
         return FakeTable(self, nama)
 
 
@@ -184,6 +191,8 @@ def _job(i: int, **ubah) -> dict:
         "source_id": 1,
         "source_url": f"https://dealls.com/{i}",
         "posted_at": f"2026-11-{i:02d}T00:00:00+00:00",
+        # Hasil clustering (PRD-05). Bawaan: cluster 11.
+        "cluster_id": 11,
     }
     dasar.update(ubah)
     return dasar
@@ -198,10 +207,11 @@ ROWS = [
     _job(3, title="Product Designer", company_name="PixelCraft",
          company_slug="pixelcraft", location="Jakarta Selatan",
          skills=["figma"], employment_type="part-time", source_id=3,
-         source_url="https://remotive.com/3", posted_at="2026-11-03T00:00:00+00:00"),
+         source_url="https://remotive.com/3", posted_at="2026-11-03T00:00:00+00:00",
+         cluster_id=12),
     _job(4, title="Python Developer", company_name="NovaTech Labs",
          location="Yogyakarta", skills=["python", "django"],
-         posted_at="2026-11-04T00:00:00+00:00"),
+         posted_at="2026-11-04T00:00:00+00:00", cluster_id=12),
 ]
 
 
@@ -583,6 +593,162 @@ def test_templates_unchanged_by_backend() -> None:
     katalog = root / "templates" / "jobs"
     isi = sorted(p.name for p in katalog.glob("*.html"))
     assert isi == ["detail.html", "home.html", "list.html"]
+
+
+# --- Filter kategori dari hasil clustering (PRD-05) ----------------------
+
+def test_category_filter_by_cluster_id(catalog) -> None:
+    """Kategori disaring lewat `cluster_id`, bukan teks label.
+
+    Label cluster berbentuk "Data & Ai & Python" — gabungan kata pembeda yang
+    tidak muncul sebagai satu frasa di judul mana pun. Menautkannya ke
+    `?q=<label>` akan menghasilkan nol hasil.
+    """
+    from app.jobs import service
+
+    data = service.search_jobs(category="11")
+
+    assert data["filters"]["category"] == [11]
+    assert {j["id"] for j in data["items"]} == {1, 2}
+
+
+def test_category_filter_multiple(catalog) -> None:
+    """Beberapa kategori sekaligus (OR di dalam dimensi)."""
+    from app.jobs import service
+
+    data = service.search_jobs(category="11,12")
+    assert set(data["filters"]["category"]) == {11, 12}
+    assert {j["id"] for j in data["items"]} == {1, 2, 3, 4}
+
+
+def test_category_filter_invalid_ignored(catalog) -> None:
+    """Nilai bukan angka dibuang, tidak menghasilkan error (R-04-02)."""
+    from app.jobs import service
+
+    data = service.search_jobs(category="abc")
+    assert data["filters"]["category"] == []
+    assert len(data["items"]) == 4, "semua lowongan tetap tampil"
+
+
+def test_category_filter_unknown_id(catalog) -> None:
+    """Cluster yang tidak ada menghasilkan kosong, bukan error."""
+    from app.jobs import service
+
+    data = service.search_jobs(category="999")
+    assert data["filters"]["category"] == [999]
+    assert data["items"] == []
+    assert data["meta"]["total"] == 0
+
+
+def test_category_options_listed(catalog) -> None:
+    """`options.categories` berisi cluster yang punya lowongan saja."""
+    from app.jobs import service
+
+    opsi = service.search_jobs()["options"]["categories"]
+    peta = {c["value"]: c["job_count"] for c in opsi}
+
+    assert peta == {11: 2, 12: 2}
+    for c in opsi:
+        assert set(c) >= {"value", "label", "active", "job_count"}
+
+
+def test_category_chip_link_uses_cluster_id(catalog) -> None:
+    """Chip kategori bertindak sebagai toggle lewat `?category=`, bukan `?q=`.
+
+    Saat kategori **belum** aktif, tautannya menambahkannya. Saat sudah aktif,
+    tautannya menghapusnya — jadi tautan chip aktif memang tidak memuat
+    `category=` (itulah arti "hapus filter"). Yang penting: tidak pernah
+    memakai `q=`, karena label cluster bukan kata kunci pencarian.
+    """
+    import re
+
+    # Belum aktif: chip ditambahkan lewat category=.
+    tanpa = _html(catalog.get("/jobs?city=Bandung"))
+    tambah = re.findall(r'name="category" value="(\d+)"', tanpa)
+    assert tambah == ["11", "12"], "kotak centang kategori memakai cluster_id"
+
+    # Sudah aktif: tautan chip menghapus filter, dan tetap bukan `q=`.
+    aktif = _html(catalog.get("/jobs?category=11"))
+    chips = re.findall(r'<a class="chip" href="([^"]+)"[^>]*data-filter="category"', aktif)
+    assert chips, "chip kategori aktif tidak ditemukan"
+    for href in chips:
+        assert "q=" not in href, "chip kategori tidak boleh menaut ke pencarian teks"
+
+
+def test_category_checkbox_in_panel(catalog) -> None:
+    """Panel filter memuat kotak centang kategori dengan `cluster_id` sebagai nilai."""
+    import re
+
+    body = _html(catalog.get("/jobs"))
+
+    kotak = re.findall(r'name="category" value="(\d+)"', body)
+    assert kotak == ["11", "12"], f"nilai kategori harus cluster_id: {kotak}"
+
+
+def test_category_filter_combines_with_others(catalog) -> None:
+    """Kategori bekerja bersama filter lain (AND antar dimensi)."""
+    from app.jobs import service
+
+    data = service.search_jobs(category="11", employment_type="full-time")
+    assert {j["id"] for j in data["items"]} == {1}
+
+
+def test_active_count_includes_category(catalog) -> None:
+    """Penghitung filter ikut menghitung kategori."""
+    body = _html(catalog.get("/jobs?category=11&city=Bandung"))
+    assert '<span class="count">2</span>' in body
+
+
+# --- Beranda: pintasan kategori -----------------------------------------
+
+def test_home_shows_category_shortcuts(catalog) -> None:
+    """Beranda menampilkan pintasan kategori dari hasil clustering (PRD-F02 §3)."""
+    body = _html(catalog.get("/"))
+
+    assert "Pintasan kategori" in body
+    assert body.count('class="category-card"') == 2
+    assert "Data &amp; Ai &amp; Python" in body
+
+
+def test_category_link_returns_results(catalog) -> None:
+    """Tautan kartu beranda benar-benar menghasilkan lowongan.
+
+    Ini menutup bug `?q=<label>`: kartu yang menaut ke pencarian kosong lebih
+    buruk daripada tidak ada kartu.
+    """
+    import re
+
+    body = _html(catalog.get("/"))
+    tautan = re.findall(r'class="category-card" href="([^"]+)"', body)
+    assert tautan, "kartu kategori tidak punya tautan"
+
+    for href in tautan:
+        hasil = catalog.get(href)
+        assert hasil.status_code == 200
+        html = _html(hasil)
+        # Bukan empty state, dan jumlah kartunya sesuai job_count.
+        assert "Tidak ada lowongan yang cocok" not in html, f"{href} kosong"
+        assert 'class="job-card"' in html
+
+
+def test_insights_category_links_to_filter(catalog, monkeypatch) -> None:
+    """Tabel kategori di /insights menaut ke filter, bukan pencarian teks."""
+    import re
+
+    from app.insights import repository as insights_repo
+
+    monkeypatch.setattr(
+        insights_repo, "find_clusters",
+        lambda: [{"cluster_id": 11, "label": "Data & Ai", "keywords": ["data"], "job_count": 2}],
+    )
+    monkeypatch.setattr(insights_repo, "find_skill_counts", lambda limit=6: [])
+    monkeypatch.setattr(insights_repo, "find_jobs_with_salary", lambda c=None, p=None: [])
+    monkeypatch.setattr(insights_repo, "find_all_skills", lambda: [])
+    monkeypatch.setattr(insights_repo, "count_jobs", lambda: 2)
+
+    body = _html(catalog.get("/insights"))
+    tautan = re.findall(r'<td>\s*<a href="([^"]+)"', body)
+    assert any("category=11" in t for t in tautan), tautan
 
 
 # --- R-04-09 / R-04-10: publik --------------------------------------------

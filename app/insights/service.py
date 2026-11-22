@@ -1,6 +1,10 @@
 """Aturan bisnis insight (PRD-05).
 
-PRD-04 hanya mengisi bagian perusahaan (R-04-07). Sisanya diisi PRD-05.
+Tempat tinggal: aturan sampel gaji minimal, pemisahan mata uang, dan larangan
+menampilkan prediksi. Dipakai ulang oleh ``/api/insights/*`` (R-05-15, R-09-15).
+
+``service`` tidak mengenal Flask dan tidak menyentuh Supabase langsung
+(docs/ARCHITECTURE.md §8.3): seluruh akses data lewat ``repository``.
 """
 
 from __future__ import annotations
@@ -9,7 +13,11 @@ from collections import Counter
 
 from core.errors import NotFoundError
 
-from . import repository
+from . import repository, salary
+
+# Batas skill yang ditampilkan. Grafik batang horizontal menjadi tidak terbaca
+# di atas ~12 baris, terutama pada 360px (R-F05-05).
+DEFAULT_SKILL_LIMIT = 6
 
 
 def _shape_job(row: dict, source: str | None = None) -> dict:
@@ -40,8 +48,70 @@ def _shape_job(row: dict, source: str | None = None) -> dict:
     }
 
 
+# --- Kategori dan skill --------------------------------------------------
+
+def get_categories() -> list[dict]:
+    """Distribusi lowongan per kategori/cluster (R-05-06).
+
+    Mengembalikan list, bukan dict: template mengiterasinya langsung
+    (``{% for kategori in categories %}``), dan bentuk itu yang tertulis di
+    kontrak PRD-F05 §4.1.
+    """
+    return repository.find_clusters()
+
+
+def get_top_skills(limit: int = DEFAULT_SKILL_LIMIT) -> list[dict]:
+    """Skill paling banyak dicari (R-05-07)."""
+    return repository.find_skill_counts(limit=limit)
+
+
+# --- Gaji ----------------------------------------------------------------
+
+def get_salary_stats(currency: str | None = None, period: str | None = None) -> dict:
+    """Statistik gaji faktual dengan aturan sampel minimal (R-05-08..R-05-10).
+
+    Seluruh aturan tinggal di ``salary.py``: titik tengah rentang, ambang lima
+    sampel, pemisahan mata uang dan periode, serta kuartil. Service hanya
+    menyediakan barisnya.
+    """
+    return salary.salary_stats(repository.find_jobs_with_salary(currency, period))
+
+
+# --- Ringkasan halaman ---------------------------------------------------
+
+def get_insights() -> dict:
+    """Semua bagian halaman ``/insights`` dalam satu panggilan.
+
+    Bentuknya mengikuti kontrak PRD-F05 §4.1, ditambah ``summary`` yang dipakai
+    ``StatTile`` di atas halaman. Template memakai keduanya, jadi keduanya
+    dihitung di satu tempat agar angkanya tidak berasal dari dua query berbeda
+    yang dapat berbeda hasilnya.
+    """
+    kategori = get_categories()
+    skills = get_top_skills()
+    gaji = get_salary_stats()
+
+    semua = repository.find_all_skills()
+    unik = {s for daftar in semua for s in daftar if s}
+    total = repository.count_jobs()
+
+    return {
+        "categories": kategori,
+        "skills": skills,
+        "salary": gaji,
+        "sample_sufficient": gaji["sample_sufficient"],
+        "summary": {
+            "total_jobs": total,
+            "unique_skills": len(unik),
+            "categories": len(kategori),
+        },
+    }
+
+
+# --- Perusahaan ---------------------------------------------------------
+
 def get_company(slug: str) -> dict:
-    """Ringkasan perusahaan yang **hanya** diturunkan dari tabel ``jobs`` (R-04-07).
+    """Ringkasan perusahaan yang **hanya** diturunkan dari tabel ``jobs`` (R-05-12).
 
     Tidak ada tabel perusahaan, sehingga nama, jumlah lowongan, lokasi, tipe
     kerja, dan skill sering muncul dihitung dari lowongan yang ada. Perusahaan
@@ -81,18 +151,3 @@ def get_company(slug: str) -> dict:
         "top_skills": [s for s, _ in sorted(skill.items(), key=lambda kv: (-kv[1], kv[0]))][:12],
         "jobs": [_shape_job(row, sumber.get(row.get("source_id"))) for row in baris],
     }
-
-
-def get_categories() -> dict:
-    """Distribusi lowongan per kategori/cluster (R-05-06)."""
-    raise NotImplementedError("Diisi pada PRD-05.")
-
-
-def get_top_skills(limit: int = 15) -> dict:
-    """Skill paling banyak dicari (R-05-07)."""
-    raise NotImplementedError("Diisi pada PRD-05.")
-
-
-def get_salary_stats(currency: str | None = None, period: str | None = None) -> dict:
-    """Statistik gaji faktual dengan aturan sampel minimal (R-05-08..R-05-10)."""
-    raise NotImplementedError("Diisi pada PRD-05.")

@@ -471,6 +471,110 @@ def test_kalibrr_parses_snake_case_payload() -> None:
     assert "/c/novatech/jobs/273950/backend-engineer" in job.source_url
 
 
+# --- Remotive: gaji bersatuan --------------------------------------------
+
+def test_remotive_salary_from_jsonld() -> None:
+    """Gaji diambil dari JSON-LD karena teks kartu dipotong server.
+
+    Terukur: teks kartu berbunyi ``"$130,000-$140,0.."`` — 95 karakter, dipotong
+    di sisi server, dan satuannya ada di bagian yang hilang. Akibatnya 130000
+    (per tahun) tercampur dengan angka per jam dalam satu kelompok statistik,
+    dan median USD menjadi 141.
+    """
+    from scraper.adapters.remotive import parse_salary_jsonld
+
+    posting = {
+        "baseSalary": {
+            "@type": "MonetaryAmount",
+            "currency": "USD",
+            "value": {"minValue": 130000.0, "maxValue": 140000.0, "unitText": "YEAR"},
+        }
+    }
+    smin, smax, mata_uang, periode = parse_salary_jsonld(posting)
+
+    assert (smin, smax) == (130000.0, 140000.0)
+    assert mata_uang == "USD"
+    assert periode == "year"
+
+
+def test_remotive_salary_unit_mapping() -> None:
+    """`unitText` dipetakan ke periode baku; yang asing menjadi None."""
+    from scraper.adapters.remotive import parse_salary_jsonld
+
+    for satuan, harap in [
+        ("HOUR", "hour"), ("DAY", "day"), ("MONTH", "month"),
+        ("YEAR", "year"), ("ANNUAL", "year"), ("FORTNIGHT", None),
+    ]:
+        posting = {
+            "baseSalary": {
+                "currency": "USD",
+                "value": {"minValue": 10, "maxValue": 20, "unitText": satuan},
+            }
+        }
+        assert parse_salary_jsonld(posting)[3] == harap, satuan
+
+
+def test_remotive_salary_missing_jsonld() -> None:
+    """Tanpa `baseSalary`, tidak ada yang dikarang."""
+    from scraper.adapters.remotive import parse_salary_jsonld
+
+    assert parse_salary_jsonld({}) == (None, None, None, None)
+
+
+def test_remotive_detail_overwrites_salary_with_period() -> None:
+    """Detail menimpa gaji kartu hanya bila periodenya jelas."""
+    from scraper.adapters.base import RawJob
+    from scraper.adapters.remotive import RemotiveAdapter
+
+    adapter = RemotiveAdapter(http=object())
+    job = RawJob(
+        title="Java Developer",
+        source_url="https://remotive.com/remote/jobs/x",
+        salary_min=130.0,
+        salary_max=140.0,
+        salary_currency="USD",
+        salary_period=None,
+    )
+
+    html = (
+        '<script type="application/ld+json">'
+        '{"@type":"JobPosting","title":"Java Developer","baseSalary":'
+        '{"currency":"USD","value":{"minValue":130000,"maxValue":140000,'
+        '"unitText":"YEAR"}}}'
+        "</script>"
+    )
+    hasil = adapter.parse_detail(job, html)
+
+    assert hasil.salary_min == 130000
+    assert hasil.salary_period == "year"
+
+
+def test_remotive_detail_keeps_salary_without_unit() -> None:
+    """Tanpa satuan di JSON-LD, gaji kartu dibiarkan apa adanya.
+
+    Mengganti angka yang ada dengan angka tanpa satuan tidak memperbaiki apa
+    pun; membiarkannya membuat asal-usulnya tetap terlihat.
+    """
+    from scraper.adapters.base import RawJob
+    from scraper.adapters.remotive import RemotiveAdapter
+
+    adapter = RemotiveAdapter(http=object())
+    job = RawJob(
+        title="X", source_url="https://remotive.com/x",
+        salary_min=50.0, salary_max=60.0, salary_currency="USD", salary_period="hour",
+    )
+    html = (
+        '<script type="application/ld+json">'
+        '{"@type":"JobPosting","title":"X","baseSalary":'
+        '{"currency":"USD","value":{"minValue":50000,"maxValue":60000}}}'
+        "</script>"
+    )
+    hasil = adapter.parse_detail(job, html)
+
+    assert hasil.salary_period == "hour"
+    assert hasil.salary_min == 50.0
+
+
 # --- R-02-06 / R-02-08 / R-02-10: runner --------------------------------
 
 def test_failure_isolation(monkeypatch) -> None:

@@ -45,7 +45,13 @@
             <tbody>
               {%- for kategori in categories -%}
                 <tr>
-                  <td>{{ kategori.label }}</td>
+                  <td>
+                    {# Angka kategori dapat ditelusuri ke daftar lowongannya
+                       lewat `cluster_id`. Menaut ke `?q=<label>` akan
+                       menghasilkan nol hasil: label bukan frasa yang ada di
+                       judul. #}
+                    <a href="{{ url_for('jobs.index', category=kategori.cluster_id) }}">{{ kategori.label }}</a>
+                  </td>
                   <td>{{ kategori.keywords|join(", ") }}</td>
                   <td>{{ kategori.job_count|angka }}</td>
                 </tr>
@@ -104,25 +110,38 @@
       <div class="salary-grid">
         {%- set PERIODE = {"month": "bulanan", "year": "tahunan", "day": "harian", "hour": "per jam", "project": "per proyek"} -%}
         {%- for grup in salary.groups -%}
-          {# Nama periode dipetakan ke bahasa manusia. "Gaji Month · IDR"
-             adalah nilai enum mentah dan dilarang (§2 butir 4). #}
+          {# Nama periode dipetakan ke bahasa manusia. "Gaji Month · IDR" adalah
+             nilai enum mentah dan dilarang (§2 butir 4).
+
+             Periode yang tidak disebut sumbernya menjadi `None`. Sebelumnya
+             template memakai "bulanan" sebagai nilai cadangan — klaim yang
+             tidak dimiliki data, dan pada data nyata 6 lowongan USD memang
+             tidak menyebut periode. Untuk kasus itu judulnya menyebut apa
+             adanya: gaji tanpa periode yang disebutkan. #}
+          {%- set nama_periode = PERIODE.get(grup.period) -%}
           <section class="panel salary-card">
             <div class="panel-head">
-              <h4>Gaji {{ PERIODE.get(grup.period, "bulanan") }} · {{ grup.currency }}</h4>
+              <h4>
+                {%- if nama_periode -%}
+                  Gaji {{ nama_periode }} · {{ grup.currency or "mata uang tidak disebut" }}
+                {%- else -%}
+                  Gaji · {{ grup.currency or "mata uang tidak disebut" }} (periode tidak disebutkan)
+                {%- endif -%}
+              </h4>
               <span class="sub">{{ grup.sample }} sampel</span>
             </div>
             <dl class="salary-stats">
               <div>
                 <dt>Median</dt>
-                <dd>{{ grup.median|angka }} <span>{{ grup.currency }}</span></dd>
+                <dd>{{ grup.median|angka }} <span>{{ grup.currency or "" }}</span></dd>
               </div>
               <div>
                 <dt>P25</dt>
-                <dd>{{ grup.p25|angka }} <span>{{ grup.currency }}</span></dd>
+                <dd>{{ grup.p25|angka }} <span>{{ grup.currency or "" }}</span></dd>
               </div>
               <div>
                 <dt>P75</dt>
-                <dd>{{ grup.p75|angka }} <span>{{ grup.currency }}</span></dd>
+                <dd>{{ grup.p75|angka }} <span>{{ grup.currency or "" }}</span></dd>
               </div>
             </dl>
             <p class="foot-note">

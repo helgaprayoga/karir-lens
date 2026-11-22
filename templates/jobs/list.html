@@ -90,6 +90,22 @@
           {%- endfor -%}
         </fieldset>
 
+        {%- if options.categories -%}
+          {# Kategori adalah hasil clustering (PRD-05). Nilainya `cluster_id`,
+             bukan label: label seperti "Data & Ai & Python" tidak akan cocok
+             sebagai kata kunci pencarian. #}
+          <fieldset class="filter-group">
+            <legend>Kategori</legend>
+            {%- for chip in options.categories -%}
+              <label class="filter-option">
+                <input type="checkbox" name="category" value="{{ chip.value }}"
+                       {%- if chip.active %} checked{% endif %}>
+                <span>{{ chip.label }} <span class="sub">({{ chip.job_count }})</span></span>
+              </label>
+            {%- endfor -%}
+          </fieldset>
+        {%- endif -%}
+
         {# Urutan ikut di dalam form yang sama: satu tombol "Terapkan" untuk
            filter dan urutan sekaligus, bukan dua form terpisah dengan dua
            tombol yang membingungkan. #}
@@ -129,6 +145,13 @@
         {%- for chip in options.sources if chip.active -%}
           <a class="chip" href="{{ chip.href }}" aria-pressed="true"
              data-filter="source" data-value="{{ chip.value }}"
+             title="Hapus filter {{ chip.label }}">
+            {{ chip.label }}<span class="remove" aria-hidden="true">×</span>
+          </a>
+        {%- endfor -%}
+        {%- for chip in options.categories if chip.active -%}
+          <a class="chip" href="{{ chip.href }}" aria-pressed="true"
+             data-filter="category" data-value="{{ chip.value }}"
              title="Hapus filter {{ chip.label }}">
             {{ chip.label }}<span class="remove" aria-hidden="true">×</span>
           </a>

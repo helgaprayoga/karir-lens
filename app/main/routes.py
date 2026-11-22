@@ -15,16 +15,16 @@ from . import bp
 def index():
     """``/`` — beranda dengan angka ringkasan dari database.
 
-    ``categories`` masih kosong karena cluster baru diisi PRD-05. Template
-    menyembunyikan bagian itu ketika daftarnya kosong, jadi tidak ada bagian
-    kosong yang tampil.
+    ``categories`` diisi PRD-05. Kategori kosong tetap diserahkan ke template
+    yang menyembunyikan bagiannya, bukan diisi daftar karangan.
     """
     from app.jobs import service as jobs_service
+    from app.insights import service as insights_service
 
     data = jobs_service.get_home()
     return render_template(
         "main/index.html",
         stats=data["stats"],
         latest=data["latest"],
-        categories=data["categories"],
+        categories=insights_service.get_categories(),
     )

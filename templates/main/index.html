@@ -52,6 +52,28 @@
            "Lihat lowongan",
            url_for("jobs.index")) }}
     {%- endif -%}
+
+    {# ── Pintasan kategori ────────────────────────────────────────────────
+       Kategori adalah hasil clustering (PRD-05) dan diwajibkan ada di beranda
+       (PRD-F02 §3). Tautannya memakai `?category=<cluster_id>`, bukan
+       `?q=<label>`: label berbentuk "Data & Ai & Python" dan tidak akan cocok
+       sebagai kata kunci pencarian — kartu yang menaut ke pencarian kosong
+       lebih buruk daripada tidak ada kartu. #}
+    {%- if categories -%}
+      <div class="section-head home-section">
+        <h2>Pintasan kategori</h2>
+        <a class="sub" href="{{ url_for('insights.index') }}">Lihat insight</a>
+      </div>
+      <div class="category-grid">
+        {%- for kategori in categories -%}
+          <a class="category-card" href="{{ url_for('jobs.index', category=kategori.cluster_id) }}">
+            <span class="category-count">{{ kategori.job_count|angka }}</span>
+            <span class="category-label">{{ kategori.label }}</span>
+            <span class="category-keys">{{ kategori.keywords|join(" · ") }}</span>
+          </a>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
   </main>
 
   <aside class="rail" aria-label="Ringkasan">
