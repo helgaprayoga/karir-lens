@@ -32,7 +32,7 @@
     </div>
 
     {{ upload_zone(max_size_mb=max_size_mb, accepted=accepted_types,
-                   action=url_for("preview.api_cv_extract")) }}
+                   action=url_for("api.cv_extract")) }}
 
     {%- if state == "idle" -%}
       <p class="field-hint cv-idle">
@@ -40,8 +40,13 @@
       </p>
 
     {%- elif state == "extracted" -%}
-      <div class="cv-grid">
-        {{ skill_confirm_list(suggested_skills, confirmed_skills, ambiguous) }}
+      {# Form ini yang menyimpan skill terpilih (R-07-06, R-07-07). Tombol
+         "Simpan skill terpilih" ada di dalam partial daftar konfirmasi, jadi
+         form membungkus seluruh grid agar checkbox ikut terkirim. #}
+      <form method="post" action="{{ url_for('cv.confirm') }}" class="cv-confirm-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="cv-grid">
+          {{ skill_confirm_list(suggested_skills, confirmed_skills, ambiguous) }}
 
         <section class="panel">
           <div class="panel-head">
@@ -54,21 +59,22 @@
                 <span class="tag">{{ skill.skill }}</span>
               {%- endfor -%}
             </div>
-            <a class="btn btn-ghost btn-sm" href="{{ url_for('preview.profile') }}">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('profile.index') }}">
               Kelola di profil
             </a>
           {%- else -%}
             <p class="field-hint">Belum ada skill tersimpan.</p>
           {%- endif -%}
         </section>
-      </div>
+        </div>
+      </form>
 
     {%- elif state == "no_skills" -%}
       {{ empty_state(
            "Belum ada skill terkonfirmasi",
            "Rekomendasi dihitung dari skill yang Anda konfirmasi. Unggah CV di atas untuk mendeteksi skill, atau tambahkan sendiri dari halaman profil.",
            "Tambahkan skill manual",
-           url_for('preview.profile')) }}
+           url_for('profile.index')) }}
 
     {%- elif state == "ready" -%}
       <div class="section-head cv-rec-head">
@@ -79,7 +85,7 @@
         {%- for job in recommendations -%}
           {# R-F04-08: MatchBadge selalu disertai alasan lewat partial kartu. #}
           {{ job_card(job, show_match=True,
-                      href=url_for("preview.job_detail", job_id=job.id)) }}
+                      href=url_for("jobs.detail", job_id=job.id)) }}
         {%- endfor -%}
       </div>
     {%- endif -%}

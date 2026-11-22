@@ -62,7 +62,10 @@
       </div>
     {%- endif -%}
 
-    <button type="button" class="btn btn-primary btn-block"
+    {# `type=submit` agar form di sekitarnya benar-benar mengirim skill terpilih
+       (R-07-06). Sebelumnya tombol ini hanya dekorasi: tidak ada form, dan
+       klik tidak menyimpan apa pun. #}
+    <button type="submit" class="btn btn-primary btn-block"
             data-confirm-skills
             {{ "disabled" if not suggested }}>
       Simpan skill terpilih

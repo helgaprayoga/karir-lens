@@ -30,6 +30,8 @@ ALIASES = {
     # Profil dan tersimpan kini punya route produksi (PRD-06).
     "preview.profile": "profile.index",
     "preview.saved": "profile.saved",
+    # CV punya route produksi sejak PRD-07.
+    "preview.cv": "cv.index",
 }
 
 # Kebalikannya, dibangun sekali dari ALIASES.

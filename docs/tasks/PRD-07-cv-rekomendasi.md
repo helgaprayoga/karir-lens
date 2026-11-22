@@ -9,7 +9,7 @@
 | Milestone | M6 CV dan rekomendasi (2 hari) |
 | Dependensi | PRD-03, PRD-04, PRD-06, PRD-F04 |
 | Task yang bergantung | PRD-09 |
-| Status | Belum dimulai |
+| Status | Selesai (terbukti di Supabase) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Frontend pasangan | [PRD-F04](./PRD-F04-cv-asisten.md) |
 
@@ -98,15 +98,17 @@ upload file
 
 ## 5. Acceptance Criteria
 
-- [ ] Upload PDF dan DOCX berhasil diekstrak.
-- [ ] File selain PDF/DOCX dan file > 5 MB ditolak dengan pesan jelas.
-- [ ] Skill berhasil diekstrak dan hanya yang dikonfirmasi tersimpan.
-- [ ] File dan teks CV tidak tersimpan setelah proses selesai.
-- [ ] Isi CV tidak muncul di log dan tidak dapat diakses admin.
-- [ ] Rekomendasi relevan dan menyertakan alasan singkat.
-- [ ] Rekomendasi tidak memanggil AI per permintaan.
-- [ ] Pengguna tanpa skill terkonfirmasi mendapat arahan jelas.
-- [ ] Lowongan rekomendasi memiliki tautan sumber asli.
+- [x] Upload PDF dan DOCX berhasil diekstrak.
+- [x] File selain PDF/DOCX dan file > 5 MB ditolak dengan pesan jelas.
+- [x] Skill berhasil diekstrak dan hanya yang dikonfirmasi tersimpan.
+- [x] File dan teks CV tidak tersimpan setelah proses selesai.
+- [x] Isi CV tidak muncul di log dan tidak dapat diakses admin.
+- [x] Rekomendasi relevan dan menyertakan alasan singkat.
+- [x] Rekomendasi tidak memanggil AI per permintaan.
+- [x] Pengguna tanpa skill terkonfirmasi mendapat arahan jelas.
+- [x] Lowongan rekomendasi memiliki tautan sumber asli.
+
+Bukti terukur ada di §12.
 
 ## 6. Dependensi
 
@@ -196,3 +198,130 @@ Yang **bisa** dirujuk hanya pola pencocokan berbasis kamus dan pengukuran akuras
 - Test otomatis pada §7.1 lulus.
 - Terbukti tidak ada file atau teks CV tersimpan.
 - Rekomendasi berjalan tanpa AI per permintaan.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `app/cv/extractor.py` | PDF via `pypdf`, DOCX via `python-docx`, termasuk isi tabel |
+| `app/cv/recommender.py` | Skor berbobot skill + kategori, alasan singkat |
+| `app/cv/service.py` | Validasi, ekstraksi, kamus, kandidat ambigu, rekomendasi |
+| `app/cv/repository.py` | Skill terkonfirmasi, lowongan kandidat, bookmark |
+| `app/cv/routes.py` | `/cv`, `/cv/confirm`, `/cv/skills/<id>/remove` |
+| `app/api/routes.py` | `POST /api/cv/extract`, `GET /api/cv/recommendations` |
+| `tests/fixtures/cv/buat_cv.py` | Pembuat PDF dan DOCX sintetis |
+| `tests/unit/test_cv.py` | 30 test ekstraksi dan skor |
+| `tests/unit/test_cv_routes.py` | 14 test route dan kontrak API |
+
+### 12.2 Keputusan
+
+**AI tidak dipanggil sama sekali di PRD-07.** R-07-05 menyebut "AI fallback
+untuk ambigu", tetapi R-07-16 melarang pengujian menyentuh jaringan, dan
+`DeepSeek.chat` baru diisi PRD-08. Karena itu `suggest_skills` **mengusulkan**
+kandidat ambigu, bukan mengirimnya. Pemanggilan AI per unggahan juga akan
+membuat pencocokan bergantung pada layanan luar setiap kali pengguna mengunggah
+CV — mahal, tidak deterministik, dan tidak dapat diuji.
+
+**Berkas sementara dihapus di `finally`.** Termasuk ketika ekstraksi gagal.
+Berkas CV yang tertinggal di disk adalah kebocoran data pengguna; jalur gagal
+adalah jalur yang paling mudah melupakannya.
+
+**Pesan galat tidak memuat isi berkas.** Pesan asli `pypdf` dapat memuat
+potongan teks CV, dan itu akan berakhir di layar atau log. Yang dilempar hanya
+``ExtractionError`` dengan kalimat sendiri, dan yang dicatat ke log hanya
+**jenis** kesalahannya.
+
+**Skor memakai proporsi terhadap lowongan, bukan terhadap CV.** Lowongan yang
+meminta 3 skill dan semuanya dimiliki lebih cocok daripada lowongan yang
+meminta 20 skill dan pengguna punya 3.
+
+**Kategori terkuat dihitung, tidak dipilih.** Pengguna tidak pernah memilih
+kategori; yang dipakai adalah cluster dengan jumlah lowongan cocok terbanyak.
+Menebaknya dari satu skill acak akan menghasilkan alasan yang tidak berdasar.
+
+### 12.3 Bug yang Ditemukan Verifikasi
+
+**Kata biasa muncul sebagai "skill yang perlu diputuskan".** Pada CV uji,
+`ambiguous` berisi `['budi', 'dan', 'data', 'di']` — nama orang dan kata fungsi.
+Dua perbaikan:
+
+1. Daftar buang `_NOT_SKILL` untuk kata fungsi Indonesia/Inggris dan istilah
+   umum.
+2. **Baris pertama CV dilewati**, karena di situ nama orang berada. Ini aturan
+   struktural, bukan daftar — nama tidak mungkin didaftarkan semuanya.
+
+Sesudah perbaikan: `ambiguous: []`, dan 9 skill tetap dikenali.
+
+**Satu skill cocok memberi skor 100%.** Terukur: lowongan yang hanya menyebut
+`aws` mendapat 100% dan menempati puncak rekomendasi, di atas lowongan yang
+cocok pada empat skill. Satu titik data tidak cukup untuk menyimpulkan
+kecocokan, jadi kemiripan dikalikan faktor kepercayaan
+`min(1, jumlah_skill_diminta / 4)`. Sesudah perbaikan: 50% untuk 2 skill cocok,
+44% untuk 1 — dan skor ≥95 tetap dapat dicapai bila empat skill cocok.
+
+**Tombol "Simpan skill terpilih" hanya dekorasi.** Partial `skill_confirm_list`
+memakai `type="button"` dan tidak ada `<form>` di sekitarnya — klik tidak
+menyimpan apa pun. Sekarang form membungkus grid dan tombolnya `type="submit"`.
+
+**Endpoint `/api/cv/extract` belum ada di produksi.** Kontrak PRD-F04 §4.1
+menyebutnya, tetapi blueprint `api` kosong sampai PRD-09. Endpoint didaftarkan
+sekarang karena halaman `/cv` membutuhkannya.
+
+### 12.4 Verifikasi Terukur
+
+Terhadap Supabase sungguhan, dengan CV sintetis (PDF 938 B, DOCX 35 KB):
+
+| Langkah | Hasil |
+|---|---|
+| `POST /api/cv/extract` (PDF) | 200, 9 skill: airflow, aws, django, docker, kubernetes, postgresql, python, redis, sql |
+| `POST /api/cv/extract` (DOCX) | 200, 10 skill (termasuk `terraform` dari tabel) |
+| Kandidat ambigu | `[]` setelah perbaikan |
+| Berkas sementara tersisa | **0** |
+| Tolak `.txt` | 400 `UNSUPPORTED_FILE_TYPE` |
+| Konfirmasi 4 skill | `user_skills` = 4 baris, `source = cv` |
+| `GET /api/cv/recommendations` | 200, 10 rekomendasi, semua ber-`source_url` |
+| Skor teratas | 50% (2 skill cocok), 46% (2), 44% (1) |
+| Tamu buka `/cv` | 302 → login |
+
+Diperiksa di browser: `/cv` menampilkan drop zone, pernyataan "berkas dan teks
+CV tidak disimpan", dan 10 kartu rekomendasi dengan badge skor serta alasan.
+Tidak ada luberan pada 360px.
+
+Data uji dihapus setelah verifikasi (1 pengguna, 4 skill).
+
+### 12.5 Hasil Ekstraksi Hilang Setelah Unggah
+
+Dilaporkan pengguna: "pada cv masih belum bisa analisis skills dari cv yang di
+upload". Analisisnya **sudah berjalan** — yang hilang adalah hasilnya.
+
+Alur yang rusak:
+
+```
+1. JS unggah ke /api/cv/extract      -> server mengembalikan 9 skill
+2. JS memanggil location.reload()    -> hasilnya DIBUANG
+3. Halaman dimuat ulang tanpa kandidat
+4. Pengguna melihat "Belum ada skill terkonfirmasi"
+```
+
+Route sudah punya jalur `?state=extracted`, tetapi **tidak ada yang pernah
+menautkannya** — jalur itu mati sejak awal. Endpoint mengembalikan JSON ke
+JavaScript, lalu muat ulang menghapusnya dari memori.
+
+**Perbaikan:** endpoint menyimpan kandidat ke sesi sebelum membalas, dan route
+`/cv` membacanya. Yang disimpan hanya **nama skill** dan daftar ambigu — bukan
+teks atau berkas CV. Cookie sesi ditandatangani Flask, dan R-07-08 tetap
+dihormati karena tidak ada isi CV yang tersimpan. Setelah konfirmasi, sesi
+dibersihkan agar panel tidak muncul lagi.
+
+Bila unggahan berikutnya gagal, kandidat sebelumnya **tetap ada** — kehilangan
+keduanya karena satu kesalahan berkas akan menjengkelkan.
+
+Diverifikasi di browser dengan PDF sungguhan: unggah → panel "Skill terdeteksi ·
+9 kandidat" muncul → centang 4 → panel hilang → 10 rekomendasi dengan skor 50%,
+46%, 44%. `user_skills` di database berisi tepat 4 baris dengan `source = cv`.
+
+Total test setelah perbaikan ini: **569 lulus**.

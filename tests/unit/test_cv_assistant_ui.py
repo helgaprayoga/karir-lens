@@ -263,14 +263,20 @@ def test_api_contract_shapes(uiClient) -> None:
 
 
 def test_api_preview_mocked_only(uiClient) -> None:
-    """API tiruan hidup di blueprint preview sehingga tidak ada di produksi."""
+    """Endpoint CV kini punya versi produksi; asisten masih tiruan.
+
+    ``/api/cv/extract`` diisi PRD-07 dan ``/api/cv/recommendations`` ikut
+    didaftarkan bersamanya. ``/api/assistant`` tetap menunggu PRD-08, sehingga
+    tiruannya masih satu-satunya yang ada.
+    """
     produksi = create_app("testing")
     jalur = {rule.rule for rule in produksi.url_map.iter_rules()}
 
-    assert "/api/cv/extract" not in jalur
-    assert "/api/assistant" not in jalur
-    # Pada Track A, tiruannya ada di bawah /preview.
-    assert "/preview/api/cv/extract" in jalur | {
+    assert "/api/cv/extract" in jalur, "PRD-07 mengisi endpoint ini"
+    assert "/api/cv/recommendations" in jalur
+    assert "/api/assistant" not in jalur, "menunggu PRD-08"
+    # Tiruan Track A tetap ada di bawah /preview.
+    assert "/preview/api/cv/extract" in {
         rule.rule for rule in uiClient.application.url_map.iter_rules()
     }
 
