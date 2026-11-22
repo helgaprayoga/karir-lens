@@ -75,6 +75,36 @@ def test_gunicorn_is_declared() -> None:
     assert "gunicorn" in isi.lower()
 
 
+def test_healthz_responds_without_login() -> None:
+    """`/healthz` mengembalikan 200 tanpa sesi.
+
+    Render memanggil health check tanpa cookie apa pun. Bila route ini memakai
+    `login_required`, deploy akan ditandai tidak sehat lalu di-restart terus
+    menerus.
+    """
+    from app import create_app
+
+    r = create_app("testing").test_client().get("/healthz")
+
+    assert r.status_code == 200, f"/healthz -> {r.status_code}"
+    assert r.get_json() == {"status": "ok"}
+
+
+def test_healthz_touches_no_database() -> None:
+    """Health check tidak boleh bergantung pada Supabase.
+
+    Diperiksa dari sumber fungsinya: bila kelak ada yang menambahkan query di
+    sana, gangguan sesaat pada database akan menjatuhkan seluruh service.
+    """
+    import inspect
+
+    from app.main import routes
+
+    sumber = inspect.getsource(routes.healthz)
+    for dilarang in ("get_db", "repository", "supabase"):
+        assert dilarang not in sumber, f"healthz memuat {dilarang!r}"
+
+
 def test_scrape_workflow_exists() -> None:
     """Workflow cron ada, memakai `--detail`, dan menjalankan clustering."""
     jalur = ROOT / ".github" / "workflows" / "scrape.yml"

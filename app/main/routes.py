@@ -6,10 +6,25 @@ Tidak ada query dan tidak ada aturan bisnis (ARCHITECTURE §4 aturan 8).
 
 from __future__ import annotations
 
-from flask import render_template
+from flask import jsonify, render_template
 from flask_login import current_user
 
 from . import bp
+
+
+@bp.get("/healthz")
+def healthz():
+    """``/healthz`` — liveness check untuk Render.
+
+    **Tidak memeriksa database.** Kalau health check ikut menanyakan Supabase,
+    gangguan sementara di sana membuat Render menganggap container tidak sehat
+    lalu me-restart terus-menerus — gangguan singkat berubah menjadi loop
+    restart. Yang dijawab di sini satu hal: apakah proses ini hidup dan
+    melayani HTTP.
+
+    Tanpa ``login_required``: Render memanggilnya tanpa sesi.
+    """
+    return jsonify({"status": "ok"}), 200
 
 
 @bp.get("/")
