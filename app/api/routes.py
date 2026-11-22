@@ -9,7 +9,7 @@ dan dipakai halaman yang sudah berjalan: ``POST /api/cv/extract`` (PRD-F04 §4.1
 
 from __future__ import annotations
 
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 from flask_login import current_user, login_required
 
 from core.errors import AppError
@@ -71,3 +71,47 @@ def cv_recommendations():
             }
         }
     )
+
+
+@bp.post("/assistant")
+@login_required
+def assistant():
+    """``POST /api/assistant`` — jawaban asisten dari data aplikasi (PRD-08).
+
+    Kontrak PRD-F04 §4.1: ``{"data": {"reply": "...", "sources": [...]}}``.
+
+    Rate limit dan pesan galat ditangani ``service`` lewat ``AppError``,
+    sehingga bentuk galatnya sama dengan endpoint lain:
+    ``{"error": {code, message}}``.
+    """
+    from app.assistant import routes as assistant_routes
+    from app.assistant import service as assistant_service
+    from core.errors import AppError
+
+    data = request.get_json(silent=True) or {}
+    pertanyaan = data.get("message") if isinstance(data, dict) else None
+
+    if not pertanyaan or not str(pertanyaan).strip():
+        return jsonify(
+            {"error": {"code": "VALIDATION_ERROR",
+                       "message": "Tulis pertanyaan terlebih dahulu."}}
+        ), 400
+
+    batas = int(current_app.config["SETTINGS"].ai_daily_limit or 20)
+    try:
+        hasil = assistant_service.ask(
+            str(pertanyaan),
+            current_user.id,
+            client=assistant_routes.klien_atas_permintaan(),
+            batas_harian=batas,
+        )
+    except AppError as error:
+        return jsonify({"error": error.to_dict()}), error.status
+    except Exception:  # noqa: BLE001 - jangan bocorkan detail internal
+        current_app.logger.exception("Asisten gagal menjawab")
+        return jsonify(
+            {"error": {"code": "ASSISTANT_FAILED",
+                       "message": "Asisten sedang tidak dapat menjawab. Coba lagi."}}
+        ), 502
+
+    return jsonify({"data": hasil})

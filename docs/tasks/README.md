@@ -76,7 +76,7 @@ Satu-satunya titik temu keduanya adalah **kontrak template**: nama variabel kont
 | [PRD-05](./PRD-05-perusahaan-insight.md) | Perusahaan dan Insight (backend) | P0 | M4 | PRD-03, PRD-04, F05 | Selesai |
 | [PRD-06](./PRD-06-akun-bookmark.md) | Akun dan Bookmark (backend) | P0 | M5 | PRD-01, PRD-04, F03 | Selesai |
 | [PRD-07](./PRD-07-cv-rekomendasi.md) | CV dan Rekomendasi (backend) | P0 | M6 | PRD-03, PRD-04, PRD-06, F04 | Selesai |
-| [PRD-08](./PRD-08-asisten-ai.md) | Asisten AI (backend) | P1 | M7 | PRD-03, PRD-05, PRD-06, F04 | Belum dimulai |
+| [PRD-08](./PRD-08-asisten-ai.md) | Asisten AI (backend) | P1 | M7 | PRD-03, PRD-05, PRD-06, F04 | Selesai |
 | [PRD-09](./PRD-09-admin-api.md) | Admin dan API (backend) | P0 | M7 | PRD-04 s.d. PRD-08, F05 | Belum dimulai |
 | [PRD-10](./PRD-10-kualitas-rilis.md) | Kualitas dan Rilis | P0 | M8 | PRD-01 s.d. PRD-09 | Belum dimulai |
 
@@ -105,7 +105,7 @@ Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan pre
 ## Status
 
 - **Track A**: PRD-F01 s.d. PRD-F06 **selesai**. Track A siap menerima Track B.
-- **Track B**: PRD-01 s.d. PRD-07 **selesai**. PRD-08 s.d. PRD-10 **Belum dimulai**.
+- **Track B**: PRD-01 s.d. PRD-08 **selesai**. PRD-09 s.d. PRD-10 **Belum dimulai**.
 
 `/insights` sudah hidup: 363 lowongan dalam 6 cluster, skill populer, dan
 statistik gaji per mata uang dan periode. Clustering dijalankan lewat
@@ -118,6 +118,12 @@ duplikat.
 `/cv` menerima PDF dan DOCX, mengekstrak teks secara lokal, mencocokkan skill
 dengan kamus, dan menghitung rekomendasi deterministik tanpa AI. Berkas dan teks
 CV dihapus di blok `finally` — pada jalur sukses maupun gagal.
+
+`/assistant` menyusun konteks dari lowongan, kategori, gaji, dan skill
+terkonfirmasi, lalu memanggil DeepSeek dengan system prompt yang melarang klaim
+di luar konteks. **Jawaban model belum dapat diuji** karena `DEEPSEEK_API_KEY`
+belum diisi; seluruh alur lain (konteks, klarifikasi, rate limit, tautan,
+penanganan galat) sudah terbukti.
 
 ### Pemfokusan produk: hanya lowongan IT
 

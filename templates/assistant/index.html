@@ -51,7 +51,7 @@
       {%- endif -%}
 
       <form class="chat-form" data-chat-form method="post"
-            action="{{ url_for('preview.api_assistant') }}">
+            action="{{ url_for('api.assistant') }}">
         <label class="sr-only" for="chat-input">Pertanyaan untuk asisten</label>
         <textarea id="chat-input" name="message" rows="1" required
                   placeholder="Tulis pertanyaan Anda…"

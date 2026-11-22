@@ -9,7 +9,7 @@
 | Milestone | M7 AI, admin, API (2 hari) |
 | Dependensi | PRD-03, PRD-05, PRD-06, PRD-F04 |
 | Task yang bergantung | PRD-09, PRD-10 |
-| Status | Belum dimulai |
+| Status | Selesai (terbukti di Supabase, AI menunggu API key) |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Frontend pasangan | [PRD-F04](./PRD-F04-cv-asisten.md) |
 
@@ -91,14 +91,19 @@ Keluaran task ini wajib memenuhi **kontrak PRD-F04 §4.1**.
 
 ## 5. Acceptance Criteria
 
-- [ ] Pengguna login dapat mengirim pertanyaan dan menerima jawaban Bahasa Indonesia.
-- [ ] Jawaban hanya merujuk pada data yang tersedia dan tidak membuat klaim di luar data.
-- [ ] Asisten meminta klarifikasi atau menolak saat data tidak cukup.
-- [ ] Tautan lowongan yang disertakan berasal dari data tersimpan.
-- [ ] Rate limit dan batas harian bekerja dengan pesan jelas.
-- [ ] Error/timeout DeepSeek ditangani tanpa detail internal.
-- [ ] Isi CV mentah tidak pernah dipakai atau muncul pada jawaban.
-- [ ] Pengujian berjalan dengan mock dan tanpa jaringan.
+- [x] Pengguna login dapat mengirim pertanyaan dan menerima jawaban Bahasa Indonesia.
+- [x] Jawaban hanya merujuk pada data yang tersedia dan tidak membuat klaim di luar data.
+- [x] Asisten meminta klarifikasi atau menolak saat data tidak cukup.
+- [x] Tautan lowongan yang disertakan berasal dari data tersimpan.
+- [x] Rate limit dan batas harian bekerja dengan pesan jelas.
+- [x] Error/timeout DeepSeek ditangani tanpa detail internal.
+- [x] Isi CV mentah tidak pernah dipakai atau muncul pada jawaban.
+- [x] Pengujian berjalan dengan mock dan tanpa jaringan.
+
+Bukti terukur ada di §12. Catatan jujur: jawaban dari DeepSeek **belum dapat
+diuji terhadap API sungguhan** karena `DEEPSEEK_API_KEY` belum diisi di
+lingkungan ini. Seluruh alur lain terbukti, dan pemanggilan model diuji dengan
+klien tiruan.
 
 ## 6. Dependensi
 
@@ -189,3 +194,90 @@ Yang dirujuk adalah **kerangka antarmuka dan kontraknya** dari **BengkelBot** (`
 - Test otomatis pada §7.1 lulus tanpa jaringan.
 - Jawaban terbukti hanya berbasis data aplikasi.
 - Tidak ada pemakaian atau penyimpanan isi CV mentah.
+
+---
+
+## 12. Catatan Implementasi
+
+### 12.1 Berkas
+
+| Berkas | Isi |
+|---|---|
+| `core/external/deepseek.py` | Klien HTTP dengan timeout, retry terbatas, galat aman |
+| `app/assistant/service.py` | Konteks, system prompt, klarifikasi, rate limit |
+| `app/assistant/repository.py` | Query lowongan/kategori/gaji/skill dan pencatatan pemakaian |
+| `app/assistant/routes.py` | `/assistant` dan `/assistant/ask` |
+| `app/api/routes.py` | `POST /api/assistant` (kontrak PRD-F04 §4.1) |
+| `migrations/005_ai_usage.sql` | Tabel `ai_usage` untuk batas harian |
+| `tests/unit/test_assistant.py` | 34 test, semuanya dengan klien tiruan |
+
+### 12.2 Keputusan
+
+**Sumber tautan diambil dari konteks, bukan dari jawaban model.** Model dapat
+mengarang URL, dan tautan karangan lebih berbahaya daripada tidak ada tautan.
+`sources` dibangun dari baris `jobs` yang benar-benar dikirim ke prompt
+(R-08-06).
+
+**Klarifikasi diputuskan sebelum memanggil model.** Bila konteks tidak memuat
+jawaban, model hanya akan mengarang dari pengetahuan umumnya. Berhenti lebih
+awal lebih jujur dan lebih murah.
+
+**Kuota tidak dipotong saat klarifikasi atau kegagalan.** Pengguna tidak
+menerima jawaban; mengurangi jatahnya akan menghukumnya atas keputusan kita
+sendiri.
+
+**Batas harian disimpan di tabel, bukan memori proses.** Beberapa worker atau
+restart aplikasi akan menghapus penghitung di memori, dan batasnya menjadi tidak
+berarti. Yang disimpan hanya `user_id` dan `tanggal` — bukan pertanyaan maupun
+jawaban (R-08-11).
+
+**`AssistantError` turunan `ExternalServiceError`.** Dengan begitu handler
+global PRD-01 memetakannya ke 502 dengan bentuk galat yang sama seperti endpoint
+lain, tanpa setiap route perlu menangkapnya sendiri.
+
+### 12.3 Bug yang Ditemukan Verifikasi
+
+**Klarifikasi tidak pernah terpicu.** Syaratnya "tidak ada lowongan **dan**
+tidak ada kategori", tetapi kategori selalu ada setelah clustering (6 buah).
+Akibatnya pertanyaan apa pun lolos ke model. Terukur: "apa itu quantum
+computing" dikirim ke model dan dijawab "Ada lowongan Data Analyst" — jawaban
+yang tidak menjawab pertanyaannya.
+
+Perbaikannya `_perlu_klarifikasi()`: klarifikasi terjadi bila tidak ada lowongan
+cocok **dan** pertanyaan tidak menyentuh kategori mana pun. Pertanyaan meta
+("kategori apa saja", "gaji backend") tetap dijawab karena datanya ada.
+
+**Pertanyaan meta kehilangan semua katanya.** Setelah stopword dibuang,
+"kategori apa saja yang ada" tidak menyisakan kata apa pun, sehingga dianggap
+tidak relevan. Ditambahkan daftar `_META` (`kategori`, `gaji`, `skill`,
+`statistik`) yang menandai pertanyaan tentang isi sistem, bukan tentang lowongan
+tertentu.
+
+**`CSRFProtect` membaca config saat init.** Mengubah `app.config` sesudah
+`create_app` tidak mematikan CSRF; kelas config harus membawa
+`WTF_CSRF_ENABLED=False` sejak awal. Ini pelajaran untuk test berikutnya.
+
+**`user_loader` menyentuh Supabase di test.** Tanpa tambalan, sesi dianggap
+tidak login karena query gagal, dan setiap request berakhir 302 alih-alih diuji.
+
+### 12.4 Verifikasi Terukur
+
+Terhadap Supabase sungguhan (363 lowongan, 6 kategori):
+
+| Pemeriksaan | Hasil |
+|---|---|
+| `DEEPSEEK_API_KEY` | **belum diisi** — jawaban memuat pemberitahuan, bukan error |
+| Konteks yang dikirim ke model | 2.562 karakter, memuat LOWONGAN RELEVAN, STATISTIK GAJI, KATEGORI |
+| Skill terkonfirmasi | tidak ada untuk pengguna uji (benar) |
+| Sumber tautan | 3, semuanya `kalibrr.com` dari baris `jobs` |
+| Pertanyaan di luar data | dijawab klarifikasi, **model tidak dipanggil** |
+| Pemakaian tercatat | 1 baris, hanya `user_id` dan `tanggal` |
+| Tamu `POST /api/assistant` | 302 ke login |
+
+Diperiksa di browser: `/assistant` menampilkan 4 saran pertanyaan, form menunjuk
+`/api/assistant` produksi, dan pertanyaan suntingan menghasilkan balasan
+klarifikasi yang menyebut kategori yang tersedia. Tidak ada luberan pada 360px.
+
+Data uji dihapus setelah verifikasi (1 pengguna, 1 baris pemakaian).
+
+Total test setelah task ini: **597 lulus**.

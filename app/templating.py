@@ -32,6 +32,8 @@ ALIASES = {
     "preview.saved": "profile.saved",
     # CV punya route produksi sejak PRD-07.
     "preview.cv": "cv.index",
+    # Asisten punya route produksi sejak PRD-08.
+    "preview.assistant": "assistant.index",
 }
 
 # Kebalikannya, dibangun sekali dari ALIASES.
