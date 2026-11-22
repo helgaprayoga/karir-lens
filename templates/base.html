@@ -159,19 +159,66 @@
       });
     });
 
-    /* --- Tombol simpan (R-F03-09) --------------------------------------- */
-    /* State lokal sampai PRD-06 menyediakan persistence. Umpan baliknya toast,
-       bukan diam, karena tombol tanpa reaksi terbaca sebagai tombol rusak. */
+    /* --- Tombol simpan (R-F03-09, R-06-03) ------------------------------- */
+    /* Mengirim POST ke /saved/<id>/add atau /remove, bukan sekadar mengubah
+       warna. Tombol yang berubah visual tanpa menyimpan apa pun adalah state
+       yang menipu: pengguna mengira lowongan sudah tersimpan padahal tidak. */
     document.addEventListener("click", function (event) {
       var button = event.target.closest(".save-btn");
       if (!button || button.disabled) return;
       event.preventDefault();
+
+      var jobId = button.getAttribute("data-job-id");
+      if (!jobId) return;
+
       var aktif = button.getAttribute("aria-pressed") === "true";
-      button.setAttribute("aria-pressed", aktif ? "false" : "true");
-      button.setAttribute("aria-label", aktif ? "Simpan lowongan" : "Hapus dari tersimpan");
-      var svg = button.querySelector("svg");
-      if (svg) svg.setAttribute("fill", aktif ? "none" : "currentColor");
-      showToast(aktif ? "Dihapus dari tersimpan" : "Lowongan disimpan");
+      var aksi = aktif ? "remove" : "add";
+      var sebelumnya = aktif;
+
+      /* Umpan balik langsung, lalu dikembalikan bila permintaan gagal. */
+      function setState(tersimpan) {
+        button.setAttribute("aria-pressed", tersimpan ? "true" : "false");
+        button.setAttribute("aria-label", tersimpan ? "Hapus dari tersimpan" : "Simpan lowongan");
+        var svg = button.querySelector("svg");
+        if (svg) svg.setAttribute("fill", tersimpan ? "currentColor" : "none");
+      }
+
+      setState(!aktif);
+      button.disabled = true;
+
+      var data = new FormData();
+      var token = document.querySelector('meta[name="csrf-token"]');
+      if (token) data.append("csrf_token", token.getAttribute("content"));
+      data.append("next", window.location.pathname + window.location.search);
+
+      fetch("/saved/" + encodeURIComponent(jobId) + "/" + aksi, {
+        method: "POST",
+        body: data,
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": token ? token.getAttribute("content") : "" }
+      })
+        .then(function (respons) {
+          if (respons.status === 401) {
+            /* Tamu: tombol tidak boleh tampak tersimpan. Arahkan ke login
+               alih-alih diam. */
+            setState(sebelumnya);
+            window.location.href = "/auth/login?next=" + encodeURIComponent(window.location.pathname);
+            return null;
+          }
+          if (!respons.ok) throw new Error("gagal");
+          return respons;
+        })
+        .then(function (respons) {
+          if (!respons) return;
+          showToast(!aktif ? "Lowongan disimpan" : "Dihapus dari tersimpan");
+        })
+        .catch(function () {
+          setState(sebelumnya);
+          showToast("Gagal menyimpan. Coba lagi.");
+        })
+        .finally(function () {
+          button.disabled = false;
+        });
     });
 
     /* --- Hapus skill (R-F03-05) ----------------------------------------- */

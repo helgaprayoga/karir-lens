@@ -105,6 +105,24 @@ def _score(job: dict, q: str) -> int:
     return skor
 
 
+def _tandai_tersimpan(items: list[dict], user_id: int | None) -> list[dict]:
+    """Isi ``is_saved`` dari tabel ``saved_jobs`` (PRD-06).
+
+    Satu query untuk seluruh halaman, bukan satu per kartu: 12 kartu berarti 12
+    permintaan ke Supabase bila dilakukan per item. ``user_id=None`` (tamu)
+    berarti tidak ada yang tersimpan — bukan "belum dicek".
+    """
+    if not user_id or not items:
+        return items
+
+    from . import repository as jobs_repository
+
+    tersimpan = jobs_repository.saved_ids_for_user(user_id)
+    for item in items:
+        item["is_saved"] = item.get("id") in tersimpan
+    return items
+
+
 def search_jobs(
     *,
     q: str | None = None,
@@ -115,6 +133,7 @@ def search_jobs(
     sort: str | None = None,
     page: str | int | None = None,
     per_page: str | int | None = None,
+    user_id: int | None = None,
 ) -> dict:
     """Cari lowongan dan kembalikan ``{items, meta, filters, options}`` (R-04-01..R-04-05).
 
@@ -179,6 +198,8 @@ def search_jobs(
         items = repository.find_page(kriteria, offset, per_halaman, sumber=peta)
         total = repository.count(kriteria)
 
+    items = _tandai_tersimpan(items, user_id)
+
     return {
         "items": items,
         "meta": build_meta(halaman, per_halaman, total),
@@ -233,23 +254,29 @@ def _options(filters: dict, sumber: list[dict] | None = None) -> dict:
     }
 
 
-def get_job(job_id: int) -> dict:
+def get_job(job_id: int, user_id: int | None = None) -> dict:
     """Detail satu lowongan beserta lowongan serupa (R-04-06, R-04-09).
 
     Melempar ``NotFoundError`` (``AppError``) agar handler global PRD-01 yang
     memetakannya ke 404 dan memilih tampilan HTML atau JSON.
+
+    ``user_id`` mengisi ``is_saved`` pada lowongan ini dan pada kartu "serupa",
+    supaya tombol simpan di halaman detail mencerminkan keadaan sebenarnya
+    (PRD-06).
     """
     job = repository.find_by_id(job_id)
     if job is None:
         raise NotFoundError("Lowongan tidak ditemukan.")
 
-    return {
-        "job": job,
-        "similar": repository.find_similar(job, limit=6),
-    }
+    similar = _tandai_tersimpan(
+        repository.find_similar(job, limit=6), user_id
+    )
+    _tandai_tersimpan([job], user_id)
+
+    return {"job": job, "similar": similar}
 
 
-def get_home() -> dict:
+def get_home(user_id: int | None = None) -> dict:
     """Beranda: ``stats``, ``latest``, ``categories``, dan ``sparkline``.
 
     ``categories`` diambil dari ``app.insights.service``, bukan dihitung ulang
@@ -262,7 +289,7 @@ def get_home() -> dict:
 
     return {
         "stats": repository.totals(),
-        "latest": repository.newest(limit=6),
+        "latest": _tandai_tersimpan(repository.newest(limit=6), user_id),
         "categories": insights_service.get_categories(),
         "sparkline": repository.posted_sparkline(days=7),
     }

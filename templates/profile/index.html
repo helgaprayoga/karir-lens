@@ -59,13 +59,33 @@
     {%- endif -%}
 
     <p class="profile-links">
-      <a class="btn btn-line" href="{{ url_for('preview.saved') }}">
+      <a class="btn btn-line" href="{{ url_for('profile.saved') }}">
         {{ icon_bookmark(False) }} Lihat lowongan tersimpan
       </a>
-      <a class="btn btn-ghost" href="{{ url_for('preview.jobs') }}">
+      <a class="btn btn-ghost" href="{{ url_for('jobs.index') }}">
         {{ icon_arrow_out() }} Jelajahi lowongan
       </a>
     </p>
+
+    {# Ubah nama tampilan (R-06-02). Email sengaja tidak dapat diubah: ia
+       identitas login, dan menggantinya memerlukan verifikasi kepemilikan
+       alamat yang belum ada di aplikasi ini. Memakai `.field` yang sudah
+       dipakai form auth, bukan kelas baru. #}
+    <section class="panel profile-name-panel">
+      <h4>Ubah nama</h4>
+      <form method="post" action="{{ url_for('profile.update_name') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="profile-name">Nama tampilan</label>
+          <input type="text" id="profile-name" name="name"
+                 value="{{ profile.name or '' }}" maxlength="80" required>
+        </div>
+        <button class="btn btn-primary" type="submit" data-loading-label="Menyimpan…">
+          Simpan
+        </button>
+      </form>
+      <p class="field-hint">Email <b>{{ profile.email }}</b> tidak dapat diubah.</p>
+    </section>
   </main>
 
   <aside class="rail" aria-label="Ringkasan akun">

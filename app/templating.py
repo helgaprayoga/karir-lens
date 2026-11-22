@@ -16,15 +16,24 @@ from __future__ import annotations
 
 from flask import Flask, url_for
 
-# Hanya halaman yang sudah punya backend produksi (PRD-04). Halaman pratinjau
-# lain (profil, CV, asisten, admin) belum punya padanan dan tidak dipetakan.
+# Pemetaan dua arah: nama endpoint pratinjau -> padanan produksinya, dan
+# sebaliknya. Arah balik diperlukan karena template ditulis pada salah satu
+# track dan dirender oleh keduanya. Tanpa itu, halaman pratinjau yang memakai
+# `url_for('profile.saved')` akan menaut ke route produksi (`/saved`) padahal
+# yang dilihat penggguna adalah fixture `/preview/saved`.
 ALIASES = {
     "preview.jobs": "jobs.index",
     "preview.job_detail": "jobs.detail",
     "preview.company_detail": "insights.company",
     "preview.home": "main.index",
     "preview.insights": "insights.index",
+    # Profil dan tersimpan kini punya route produksi (PRD-06).
+    "preview.profile": "profile.index",
+    "preview.saved": "profile.saved",
 }
+
+# Kebalikannya, dibangun sekali dari ALIASES.
+_BALIK = {produksi: pratinjau for pratinjau, produksi in ALIASES.items()}
 
 
 def install(app: Flask) -> None:
@@ -37,24 +46,26 @@ def install(app: Flask) -> None:
     def url_for_kompatibel(endpoint: str, **nilai):
         """Tautan mengikuti halaman yang sedang dirender, bukan flag.
 
-        Saat pratinjau aktif keduanya terdaftar, dan memilih berdasarkan
-        endpoint yang sedang dirender mencegah halaman produksi menautkan ke
-        ``/preview/...`` (atau sebaliknya).
+        Saat pratinjau aktif keduanya terdaftar. Memilih berdasarkan endpoint
+        yang sedang dirender mencegah halaman produksi menautkan ke
+        ``/preview/...`` dan sebaliknya — dua track yang tautannya bercampur
+        membuat pengguna berpindah ke data fixture tanpa sadar.
         """
         from flask import has_request_context, request
 
         sedang_pratinjau = (
             has_request_context() and (request.endpoint or "").startswith("preview.")
         )
-        pengganti = ALIASES.get(endpoint)
+        if sedang_pratinjau:
+            # Halaman pratinjau: pakai endpoint pratinjau bila ada.
+            kandidat = [_BALIK.get(endpoint, endpoint), endpoint]
+        else:
+            # Halaman produksi: pakai padanan produksi bila ada.
+            kandidat = [ALIASES.get(endpoint, endpoint), endpoint]
 
-        urutan = [endpoint]
-        if pengganti and _terdaftar(pengganti):
-            urutan = [pengganti, endpoint] if not sedang_pratinjau else [endpoint, pengganti]
-
-        for kandidat in urutan:
-            if _terdaftar(kandidat):
-                return bawaan(kandidat, **nilai)
+        for nama in kandidat:
+            if _terdaftar(nama):
+                return bawaan(nama, **nilai)
         return bawaan(endpoint, **nilai)
 
     app.jinja_env.globals["url_for"] = url_for_kompatibel

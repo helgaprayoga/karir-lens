@@ -25,18 +25,18 @@
       </div>
       <div class="cards">
         {%- for job in items -%}
-          {{ job_card(job, href=url_for("preview.job_detail", job_id=job.id)) }}
+          {{ job_card(job, href=url_for("jobs.detail", job_id=job.id)) }}
         {%- endfor -%}
       </div>
       {%- if meta.has_next or meta.page > 1 -%}
-        {{ pagination(meta, "preview.saved", params=url_params) }}
+        {{ pagination(meta, "profile.saved", params=url_params) }}
       {%- endif -%}
     {%- else -%}
       {{ empty_state(
            "Belum ada lowongan tersimpan",
            "Simpan lowongan dari katalog untuk melihatnya di sini nanti.",
            "Jelajahi lowongan",
-           url_for("preview.jobs")) }}
+           url_for("jobs.index")) }}
     {%- endif -%}
   </main>
 

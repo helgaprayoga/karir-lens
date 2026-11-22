@@ -9,6 +9,7 @@ Template yang dirender adalah template PRD-F02 tanpa perubahan (R-04-11).
 from __future__ import annotations
 
 from flask import render_template, request, url_for
+from flask_login import current_user
 
 from . import bp, service
 
@@ -106,6 +107,9 @@ def index():
         sort=request.args.get("sort"),
         page=request.args.get("page"),
         per_page=request.args.get("per_page"),
+        # Pengguna login melihat tombol simpan yang mencerminkan keadaan
+        # sebenarnya; tamu tidak punya bookmark (PRD-06).
+        user_id=current_user.id if current_user.is_authenticated else None,
     )
 
     filters = data["filters"]
@@ -143,5 +147,8 @@ def detail(job_id: int):
     ``service.get_job`` melempar ``NotFoundError`` bila ID tidak ada; handler
     global yang mengubahnya menjadi 404 (R-04-09).
     """
-    data = service.get_job(job_id)
+    data = service.get_job(
+        job_id,
+        user_id=current_user.id if current_user.is_authenticated else None,
+    )
     return render_template("jobs/detail.html", job=data["job"], similar=data["similar"])

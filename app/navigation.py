@@ -139,6 +139,27 @@ def _href(kandidat: tuple[str, ...]) -> str | None:
     return None
 
 
+def saved_count() -> int:
+    """Jumlah bookmark pengguna login, untuk indikator di navigasi (PRD-06).
+
+    Dihitung hanya bila pengguna login: tamu tidak punya bookmark, dan
+    menampilkan "0" pada menu yang tidak mereka miliki hanya menambah derau.
+    Kegagalan query tidak boleh menggagalkan render — navigasi adalah hiasan,
+    bukan isi halaman.
+    """
+    from flask_login import current_user
+
+    if not getattr(current_user, "is_authenticated", False):
+        return 0
+
+    try:
+        from app.profile import repository as profile_repository
+
+        return profile_repository.count_saved(current_user.id)
+    except Exception:  # noqa: BLE001 - navigasi tidak boleh mematahkan halaman
+        return 0
+
+
 def header_hrefs() -> dict[str, str | None]:
     """URL untuk menu header: AI, profil, tersimpan, CV, dan admin.
 
@@ -150,4 +171,5 @@ def header_hrefs() -> dict[str, str | None]:
         "saved_href": _href(("preview.saved", "profile.saved")),
         "cv_href": _href(("preview.cv", "cv.index")),
         "admin_href": _href(("preview.admin_index", "admin.index")),
+        "saved_count": saved_count(),
     }

@@ -43,6 +43,33 @@ def find_by_id(user_id: int) -> dict | None:
     return rows[0] if rows else None
 
 
+def update_name(user_id: int, name: str | None) -> dict | None:
+    """Perbarui nama tampilan pengguna (PRD-06 R-06-02).
+
+    Email sengaja tidak dapat diubah: ia identitas login, dan menggantinya
+    memerlukan verifikasi kepemilikan alamat yang belum ada di aplikasi ini.
+    Mengembalikan baris terbaru, atau ``None`` bila pengguna tidak ada.
+    """
+    from datetime import datetime, timezone
+
+    (
+        db.get_db()
+        .table(TABLE)
+        .update(
+            {
+                "name": name,
+                # Waktu dihitung di sini, bukan `"now()"`: PostgREST memakai
+                # parameter terikat, dan string "now()" akan tersimpan sebagai
+                # teks, bukan dipanggil sebagai fungsi SQL.
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        .eq("id", user_id)
+        .execute()
+    )
+    return find_by_id(user_id)
+
+
 def create(email: str, password_hash: str, name: str | None = None) -> dict:
     """Simpan pengguna baru dan kembalikan kolom publik.
 

@@ -280,6 +280,29 @@ def list_clusters() -> list[dict]:
     return hasil
 
 
+def saved_ids_for_user(user_id: int) -> set[int]:
+    """Himpunan ``job_id`` yang disimpan pengguna ini (PRD-06).
+
+    Dimiliki repository katalog sendiri, bukan dipinjam dari
+    ``app.profile.repository``: aturan arsitektur §4 butir 2 membatasi setiap
+    service pada repository modulnya sendiri.
+
+    Dipakai katalog untuk menandai tombol simpan pada setiap kartu. Satu query
+    untuk seluruh halaman, bukan satu per kartu: 12 kartu berarti 12 permintaan
+    ke Supabase bila dilakukan per item.
+    """
+    baris = (
+        _client()
+        .table("saved_jobs")
+        .select("job_id")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+        or []
+    )
+    return {row["job_id"] for row in baris if row.get("job_id") is not None}
+
+
 def list_sources() -> list[dict]:
     """Sumber yang benar-benar tercatat, untuk chip filter."""
     return (

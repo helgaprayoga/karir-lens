@@ -7,6 +7,7 @@ Tidak ada query dan tidak ada aturan bisnis (ARCHITECTURE §4 aturan 8).
 from __future__ import annotations
 
 from flask import render_template
+from flask_login import current_user
 
 from . import bp
 
@@ -21,7 +22,9 @@ def index():
     from app.jobs import service as jobs_service
     from app.insights import service as insights_service
 
-    data = jobs_service.get_home()
+    data = jobs_service.get_home(
+        user_id=current_user.id if current_user.is_authenticated else None
+    )
     return render_template(
         "main/index.html",
         stats=data["stats"],
