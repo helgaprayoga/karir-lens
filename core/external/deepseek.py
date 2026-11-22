@@ -106,6 +106,11 @@ class DeepSeek(DeepSeekClient):
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": False,
+            # Thinking mode menyala secara bawaan. Bila dibiarkan, rantai
+            # penalaran ikut memakan ``max_tokens`` sehingga ``content`` dapat
+            # kosong, dan ``temperature`` diabaikan sepenuhnya — padahal
+            # temperature rendah itulah yang menahan model dari mengarang.
+            "thinking": {"type": "disabled"},
         }
         tajuk = {
             "Authorization": f"Bearer {self.api_key}",
@@ -135,10 +140,29 @@ class DeepSeek(DeepSeekClient):
                 break
 
             # 5xx mungkin sementara; 4xx tidak akan berubah bila diulang.
-            logger.warning("DeepSeek membalas %s.", respons.status_code)
+            # Alasan dari DeepSeek ikut dicatat: tanpa itu, nama model yang salah
+            # hanya terlihat sebagai "membalas 400" tanpa petunjuk apa pun.
+            # Body galat memuat alasan penolakan, bukan isi percakapan (R-08-11).
+            try:
+                alasan = (respons.json().get("error") or {}).get("message") or ""
+            except ValueError:
+                alasan = respons.text[:200]
+            logger.warning(
+                "DeepSeek membalas %s: %s", respons.status_code, str(alasan)[:200]
+            )
             if respons.status_code >= 500 and percobaan < MAX_RETRY:
                 percobaan += 1
                 continue
+
+            # 401/403 bukan gangguan sementara: kuncinya salah atau dicabut.
+            # Mengatakan "sedang sibuk" untuk kasus ini menyesatkan — pengguna
+            # akan menunggu selamanya, padahal yang perlu diperbaiki adalah
+            # konfigurasi server.
+            if respons.status_code in (401, 403):
+                raise AssistantError(
+                    "Asisten belum dapat memakai layanan AI: kunci API ditolak. "
+                    "Hubungi pengelola aplikasi."
+                )
             raise AssistantError(
                 "Asisten sedang sibuk. Coba lagi beberapa saat lagi."
             )

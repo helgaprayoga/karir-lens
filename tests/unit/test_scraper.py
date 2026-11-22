@@ -44,7 +44,7 @@ def _settings(**ubah) -> Settings:
         "supabase_url": "https://contoh.supabase.co",
         "supabase_key": "kunci",
         "deepseek_api_key": None,
-        "deepseek_model": "deepseek-chat",
+        "deepseek_model": "deepseek-flash",
         "scraper_user_agent": "KarirLensBot/1.0 (uji)",
         "scraper_max_retry": 3,
         "ai_daily_limit": 20,

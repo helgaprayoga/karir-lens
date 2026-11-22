@@ -243,7 +243,7 @@ def test_context_has_jobs_clusters_salary(db) -> None:
     """Konteks disusun dari lowongan, kategori, dan statistik gaji (R-08-02)."""
     context = service.build_context("data analyst", 1)
 
-    assert set(context) == {"jobs", "categories", "salary", "skills"}
+    assert set(context) == {"match", "jobs", "categories", "salary", "skills"}
     assert context["jobs"], "lowongan relevan harus ada"
     assert context["categories"][0]["label"] == "Data & Ai"
     assert "sample_sufficient" in context["salary"]
@@ -361,6 +361,52 @@ def test_clarification_suggests_what_to_ask(monkeypatch) -> None:
 
     hasil = service.ask("xyz", 1, client=Klien())
     assert "posisi" in hasil["reply"].lower() or "skill" in hasil["reply"].lower()
+
+
+def test_job_intent_without_exact_match_reaches_model(db) -> None:
+    """Niat mencari kerja tidak boleh ditolak hanya karena teks tidak cocok.
+
+    Regresi: "backend engineer" ditolak dengan "belum menemukan lowongan"
+    padahal 363 lowongan ada di database. Judulnya berbunyi "Software
+    Engineer, Backend", dan pencarian `ilike %backend engineer%` tidak
+    menemukannya. Pengguna melihat penolakan, bukan jawaban.
+    """
+    klien = Klien("Belum ada yang persis cocok, tetapi ini lowongan terbaru.")
+    hasil = service.ask("backend engineer", 1, client=klien)
+
+    assert klien.panggilan, "model harus dipanggil untuk pertanyaan pencarian kerja"
+    assert "belum menemukan" not in hasil["reply"].lower()
+    assert hasil["sources"], "lowongan terbaru dipakai sebagai sumber"
+
+
+def test_skill_mention_alone_counts_as_job_intent(db) -> None:
+    """Menyebut skill yang ada di kamus sudah cukup sebagai niat mencari kerja."""
+    klien = Klien("Ini yang memakai Python.")
+    service.ask("python", 1, client=klien)
+
+    assert klien.panggilan, "menyebut skill harus sampai ke model"
+
+
+def test_latest_fallback_is_labelled_not_exact(monkeypatch) -> None:
+    """Lowongan cadangan ditandai "terbaru", bukan "relevan".
+
+    Tanpa penanda ini, model akan menyebut lowongan acak sebagai "relevan" —
+    persis kesalahan yang dulu membuat "quantum computing" dijawab "Ada
+    lowongan Data Analyst".
+    """
+    dari = DB(
+        [_job(i) for i in range(1, 4)],
+        [{"id": 1, "label": "Developer & Backend", "keywords": ["backend", "java"]}],
+        skills=[],
+    )
+    monkeypatch.setattr(assistant_repo, "_client", lambda: dari)
+
+    klien = Klien()
+    service.ask("backend engineer", 1, client=klien)
+
+    prompt = klien.panggilan[0][-1]["content"]
+    assert "LOWONGAN TERBARU" in prompt
+    assert "tidak ada yang persis cocok" in prompt
 
 
 # --- R-08-09: rate limit ---------------------------------------------

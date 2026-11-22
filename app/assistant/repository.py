@@ -39,7 +39,7 @@ def search_jobs(kata: list[str], limit: int = 8) -> list[dict]:
     """
     kata = [k.strip().lower() for k in (kata or []) if len(k.strip()) > 2]
     if not kata:
-        return _lowongan_terbaru(limit)
+        return find_latest_jobs(limit)
 
     klausa = []
     for k in kata[:4]:
@@ -65,8 +65,8 @@ def search_jobs(kata: list[str], limit: int = 8) -> list[dict]:
     return hasil
 
 
-def _lowongan_terbaru(limit: int = 8) -> list[dict]:
-    """Lowongan terbaru, dipakai saat pertanyaan tidak menyebut kata kunci.
+def find_latest_jobs(limit: int = 8) -> list[dict]:
+    """Lowongan terbaru, dipakai sebagai pijakan bila tidak ada yang persis cocok.
 
     Pertanyaan seperti "lowongan apa saja yang ada?" tidak punya kata kunci
     yang berguna, jadi konteksnya adalah daftar terbaru.

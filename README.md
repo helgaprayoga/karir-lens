@@ -101,7 +101,7 @@ Aplikasi tersedia di `http://127.0.0.1:5000`.
 | `SUPABASE_DB_PASSWORD` | Untuk migrasi | — | Password database (bukan kunci API). |
 | `SUPABASE_DB_SSLMODE` | Tidak | `require` | Mode SSL koneksi langsung. |
 | `DEEPSEEK_API_KEY` | Untuk AI | — | Kunci DeepSeek. |
-| `DEEPSEEK_MODEL` | Tidak | `deepseek-chat` | Model DeepSeek. |
+| `DEEPSEEK_MODEL` | Tidak | `deepseek-flash` | Model DeepSeek. |
 | `AI_DAILY_LIMIT` | Tidak | `20` | Batas pertanyaan asisten per pengguna per hari. |
 | `SCRAPER_USER_AGENT` | Tidak | `KarirLensBot/1.0` | User agent pipeline data. |
 | `SCRAPER_MAX_RETRY` | Tidak | `3` | Maksimum retry pengambilan data. |

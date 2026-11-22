@@ -70,46 +70,70 @@ def _kata_kunci(question: str) -> list[str]:
 _META = ("kategori", "kategorinya", "cluster", "gaji", "salary", "insight",
          "statistik", "skill", "keahlian", "tren", "trennya")
 
+# Kata yang menandakan pengguna memang mencari kerja, bukan bertanya hal umum.
+# Tanpa daftar ini, "backend engineer" tertolak hanya karena judul lowongannya
+# berbunyi "Software Engineer, Backend" dan pencarian teks tidak menemukannya.
+# Sebaliknya "apa itu quantum computing" tetap ditolak — tidak ada satu pun kata
+# di sini yang muncul.
+_NIAT_KERJA = {
+    "loker", "posisi", "jabatan", "karir", "karier", "perusahaan", "rekrut",
+    "rekrutmen", "hiring", "magang", "internship", "intern", "remote", "gaji",
+    "fulltime", "freelance", "kontrak", "backend", "frontend", "fullstack",
+    "devops", "engineer", "developer", "programmer", "analyst", "designer",
+    "scientist", "administrator", "tester", "specialist", "staff", "lead",
+}
+
 
 def build_context(question: str, user_id: int) -> dict:
     """Konteks dari lowongan, cluster, statistik gaji, dan skill terkonfirmasi (R-08-02).
 
     Bentuknya dict yang mudah diformat menjadi teks prompt. Tidak ada isi CV
     di sini: hanya skill yang sudah disetujui pengguna (R-08-04).
+
+    ``match`` menandai seberapa kuat lowongan itu menjawab pertanyaan: ``exact``
+    bila kata kunci menemukan sesuatu, ``none`` bila tidak. Lowongan terbaru
+    sengaja **tidak** diisi di sini, supaya gerbang klarifikasi dapat membedakan
+    "tidak ada yang cocok" dari "tidak ada data". Pengisian cadangan dilakukan
+    ``ask()`` setelah gerbang itu lolos, lewat ``_isi_lowongan_terbaru``.
     """
     from app.insights import salary as salary_rules
 
     sumber = {row["id"]: row["name"] for row in repository.find_sources()}
-    jobs = repository.search_jobs(_kata_kunci(question), limit=MAX_JOBS_IN_CONTEXT)
+    kata = _kata_kunci(question)
+
+    jobs = repository.search_jobs(kata, limit=MAX_JOBS_IN_CONTEXT) if kata else []
 
     gaji = salary_rules.salary_stats(repository.find_jobs_with_salary())
 
     return {
-        "jobs": [
-            {
-                "id": j.get("id"),
-                "title": j.get("title"),
-                "company": j.get("company_name"),
-                "location": j.get("location"),
-                "employment_type": j.get("employment_type"),
-                "skills": (j.get("skills") or [])[:8],
-                "salary_min": j.get("salary_min"),
-                "salary_max": j.get("salary_max"),
-                "salary_currency": j.get("salary_currency"),
-                "salary_period": j.get("salary_period"),
-                "source": sumber.get(j.get("source_id")),
-                # Tautan asli selalu ikut; asisten hanya boleh menyebut tautan
-                # yang ada di sini (R-08-06).
-                "url": j.get("source_url"),
-            }
-            for j in jobs
-        ],
+        "match": "exact" if jobs else "none",
+        "jobs": [_ringkas_lowongan(j, sumber) for j in jobs],
         "categories": [
             {"label": c.get("label"), "keywords": (c.get("keywords") or [])[:6]}
             for c in repository.find_clusters()
         ],
         "salary": gaji,
         "skills": repository.find_confirmed_skills(user_id),
+    }
+
+
+def _ringkas_lowongan(j: dict, sumber: dict) -> dict:
+    """Satu baris lowongan -> bentuk yang dipakai prompt dan daftar sumber."""
+    return {
+        "id": j.get("id"),
+        "title": j.get("title"),
+        "company": j.get("company_name"),
+        "location": j.get("location"),
+        "employment_type": j.get("employment_type"),
+        "skills": (j.get("skills") or [])[:8],
+        "salary_min": j.get("salary_min"),
+        "salary_max": j.get("salary_max"),
+        "salary_currency": j.get("salary_currency"),
+        "salary_period": j.get("salary_period"),
+        "source": sumber.get(j.get("source_id")),
+        # Tautan asli selalu ikut; asisten hanya boleh menyebut tautan yang ada
+        # di sini (R-08-06).
+        "url": j.get("source_url"),
     }
 
 
@@ -123,6 +147,15 @@ def _format_context(context: dict) -> str:
         )
 
     if context["jobs"]:
+        # Lowongan ada, tetapi tidak satu pun cocok dengan kata kunci. Model
+        # harus tahu ini pijakan terbaru, bukan jawaban pertanyaan — kalau tidak,
+        # ia akan menyebutnya "relevan" dan menyesatkan pengguna.
+        judul = "LOWONGAN RELEVAN"
+        if context.get("match") == "latest":
+            judul = (
+                "LOWONGAN TERBARU (tidak ada yang persis cocok dengan pertanyaan; "
+                "sebutkan itu sebelum meringkas)"
+            )
         baris = []
         for j in context["jobs"]:
             gaji = ""
@@ -139,7 +172,7 @@ def _format_context(context: dict) -> str:
                 f" ({j['location'] or 'lokasi tidak disebut'}){gaji}"
                 f" | skill: {skill} | sumber: {j['url']}"
             )
-        bagian.append("LOWONGAN RELEVAN:\n" + "\n".join(baris))
+        bagian.append(judul + ":\n" + "\n".join(baris))
     else:
         bagian.append("LOWONGAN RELEVAN: tidak ada yang cocok dengan pertanyaan.")
 
@@ -209,43 +242,50 @@ def _cek_limit(user_id: int, batas_harian: int) -> str:
     return tanggal
 
 
-def _relevan_dengan_kategori(kata: list[str], context: dict) -> bool:
-    """True bila pertanyaan menyebut kategori yang kita punya.
+def _ada_niat_kerja(question: str, kata: list[str]) -> bool:
+    """Apakah pertanyaan memang tentang mencari kerja.
 
-    Kategori selalu ada (hasil clustering), jadi memakai "kategori kosong"
-    sebagai syarat klarifikasi tidak pernah benar: pertanyaan apa pun akan
-    lolos. Yang menentukan adalah apakah kata-kata pertanyaan menyentuh label,
-    kata kunci kategori, atau merupakan pertanyaan meta tentang isi sistem.
+    Tiga sinyal, dari yang paling kuat:
+
+    1. Menyebut skill yang ada di kamus ("python", "kubernetes").
+    2. Menyebut kata seputar lowongan ("backend", "magang", "gaji").
+    3. Menyebut label atau kata kunci kategori hasil clustering.
+
+    Tanpa ini, membuka gerbang klarifikasi akan meloloskan pertanyaan umum
+    seperti "apa itu quantum computing" — yang dulu sempat dijawab model dengan
+    "Ada lowongan Data Analyst", jawaban yang tidak menjawab pertanyaannya.
     """
-    if any(m in (kata or []) for m in _META):
-        # Pertanyaan meta ("kategori apa saja", "gaji berapa") dijawab dari
-        # kategori dan statistik yang memang ada di konteks.
-        return bool(context["categories"])
+    from core.skills import match_skills
 
-    bahan = " ".join(
-        f"{c.get('label') or ''} {' '.join(c.get('keywords') or [])}"
-        for c in context["categories"]
-    ).lower()
-    return any(k in bahan for k in kata)
+    if match_skills(question):
+        return True
+
+    semua = {k.lower() for k in kata}
+    if semua & _NIAT_KERJA:
+        return True
+
+    return bool(semua & set(_META))
 
 
-def _perlu_klarifikasi(kata: list[str], context: dict) -> bool:
+def _perlu_klarifikasi(kata: list[str], context: dict, question: str = "") -> bool:
     """Apakah konteks terlalu lemah untuk dijawab dengan jujur (R-08-07).
 
-    Tiga keadaan dianggap lemah:
+    Klarifikasi hanya untuk dua keadaan:
 
-    1. Tidak ada lowongan yang cocok **dan** tidak ada kategori yang disebut
-       pertanyaan. Model hanya akan menjawab dari pengetahuan umumnya.
-    2. Tidak ada lowongan sama sekali (database kosong).
+    1. Database tidak berisi lowongan maupun kategori sama sekali.
+    2. Lowongan ada, tetapi pertanyaan tidak menunjukkan niat mencari kerja
+       dan tidak satu pun lowongan cocok. Model hanya akan menjawab dari
+       pengetahuan umumnya.
 
-    Bila pertanyaan menyebut kategori yang ada — "kategori apa saja?", "gaji
-    backend?" — konteks masih memuat jawaban, jadi model tetap dipanggil.
+    Syarat lama menolak pertanyaan wajar: "backend engineer" gagal karena judul
+    lowongannya berbunyi "Software Engineer, Backend" dan pencarian teks tidak
+    menemukannya, padahal jelas yang dicari adalah lowongan.
     """
     if not context["jobs"] and not context["categories"]:
         return True
-    if not context["jobs"] and not _relevan_dengan_kategori(kata, context):
-        return True
-    return False
+    if context["jobs"]:
+        return False
+    return not _ada_niat_kerja(question, kata)
 
 
 def ask(
@@ -285,8 +325,21 @@ def ask(
     #
     # Kuota TIDAK dipotong: pengguna tidak menerima jawaban, dan pertanyaan
     # yang tidak terjawab tidak seharusnya menghabiskan jatahnya.
-    if _perlu_klarifikasi(kata, context):
+    if _perlu_klarifikasi(kata, context, teks):
         return {"reply": _klarifikasi(context), "sources": []}
+
+    # Pertanyaan lolos gerbang tetapi tidak ada lowongan yang persis cocok
+    # (mis. "backend engineer" sementara judulnya "Software Engineer, Backend").
+    # Isi dengan lowongan terbaru sebagai pijakan, dan tandai agar prompt
+    # memerintahkan model menyebut bahwa tidak ada yang persis cocok.
+    if not context["jobs"]:
+        sumber = {row["id"]: row["name"] for row in repository.find_sources()}
+        context["jobs"] = [
+            _ringkas_lowongan(j, sumber)
+            for j in repository.find_latest_jobs(MAX_JOBS_IN_CONTEXT)
+        ]
+        if context["jobs"]:
+            context["match"] = "latest"
 
     if client is None:
         return {

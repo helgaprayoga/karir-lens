@@ -63,7 +63,7 @@ def _env_bool(name: str, default: bool) -> bool:
 
 
 DEFAULT_USER_AGENT = "KarirLensBot/1.0 (agregator lowongan; hubungi pemilik aplikasi)"
-DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
+DEFAULT_DEEPSEEK_MODEL = "deepseek-flash"
 DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 

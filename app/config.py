@@ -49,7 +49,7 @@ class TestingConfig(BaseConfig):
         supabase_url="http://localhost:54321",
         supabase_key="testing-key",
         deepseek_api_key=None,
-        deepseek_model="deepseek-chat",
+        deepseek_model="deepseek-flash",
         scraper_user_agent="KarirLensBot-Test/1.0",
         scraper_max_retry=1,
         ai_daily_limit=100,
