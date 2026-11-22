@@ -125,7 +125,8 @@ def finish_run(
 # mengubahnya berarti membuat baris baru secara diam-diam.
 FIELD_DIPERBARUI = (
     "title", "company_name", "company_slug", "location", "employment_type",
-    "description", "skills", "salary_min", "salary_max", "salary_currency",
+    "description", "skills", "skills_source", "salary_min", "salary_max",
+    "salary_currency",
     "salary_period", "source_job_id", "posted_at", "dedup_hash", "scraped_at",
 )
 
@@ -246,3 +247,71 @@ def insert_many(rows: list[dict]) -> dict[str, int]:
 def insert_or_update(job: dict) -> str:
     """Nama lama; sekarang meneruskan ke :func:`upsert`."""
     return upsert(job)
+
+
+def hapus_di_luar(
+    url_dipertahankan: set[str], abaikan_sumber: set[str] | None = None
+) -> int:
+    """Hapus baris yang ``source_url``-nya tidak ada di himpunan (R-02-11).
+
+    Dipakai oleh ``--replace``: hasil pengambilan terbaru menjadi daftar
+    kebenaran, dan baris lama yang tidak muncul lagi dianggap sudah tidak
+    tersedia.
+
+    Tiga penjagaan, semuanya disengaja:
+
+    1. ``url_dipertahankan`` kosong berarti **tidak menghapus apa pun**. Daftar
+       kosong hampir selalu berarti pengambilan gagal, bukan "semua lowongan
+       hilang dari internet".
+    2. ``abaikan_sumber`` berisi sumber yang gagal pada eksekusi ini; lowongan
+       miliknya tidak ikut dihapus, karena kita tidak punya dasar menyatakan
+       lowongan itu sudah tidak ada.
+    3. Penghapusan per batch memakai ``in_`` pada ``source_url``, bukan
+       menghapus seluruh tabel lalu memasukkannya kembali — ``saved_jobs``
+       menunjuk ke ``jobs.id``, dan menghapus lalu memasukkan ulang akan
+       memutus bookmark pengguna.
+
+    Baris mengembalikan jumlah yang dihapus.
+    """
+    if not url_dipertahankan:
+        return 0
+
+    klien = core_db.get_db()
+    dihapus = 0
+    sumber_dilewati = set(abaikan_sumber or ())
+
+    peta_sumber = {
+        row["name"]: row["id"]
+        for row in (klien.table(SOURCES).select("id,name").execute().data or [])
+    }
+    id_dilewati = {peta_sumber[nama] for nama in sumber_dilewati if nama in peta_sumber}
+
+    while True:
+        baris = (
+            klien.table(JOBS)
+            .select("id,source_url,source_id")
+            .limit(500)
+            .execute()
+            .data
+            or []
+        )
+        if not baris:
+            break
+
+        buang = [
+            r["id"]
+            for r in baris
+            if r.get("source_url") not in url_dipertahankan
+            and r.get("source_id") not in id_dilewati
+        ]
+        if not buang:
+            # Tidak ada yang perlu dibuang pada halaman ini; berhenti agar tidak
+            # berputar selamanya membaca 500 baris yang sama.
+            break
+
+        for mulai in range(0, len(buang), 100):
+            potong = buang[mulai : mulai + 100]
+            klien.table(JOBS).delete().in_("id", potong).execute()
+            dihapus += len(potong)
+
+    return dihapus

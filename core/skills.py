@@ -195,6 +195,163 @@ def match_skills(*texts: str | None) -> list[str]:
     return sorted(ditemukan)
 
 
+# Heading yang menandai awal bagian syarat. Ditulis sebagai pola terhadap baris
+# pendek tanpa titik akhir, karena deskripsi sumber berupa teks berbaris — bukan
+# HTML — sehingga `</h2>` tidak bisa dijadikan penanda.
+HEADING_REQUIREMENT = re.compile(
+    r"^(requirements?|qualifications?|kualifikasi|"
+    r"what you(?:'ll|’ll| will)? bring|"
+    r"what we(?:'re|’re| are) looking for|who we(?:'re|’re| are) looking for|"
+    r"who you are|must[- ]have|required (?:skills?|qualifications?)|"
+    r"the ideal candidate|what you need|your profile|"
+    r"skills?(?: and| &)? (?:experience|qualifications?)|"
+    r"nice to have|preferred qualifications?|about you)\b",
+    re.IGNORECASE,
+)
+
+# Heading yang menandai bagian NON-syarat; menghentikan pemotongan.
+HEADING_NON_REQUIREMENT = re.compile(
+    r"^(about us|about the company|about \w+|why join|why work|benefits?|perks?|"
+    r"compensation|salary|how to get started|how to apply|apply now|working at|"
+    r"our (?:team|values|culture|mission)|service rates?|pay|"
+    r"independent contractor|qualification path|what you get|what we offer)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_heading(line: str) -> bool:
+    """Baris judul bagian: pendek dan tidak diakhiri tanda akhir kalimat."""
+    return len(line) <= 70 and not line.rstrip().endswith((".", "!", "?", ";"))
+
+
+def requirement_section(description: str | None) -> str | None:
+    """Teks di bawah heading syarat pertama, atau ``None`` bila tidak ada.
+
+    Dipotong pada heading non-syarat berikutnya, supaya bagian "Benefits" atau
+    "About us" tidak ikut dicocokkan.
+    """
+    if not description:
+        return None
+
+    baris = [b.strip() for b in description.splitlines() if b.strip()]
+    mulai = None
+    for i, b in enumerate(baris):
+        if _is_heading(b) and HEADING_REQUIREMENT.match(b):
+            mulai = i + 1
+            break
+    if mulai is None:
+        return None
+
+    hasil: list[str] = []
+    for b in baris[mulai:]:
+        if _is_heading(b) and (
+            HEADING_NON_REQUIREMENT.match(b) or HEADING_REQUIREMENT.match(b)
+        ):
+            break
+        hasil.append(b)
+    return " ".join(hasil) if hasil else None
+
+
+def infer_skills(title: str | None, description: str | None) -> list[str]:
+    """Skill yang **disimpulkan** dari teks, untuk sumber tanpa field skill.
+
+    Kalibrr dan Remotive tidak menyediakan daftar skill; keduanya hanya punya
+    prosa. Mengambil seluruh deskripsi apa adanya menghasilkan salah cocok yang
+    parah, terukur pada data nyata:
+
+    - "Senior Data Engineer" (Lemon.io) -> ``react``, karena *boilerplate*
+      perekrut menyebut "Senior React Full-stack Engineers come in all the time"
+      di bagian promosi, di atas syarat sebenarnya.
+    - "Content Reviewer" -> ``android``/``ios``, karena syarat perangkat keras
+      menyebut "smartphone (Android 5.0, iOS 14 or higher)".
+    - "Freelance Writer" -> ``rest api``, karena prosa memuat "the rest of our
+      content team".
+
+    Tiga tingkat, dari paling presisi:
+
+    1. **Judul.** Sinyal terkuat dan paling sedikit salah, tetapi hanya memberi
+       satu-dua skill.
+    2. **Bagian syarat** di bawah heading ("Requirements", "What you'll bring").
+       Remotive memakai gaya ini, dan boilerplate promosinya berada di atas
+       heading sehingga ikut terbuang.
+    3. **Kalimat ber-penanda syarat** ("proficient in", "experience with").
+       Kalibrr menulis syarat sebagai daftar butir tanpa heading, sehingga
+       tingkat 2 tidak menemukan apa pun di sana.
+
+    Bila ketiganya kosong, hasilnya kosong — bukan tebakan.
+    """
+    judul = title or ""
+
+    bagian = requirement_section(description)
+    if bagian:
+        hasil = match_skills(judul, _drop_device_sentences(bagian))
+        if hasil:
+            return hasil
+
+    sinyal = requirement_sentences(description)
+    if sinyal:
+        hasil = match_skills(judul, _drop_device_sentences(sinyal))
+        if hasil:
+            return hasil
+
+    return match_skills(judul)
+
+
+# Syarat perangkat, bukan kemampuan. "Content Reviewer" menulis "a reliable
+# computer and a smartphone (Android 5.0, iOS 14 or higher)"; tanpa penyaring
+# ini lowongan menulis konten mendapat skill ``android`` dan ``ios``.
+DEVICE_WORDS = re.compile(
+    r"\b(smartphone|phone|tablet|laptop|computer|device|equipment|headset|"
+    r"webcam|monitor|hardware|internet connection|broadband|bandwidth)\b",
+    re.IGNORECASE,
+)
+
+
+def _drop_device_sentences(text: str) -> str:
+    """Buang kalimat yang membicarakan perangkat, bukan kemampuan.
+
+    Pencocokan tetap dilakukan pada bagian syarat; yang dibuang hanya kalimat
+    yang jelas menyebut perangkat. "Linux server experience" tetap lolos karena
+    tidak memuat kata perangkat.
+    """
+    if not text:
+        return ""
+    kalimat = re.split(r"(?<=[.!?])\s+", text)
+    tersisa = [k for k in kalimat if not DEVICE_WORDS.search(k)]
+    return " ".join(tersisa)
+
+
+# Kalimat yang menyatakan syarat secara eksplisit. Dipakai hanya bila deskripsi
+# tidak punya heading syarat (lihat `requirement_section`).
+REQUIREMENT_CUE = re.compile(
+    r"\b(experience (?:with|in|using)|proficien\w* in|knowledge of|"
+    r"familiar\w* with|skilled (?:in|with)|expertise in|hands-on|"
+    r"must have|required|requirements?|"
+    r"strong (?:understanding|knowledge) of|ability to use|comfortable with|"
+    r"working knowledge of|background in|you have|you know)\b",
+    re.IGNORECASE,
+)
+
+
+def requirement_sentences(description: str | None) -> str | None:
+    """Kalimat yang memuat penanda syarat, atau ``None`` bila tidak ada.
+
+    Dipakai untuk sumber yang menulis syarat sebagai butir tanpa heading —
+    Kalibrr menyajikan "Proficient in at least one programming language such as
+    Golang, C++, C, or Python" tanpa judul bagian di atasnya.
+    """
+    if not description:
+        return None
+
+    teks = " ".join(description.split())
+    terpilih = [
+        kalimat
+        for kalimat in re.split(r"(?<=[.!?])\s+", teks)
+        if REQUIREMENT_CUE.search(kalimat)
+    ]
+    return " ".join(terpilih) if terpilih else None
+
+
 # Singkatan yang bisa berarti beberapa hal, walau kebetulan ada di kamus.
 # "REST" bisa berarti REST API atau istirahat; "QC" bisa Quality Control atau
 # Quick Check. Yang ambigu dikirim ke AI fallback hanya di PRD-07.

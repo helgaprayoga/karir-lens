@@ -175,6 +175,84 @@ diimplementasikan dan diuji. Kolom `skills` akan terisi saat PRD-03 berjalan.
 `salary_min` rendah karena sumbernya memang tidak mencantumkan gaji
 ("Salary Undisclosed" / "Tidak Ditampilkan"), bukan karena parser gagal.
 
+---
+
+## Keputusan akhir: inferensi dinyalakan saat ingestion
+
+Catatan di atas ditulis **sebelum** inferensi benar-benar dipanggil. Saat itu
+`core/skills.py` sudah ada dan diuji, tetapi tidak ada satu pun pemanggilnya di
+pipeline — akibatnya Kalibrr dan Remotive tetap 0 skill di database, dan
+kartunya tampil tanpa satu pun tag sementara kartu Dealls penuh. Itu yang
+terlihat janggal di antarmuka.
+
+Inferensi sekarang dijalankan di `scraper/pipeline/normalize.py` lewat
+`infer_skills()`, dengan tiga tingkat presisi:
+
+| Tingkat | Bahan | Contoh |
+|---|---|---|
+| 1 | Judul | "Senior React Full-stack Developer" → `react` |
+| 2 | Bagian syarat (di bawah heading) | "Who we're looking for" di Remotive |
+| 3 | Kalimat ber-penanda syarat | "Proficient in … Golang, C++, C, or Python" di Kalibrr |
+
+### Yang salah bila deskripsi dibaca apa adanya
+
+Diukur pada database sungguhan. Masing-masing punya penyebab berbeda:
+
+| Lowongan | Skill salah | Penyebab |
+|---|---|---|
+| Senior Data Engineer (Lemon.io) | `react` | *Boilerplate* perekrut di atas syarat: "New roles for Senior React Full-stack Engineers come in all the time" |
+| Content Reviewer (TELUS) | `android`, `ios` | Syarat perangkat: "a reliable computer and a smartphone (Android 5.0, iOS 14 or higher)" |
+| Freelance Writer (IAPWE) | `rest api` | Alias kamus `rest` → `rest api` cocok pada "the rest of our content team" |
+
+Tiga perbaikan:
+
+1. **Pemotongan berbasis heading** — hanya teks di bawah "Requirements" /
+   "What you'll bring" / "Qualifications" yang dicocokkan, dan berhenti pada
+   heading non-syarat ("Benefits", "About us").
+2. **Penyaring kalimat perangkat** — kalimat yang menyebut *smartphone*,
+   *computer*, *laptop*, *internet connection* dibuang sebelum pencocokan.
+3. **Alias `rest` dan `dl` dihapus dari kamus.** Keduanya kata biasa dalam prosa
+   Inggris. `rest apis` dan `api integration` ditambahkan agar bentuk yang sah
+   tetap dikenali.
+
+### Hasil terukur
+
+Setelah perbaikan, pada 54 baris di database:
+
+| Sumber | Total | `declared` | `inferred` | Kosong |
+|---|---|---|---|---|
+| dealls | 22 | 19 | 0 | 3 |
+| kalibrr | 16 | 0 | 2 | 14 |
+| remotive | 16 | 0 | 6 | 10 |
+| **total** | **54** | **19** | **8** | **27** |
+
+Bandingkan dengan sebelum inferensi dinyalakan: 17 declared, **0 inferred**.
+
+Cakupan memang tidak penuh, dan itu disengaja. Dari 32 lowongan Kalibrr +
+Remotive, membaca seluruh deskripsi memberi 13 yang terisi tetapi dengan skill
+palsu (termasuk `react` pada Data Engineer); pendekatan berbasis syarat memberi
+8 yang semuanya benar. Untuk data yang tampil di kartu, 8 benar lebih baik
+daripada 13 yang sebagian bohong.
+
+Sebagian besar sisanya memang tidak menyebut teknologi apa pun — "Staff General
+Affair", "Senior Cook", "Community Officer", "Tax & Audit Staff". Kosong adalah
+jawaban yang benar untuk lowongan seperti itu.
+
+### Penanda asal wajib
+
+Kolom `jobs.skills_source` (`declared` / `inferred`, migrasi 004) membedakan
+pernyataan sumber dari hasil kamus. Tanpa itu, skill tebakan tampil sama
+yakannya dengan yang ditulis rekruter.
+
+Di antarmuka:
+
+- Kartu: penanda kecil `≈` dengan `title`/`aria-label` penjelas.
+- Detail: kalimat "Skill disimpulkan dari judul dan deskripsi lowongan, bukan
+  daftar resmi dari Kalibrr."
+
+Baris lama yang belum punya penanda diisi mundur: skill Dealls dianggap
+`declared` (satu-satunya sumber berfield skill), sumber lain `inferred`.
+
 ### Kamus yang dipakai
 
 `core/data/skills.json` berisi **105 skill** dan **80 alias**. Dua sumbernya:

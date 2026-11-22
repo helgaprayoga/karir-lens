@@ -90,6 +90,9 @@ class BaseAdapter:
     # kesalahan konfigurasi (`--pages 10 --detail`) dapat menjadi ratusan
     # permintaan ke situs orang lain.
     max_detail: int = 100
+    # Hanya simpan lowongan IT (pemfokusan produk). Adapter yang tahu
+    # kategorinya menyaring lebih awal lewat `is_tech_relevant`.
+    tech_only: bool = True
 
     def __init__(self, http: ScraperHTTP | None = None) -> None:
         """Adapter memakai klien HTTP bersama; test menyuntikkan klien tiruan."""
@@ -100,6 +103,9 @@ class BaseAdapter:
                 Settings.from_env(), self.base_url, min_interval=self.min_interval
             )
         self.http = http
+        # Dihitung selama `iter_jobs`, dilaporkan runner supaya penyaringan
+        # terlihat alih-alih tampak seperti "sumbernya cuma segini".
+        self.filtered_out = 0
 
     # --- wajib diisi adapter --------------------------------------------
 
@@ -120,6 +126,33 @@ class BaseAdapter:
         adapter ini tidak mendukung pengambilan detail.
         """
         return None
+
+    def category_of(self, item: dict) -> str | None:
+        """Kategori yang dinyatakan sumber untuk satu item mentah, bila ada.
+
+        Kalibrr memakai ``function`` ("IT and Software"); Remotive memakai
+        segmen kategori pada URL. Mengembalikan ``None`` bila sumber tidak
+        menyatakannya — jangan menebak dari judul di sini, karena itu tugas
+        ``core.tech``.
+        """
+        return None
+
+    def is_tech_relevant(self, item: dict, job: RawJob) -> bool:
+        """True bila item ini lowongan IT dan layak disimpan.
+
+        Dipanggil **sebelum** halaman detail diambil, supaya lowongan non-IT
+        tidak memakan satu permintaan pun. Bila ``tech_only`` mati, semuanya
+        lolos — berguna untuk memeriksa klasifikasi tanpa mengubah kode.
+        """
+        if not self.tech_only:
+            return True
+        from core.tech import is_it_job
+
+        return is_it_job(
+            title=job.title,
+            category=self.category_of(item),
+            skills=job.skills,
+        )
 
     def parse_detail(self, job: RawJob, html: str) -> RawJob:
         """Lengkapi ``job`` dari HTML halaman detail.
@@ -206,6 +239,12 @@ class BaseAdapter:
                 if job.source_url in dilihat:
                     continue
                 dilihat.add(job.source_url)
+
+                # Penyaringan IT dilakukan SEBELUM detail: lowongan non-IT tidak
+                # boleh memakan satu pun permintaan tambahan.
+                if not self.is_tech_relevant(item, job):
+                    self.filtered_out += 1
+                    continue
 
                 if with_detail:
                     if jumlah_detail < self.max_detail:

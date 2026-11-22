@@ -59,6 +59,11 @@ def persist_run(source: str, jobs: list) -> dict[str, int]:
     return persist.insert_many(baris)
 
 
+def persist_hapus_di_luar(url_dipertahankan: set[str], abaikan_sumber: set[str] | None = None) -> int:
+    """Teruskan ke :func:`persist.hapus_di_luar` (dipakai ``--replace``)."""
+    return persist.hapus_di_luar(url_dipertahankan, abaikan_sumber=abaikan_sumber)
+
+
 def record_outcome(outcome) -> None:
     """Catat satu sumber ke ``scrape_runs`` (R-02-06 s.d. R-02-08, R-03-13).
 

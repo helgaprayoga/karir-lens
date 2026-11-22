@@ -1,46 +1,74 @@
 {% extends "base.html" %}
 
-{% from "components/alert_banner.html" import alert_banner %}
-{% from "components/skeleton_card.html" import skeleton_card %}
+{% from "components/job_card.html" import job_card %}
+{% from "components/icons.html" import icon_search %}
+{% from "components/empty_state.html" import empty_state %}
 
 {% block title %}KarirLens — Lowongan dari tiga sumber, satu pencarian{% endblock %}
 
 {% block content %}
 <div class="layout">
-<div class="feed">
-  <div class="page-head">
-    <h1>Lowongan dari tiga sumber, satu pencarian</h1>
-  </div>
+  <main class="feed">
+    <div class="page-head">
+      <h1>Lowongan dari tiga sumber, satu pencarian</h1>
+    </div>
 
-  <p class="field-hint">
-    KarirLens mengumpulkan lowongan dari Dealls, Kalibrr, dan Remotive, lalu
-    menampilkannya dalam satu daftar yang dapat dicari dan disaring.
-  </p>
+    <p class="field-hint">
+      KarirLens mengumpulkan lowongan dari Dealls, Kalibrr, dan Remotive, lalu
+      menampilkannya dalam satu daftar yang dapat dicari dan disaring.
+    </p>
 
-  {{ alert_banner("Kerangka antarmuka sudah berjalan. Katalog lowongan dibangun pada PRD-F02.", "info") }}
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{ url_for('jobs.index') }}">
+        {{ icon_search() }} Mulai cari lowongan
+      </a>
+    </div>
 
-  <p>
-    <a class="btn btn-primary" href="{{ url_for('auth.register') }}">Buat akun</a>
-    <a class="btn btn-line" href="{{ url_for('auth.login') }}">Masuk</a>
-    {% if preview_ui %}
-      <a class="btn btn-ghost" href="{{ url_for('preview.styleguide') }}">Buka Style Guide</a>
-    {% endif %}
-  </p>
+    <div class="stat-grid home-stats">
+      <div class="stat-tile">
+        <div class="value">{{ stats.total_jobs|angka }}</div>
+        <div class="label">Lowongan</div>
+      </div>
+      <div class="stat-tile">
+        <div class="value">{{ stats.total_companies|angka }}</div>
+        <div class="label">Perusahaan</div>
+      </div>
+    </div>
 
-  <div class="section-head">
-    <h2>Contoh komponen</h2>
-    <span class="sub">state loading (R-04-06)</span>
-  </div>
-  <div class="cards">
-    {{ skeleton_card() }}
-    {{ skeleton_card() }}
-  </div>
-</div>
+    {%- if latest -%}
+      <div class="section-head home-section">
+        <h2>Lowongan terbaru</h2>
+        <a class="sub" href="{{ url_for('jobs.index') }}">Lihat semua</a>
+      </div>
+      <div class="cards">
+        {%- for job in latest -%}
+          {{ job_card(job, href=url_for("jobs.detail", job_id=job.id)) }}
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      {{ empty_state(
+           "Belum ada lowongan",
+           "Data lowongan belum masuk. Jalankan pengambilan data lebih dulu.",
+           "Lihat lowongan",
+           url_for("jobs.index")) }}
+    {%- endif -%}
+  </main>
 
-<aside class="rail" aria-label="Ringkasan akun">
-  <div class="hint">
-    <span>Rekomendasi berbasis skill CV tersedia setelah Anda masuk dan mengonfirmasi skill.</span>
-  </div>
-</aside>
+  <aside class="rail" aria-label="Ringkasan">
+    <div class="hint">
+      <span><b>{{ stats.total_jobs|angka }} lowongan</b> dari {{ stats.total_companies|angka }} perusahaan.</span>
+    </div>
+
+    <section class="panel">
+      <h4>Baru di sini?</h4>
+      <p class="field-hint">
+        Buat akun untuk menyimpan lowongan, mengunggah CV, dan menerima
+        rekomendasi berdasarkan skill yang Anda konfirmasi.
+      </p>
+      {%- if not current_user.is_authenticated -%}
+        <a class="btn btn-primary" href="{{ url_for('auth.register') }}">Buat akun</a>
+      {%- endif -%}
+    </section>
+  </aside>
 </div>
 {% endblock %}

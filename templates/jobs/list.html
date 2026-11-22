@@ -25,40 +25,116 @@
     <div class="page-head">
       <h1>Cari Lowongan</h1>
       <div class="page-actions">
-        {{ search_field(name="q", value=filters.q, action=url_for("preview.jobs"),
+        {{ search_field(name="q", value=filters.q, action=url_for("jobs.index"),
                         placeholder="Posisi, perusahaan, skill...") }}
-        <button class="btn btn-primary" type="button" aria-expanded="false" aria-controls="filter-panel">
+        <button class="btn btn-primary" type="button" aria-expanded="false"
+                aria-controls="filter-panel" data-filter-toggle>
           {{ icon_filter() }} Filter <span class="count">{{ active_count }}</span>
         </button>
       </div>
     </div>
 
-    {# ── Bar filter ────────────────────────────────────────────────────────
-       Chip adalah tautan: klik = toggle filter di URL (R-F02-06, R-F02-10). #}
-    <div class="filters">
-      {%- for chip in options.cities -%}
-        <a class="chip" href="{{ chip.href }}" aria-pressed="{{ 'true' if chip.active else 'false' }}"
-           data-filter="city" data-value="{{ chip.value }}">
-          {{ chip.label }}{% if chip.active %}<span class="remove" aria-hidden="true">×</span>{% endif %}
-        </a>
-      {%- endfor -%}
+    {# ── Panel filter ──────────────────────────────────────────────────────
+       Panel ini berisi opsi yang benar-benar ada di database: kota diambil dari
+       kolom `location` yang terisi, sumber dari tabel `sources`, dan tipe kerja
+       dari nilai yang dipakai data. Sebelumnya tombol "Filter" hanya dekorasi —
+       `aria-controls` menunjuk elemen yang tidak ada dan tidak ada yang terjadi
+       saat diklik.
 
-      {%- for chip in options.employment_types -%}
-        <a class="chip" href="{{ chip.href }}" aria-pressed="{{ 'true' if chip.active else 'false' }}"
-           data-filter="employment_type" data-value="{{ chip.value }}">
-          {{ chip.label }}{% if chip.active %}<span class="remove" aria-hidden="true">×</span>{% endif %}
-        </a>
-      {%- endfor -%}
+       Setiap kotak adalah tautan yang men-toggle satu nilai di URL, sehingga
+       beberapa nilai dapat dipilih sekaligus dan statusnya tetap dapat di-bookmark. #}
+    <div class="filter-panel" id="filter-panel" hidden>
+      <form class="filter-form" method="get" action="{{ url_for('jobs.index') }}" role="search"
+            aria-label="Filter lowongan">
+        {%- if filters.q %}
+          <input type="hidden" name="q" value="{{ filters.q }}">
+        {%- endif %}
+        {%- if filters.sort != 'posted_desc' %}
+          <input type="hidden" name="sort" value="{{ filters.sort }}">
+        {%- endif %}
 
-      {%- for chip in options.sources -%}
-        <a class="chip" href="{{ chip.href }}" aria-pressed="{{ 'true' if chip.active else 'false' }}"
-           data-filter="source" data-value="{{ chip.value }}">
-          {{ chip.label }}{% if chip.active %}<span class="remove" aria-hidden="true">×</span>{% endif %}
-        </a>
-      {%- endfor -%}
+        <fieldset class="filter-group">
+          <legend>Kota</legend>
+          {%- if options.cities -%}
+            {%- for chip in options.cities -%}
+              <label class="filter-option">
+                <input type="checkbox" name="city" value="{{ chip.value }}"
+                       {%- if chip.active %} checked{% endif %}>
+                <span>{{ chip.label }}</span>
+              </label>
+            {%- endfor -%}
+          {%- else -%}
+            <p class="field-hint">Belum ada data lokasi.</p>
+          {%- endif -%}
+        </fieldset>
 
-      {{ sort_control(sort=filters.sort, smart=True) }}
+        <fieldset class="filter-group">
+          <legend>Tipe kerja</legend>
+          {%- for chip in options.employment_types -%}
+            <label class="filter-option">
+              <input type="checkbox" name="employment_type" value="{{ chip.value }}"
+                     {%- if chip.active %} checked{% endif %}>
+              <span>{{ chip.label }}</span>
+            </label>
+          {%- endfor -%}
+        </fieldset>
+
+        <fieldset class="filter-group">
+          <legend>Sumber</legend>
+          {%- for chip in options.sources -%}
+            <label class="filter-option">
+              <input type="checkbox" name="source" value="{{ chip.value }}"
+                     {%- if chip.active %} checked{% endif %}>
+              <span>{{ chip.label }}</span>
+            </label>
+          {%- endfor -%}
+        </fieldset>
+
+        {# Urutan ikut di dalam form yang sama: satu tombol "Terapkan" untuk
+           filter dan urutan sekaligus, bukan dua form terpisah dengan dua
+           tombol yang membingungkan. #}
+        <fieldset class="filter-group">
+          <legend>Urutkan</legend>
+          {{ sort_control(sort=filters.sort, smart=True) }}
+        </fieldset>
+
+        <div class="filter-actions">
+          <button class="btn btn-primary" type="submit">Terapkan</button>
+          {%- if active_count -%}
+            <a class="btn btn-ghost" href="{{ url_for('jobs.index') }}">Hapus semua</a>
+          {%- endif -%}
+        </div>
+      </form>
     </div>
+
+    {# ── Filter yang sedang aktif ──────────────────────────────────────────
+       Hanya chip aktif yang ditampilkan di sini; sisanya ada di panel. Tanpa
+       ini, baris chip berisi 28 kota akan mendorong hasil ke bawah layar. #}
+    {%- if active_count -%}
+      <div class="filters active-filters">
+        {%- for chip in options.cities if chip.active -%}
+          <a class="chip" href="{{ chip.href }}" aria-pressed="true"
+             data-filter="city" data-value="{{ chip.value }}"
+             title="Hapus filter {{ chip.label }}">
+            {{ chip.label }}<span class="remove" aria-hidden="true">×</span>
+          </a>
+        {%- endfor -%}
+        {%- for chip in options.employment_types if chip.active -%}
+          <a class="chip" href="{{ chip.href }}" aria-pressed="true"
+             data-filter="employment_type" data-value="{{ chip.value }}"
+             title="Hapus filter {{ chip.label }}">
+            {{ chip.label }}<span class="remove" aria-hidden="true">×</span>
+          </a>
+        {%- endfor -%}
+        {%- for chip in options.sources if chip.active -%}
+          <a class="chip" href="{{ chip.href }}" aria-pressed="true"
+             data-filter="source" data-value="{{ chip.value }}"
+             title="Hapus filter {{ chip.label }}">
+            {{ chip.label }}<span class="remove" aria-hidden="true">×</span>
+          </a>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
 
     {# ── Hasil ──────────────────────────────────────────────────────────── #}
     <div class="section-head">
@@ -180,6 +256,47 @@
     var tinggi = parseInt(bar.getAttribute("data-height"), 10);
     if (!isNaN(tinggi)) bar.style.height = tinggi + "px";
   });
+})();
+
+/* Buka/tutup panel filter.
+   Tanpa JavaScript panel tetap dapat dipakai: `hidden` dilepas oleh skrip ini,
+   dan bila skrip gagal panel tetap tertutup — tetapi tautan chip di luar panel
+   masih berfungsi. `aria-expanded` dijaga sinkron karena pembaca layar
+   mengandalkannya, bukan pada perubahan visual. */
+(function () {
+  "use strict";
+  var tombol = document.querySelector("[data-filter-toggle]");
+  var panel = document.getElementById("filter-panel");
+  if (!tombol || !panel) return;
+
+  function setBuka(buka) {
+    panel.hidden = !buka;
+    tombol.setAttribute("aria-expanded", buka ? "true" : "false");
+    if (buka) {
+      var pertama = panel.querySelector("input, button, a");
+      if (pertama) pertama.focus();
+    }
+  }
+
+  tombol.addEventListener("click", function () {
+    setBuka(panel.hidden);
+  });
+
+  /* Esc menutup panel dan mengembalikan fokus ke tombol, supaya pengguna
+     keyboard tidak terjebak di dalam panel yang tidak terlihat. */
+  panel.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      setBuka(false);
+      tombol.focus();
+    }
+  });
+
+  /* Panel dibuka otomatis bila ada filter aktif, agar filter yang sedang
+     berlaku langsung terlihat. */
+  var jumlahAktif = parseInt(
+    (tombol.querySelector(".count") || {}).textContent || "0", 10
+  );
+  if (jumlahAktif > 0) setBuka(true);
 })();
 </script>
 {% endblock %}

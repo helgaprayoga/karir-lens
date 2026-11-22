@@ -357,9 +357,14 @@ def test_rate_limit_default_not_more_than_one_per_second() -> None:
 # --- iter_jobs: dedup dan isolasi ---------------------------------------
 
 def test_iter_jobs_deduplicates_source_url() -> None:
-    """`source_url` yang sama tidak muncul dua kali (R-02-09)."""
+    """`source_url` yang sama tidak muncul dua kali (R-02-09).
+
+    ``tech_only=False`` karena yang diuji dedup, bukan penyaringan IT; fixture
+    Dealls berisi judul campuran.
+    """
     html = (FIXTURES / "dealls_listing.html").read_text(encoding="utf-8")
     adapter = DeallsAdapter(http=HTTPPalsu(halaman=[html]))
+    adapter.tech_only = False
 
     jobs = list(adapter.iter_jobs(max_pages=1))
     url = [j.source_url for j in jobs]
@@ -380,6 +385,7 @@ def test_iter_jobs_keeps_pages_before_failure() -> None:
             raise ScrapeError("halaman 2 gagal")
 
     adapter = DeallsAdapter(http=Setengah(halaman=[html]))
+    adapter.tech_only = False
     jobs = list(adapter.iter_jobs(max_pages=3))
 
     assert len(jobs) == 2, "halaman pertama harus tetap dihasilkan"
@@ -391,6 +397,78 @@ def test_iter_jobs_raises_when_nothing_found() -> None:
 
     with pytest.raises(ScrapeError):
         list(adapter.iter_jobs(max_pages=2))
+
+
+# --- Kalibrr: endpoint "Load more" ---------------------------------------
+
+def test_kalibrr_uses_kjs_endpoint() -> None:
+    """Kalibrr memakai ``/kjs/job_board/search``, bukan halaman HTML.
+
+    Halaman ``/job-board`` hanya berisi 15 lowongan pertama; sisanya datang
+    lewat tombol "Load more" yang memanggil endpoint ini. Nomor halaman pada
+    HTML diabaikan server: diukur, HTML hanya dapat menjangkau 26 lowongan,
+    sedangkan endpoint ini memberi 2290.
+
+    Ditemukan dengan merekam panggilan jaringan saat tombol "Load more"
+    diklik, bukan dengan menebak parameter URL.
+    """
+    from scraper.adapters.kalibrr import KalibrrAdapter
+
+    adapter = KalibrrAdapter(http=object())
+    url = adapter.listing_url(1)
+
+    assert "/kjs/job_board/search" in url
+    assert "limit=100" in url
+    assert "offset=0" in url
+    # Halaman kedua memakai offset, bukan nomor halaman.
+    assert "offset=100" in adapter.listing_url(2)
+
+
+def test_kalibrr_asks_for_it_function_only() -> None:
+    """Filter kategori IT dipakai dari sisi server, bukan disaring belakangan.
+
+    ``function=IT+and+Software`` menurunkan 2290 menjadi 254 dan seluruh
+    hasilnya memang IT — lebih andal daripada memilah judul setelah data
+    terlanjur diambil.
+    """
+    from scraper.adapters.kalibrr import KalibrrAdapter
+
+    adapter = KalibrrAdapter(http=object())
+    adapter.tech_only = True
+    assert "function=IT%20and%20Software" in adapter.listing_url(1)
+
+    # Tanpa penyaringan IT, filter itu tidak boleh ikut.
+    adapter.tech_only = False
+    assert "function=" not in adapter.listing_url(1)
+
+
+def test_kalibrr_parses_snake_case_payload() -> None:
+    """Payload kjs memakai snake_case, berbeda dari ``__NEXT_DATA__``."""
+    from scraper.adapters.kalibrr import parse_kjs_item
+
+    job = parse_kjs_item(
+        {
+            "id": 273950,
+            "name": "Backend Engineer",
+            "slug": "backend-engineer",
+            "function": "IT and Software",
+            "tenure": "Full time",
+            "company_name": "NovaTech",
+            "company_info": {"code": "novatech"},
+            "base_salary": 9000000,
+            "maximum_salary": 14000000,
+            "salary_currency": "IDR",
+            "salary_interval": "month",
+        }
+    )
+
+    assert job is not None
+    assert job.title == "Backend Engineer"
+    assert job.company_name == "NovaTech"
+    assert job.employment_type == "full-time"
+    assert job.salary_min == 9000000
+    assert job.salary_period == "month"
+    assert "/c/novatech/jobs/273950/backend-engineer" in job.source_url
 
 
 # --- R-02-06 / R-02-08 / R-02-10: runner --------------------------------
@@ -628,9 +706,16 @@ def test_dealls_parses_real_markup_shape() -> None:
 # --- Halaman detail (PRD-02 lanjutan: deskripsi dan skill) ---------------
 
 class AdapterDetail(DeallsAdapter):
-    """Adapter uji yang punya halaman detail sederhana."""
+    """Adapter uji yang punya halaman detail sederhana.
+
+    ``tech_only = False``: fixture Dealls berisi judul campuran ("Head Chef",
+    "Live Streaming Host"), dan test di bagian ini menguji paginasi serta
+    pengambilan detail — bukan klasifikasi IT, yang punya test sendiri di
+    ``test_tech_filter.py``.
+    """
 
     max_detail = 2
+    tech_only = False
 
     def detail_url(self, job):
         return f"https://contoh.test/detail/{job.source_job_id}"

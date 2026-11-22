@@ -34,10 +34,14 @@ def _html(resp) -> str:
 # --- R-F02-01: halaman katalog lengkap -----------------------------------
 
 def test_jobs_list_renders_cards(catalog) -> None:
-    """/jobs merender satu JobCard per item fixture."""
+    """/jobs merender satu JobCard per item fixture.
+
+    Baris chip lama digantikan panel ``#filter-panel``: chip kini hanya muncul
+    untuk filter yang sedang aktif, sedangkan pilihannya ada di panel.
+    """
     body = _html(catalog.get("/preview/jobs"))
     assert body.count('class="job-card"') >= 1
-    assert 'class="filters"' in body
+    assert 'id="filter-panel"' in body
     assert "search-field" in body
     assert 'class="pager"' in body
 
@@ -244,22 +248,26 @@ def test_filter_removes_itself(catalog) -> None:
 def test_chip_has_no_lying_caret(catalog) -> None:
     """Chip tidak menampilkan caret ▾ yang menjanjikan dropdown (§2 prinsip 2).
 
-    Panel pilihan belum ada, sehingga caret akan menjadi state yang menipu.
-    Hanya chip yang benar-benar terapan yang boleh menampilkan ikon ×.
+    Pilihan filter kini ada di panel `#filter-panel` (kotak centang), bukan di
+    baris chip, sehingga tidak ada caret yang perlu ditakutkan di sana. Yang
+    tetap diperiksa: setiap chip yang dirender — kini hanya chip terapan —
+    tidak memakai caret.
     """
-    body = _html(catalog.get("/preview/jobs"))
+    # Tanpa filter aktif: tidak ada chip sama sekali, dan panelnya ada.
+    kosong = _html(catalog.get("/preview/jobs"))
+    assert 'class="caret"' not in kosong
+    assert 'id="filter-panel"' in kosong, "panel filter harus ada walau tanpa filter"
+
+    # Dengan filter aktif: chip dirender, dan tetap tanpa caret.
+    body = _html(catalog.get("/preview/jobs?city=Bandung"))
     assert 'class="caret"' not in body
 
     # Batasi pemeriksaan ke elemen chip: tombol simpan juga memakai
     # aria-pressed dan akan mengacaukan hitungan bila tidak dipisah.
     chips = re.findall(r'<a class="chip"[^>]*aria-pressed="(true|false)"', body)
-    assert chips, "chip filter tidak ditemukan"
-    assert chips.count("true") == 0, "tanpa filter aktif tidak boleh ada chip terapan"
-
-    aktif = _html(catalog.get("/preview/jobs?city=Bandung"))
-    chips_aktif = re.findall(r'<a class="chip"[^>]*aria-pressed="(true|false)"', aktif)
-    assert chips_aktif.count("true") == 1
-    assert aktif.count('class="remove"') == 1
+    assert chips, "chip filter terapan tidak ditemukan"
+    assert chips.count("true") == 1, "hanya chip terapan yang dirender"
+    assert body.count('class="remove"') == 1
 
 
 def test_search_and_filter_narrow_results(catalog) -> None:

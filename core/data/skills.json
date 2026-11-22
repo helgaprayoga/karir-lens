@@ -145,13 +145,11 @@
     "sk-learn": "scikit-learn",
     "ml": "machine learning",
     "machine-learning": "machine learning",
-    "dl": "deep learning",
     "deep-learning": "deep learning",
     "natural language processing": "nlp",
     "computer vision": "opencv",
     "large language model": "llm",
     "large language models": "llm",
-    "rest": "rest api",
     "restful": "rest api",
     "restful api": "rest api",
     "web api": "rest api",
@@ -193,6 +191,8 @@
     "dotnet": "c#",
     ".net": "c#",
     "objective-c": "swift",
-    "kotlin/android": "android"
+    "kotlin/android": "android",
+    "rest apis": "rest api",
+    "api integration": "api"
   }
 }

@@ -72,7 +72,7 @@ Satu-satunya titik temu keduanya adalah **kontrak template**: nama variabel kont
 | [PRD-01](./PRD-01-fondasi-proyek.md) | Fondasi Proyek | P0 | M1 | — | Selesai |
 | [PRD-02](./PRD-02-data-ingestion.md) | Data Ingestion | P0 | M2 | PRD-01 | Selesai |
 | [PRD-03](./PRD-03-normalisasi-deduplikasi.md) | Normalisasi dan Deduplikasi | P0 | M2 | PRD-01, PRD-02 | Selesai |
-| [PRD-04](./PRD-04-katalog-publik.md) | Katalog Publik (backend) | P0 | M3 | PRD-01, PRD-03, F02 | Belum dimulai |
+| [PRD-04](./PRD-04-katalog-publik.md) | Katalog Publik (backend) | P0 | M3 | PRD-01, PRD-03, F02 | Selesai |
 | [PRD-05](./PRD-05-perusahaan-insight.md) | Perusahaan dan Insight (backend) | P0 | M4 | PRD-03, PRD-04, F05 | Belum dimulai |
 | [PRD-06](./PRD-06-akun-bookmark.md) | Akun dan Bookmark (backend) | P0 | M5 | PRD-01, PRD-04, F03 | Belum dimulai |
 | [PRD-07](./PRD-07-cv-rekomendasi.md) | CV dan Rekomendasi (backend) | P0 | M6 | PRD-03, PRD-04, PRD-06, F04 | Belum dimulai |
@@ -105,7 +105,43 @@ Ketika Track B selesai untuk sebuah modul, route produksi mengambil alih dan pre
 ## Status
 
 - **Track A**: PRD-F01 s.d. PRD-F06 **selesai**. Track A siap menerima Track B.
-- **Track B**: PRD-01 s.d. PRD-03 **selesai** (49 lowongan tersimpan, idempoten, duplikat tertandai). PRD-04 s.d. PRD-10 **Belum dimulai**.
+- **Track B**: PRD-01 s.d. PRD-04 **selesai**. PRD-05 s.d. PRD-10 **Belum dimulai**.
+
+### Pemfokusan produk: hanya lowongan IT
+
+Sejak PRD-04, KarirLens **hanya menyimpan lowongan IT**. Alasannya bukan
+preferensi: tiga sumber ini memuat semua jenis pekerjaan, dan 96% hasil
+scraping Dealls adalah non-IT (860 dari 900). Katalog yang 96% berisi "Head
+Chef" dan "Host Live" bukan katalog karir teknologi.
+
+Aturannya ada di `core/tech.py`, diuji terhadap 30 judul nyata di
+`tests/unit/test_tech_filter.py`. Bukti yang dipakai, dari terkuat:
+
+| Sumber | Sinyal | Contoh |
+|---|---|---|
+| Kalibrr | field `function` | "IT and Software" |
+| Remotive | kategori di URL | `/remote-jobs/software-development` |
+| Dealls | judul dan skill | "Data Engineer", "Cyber Security Engineer" |
+
+Dealls tidak punya kategori yang dapat dipercaya (`categoryId` kosong pada 17
+dari 18 lowongan yang diperiksa), sehingga judul menjadi satu-satunya sinyal.
+Pencocokan memakai batas kata — tanpa itu `"it staff"` cocok di dalam
+**"audit staff"**, dan "Tax & Audit Staff" masuk sebagai lowongan IT.
+
+Hasil pengambilan penuh (`python -m scraper run --source all --pages 0 --replace`):
+
+| Sumber | Diambil | IT | Disaring |
+|---|---|---|---|
+| dealls | 900 | 40 | 860 |
+| kalibrr | 2290 | 253 | 0 (disaring server) |
+| remotive | 171 | 65 | 105 |
+| **total** | **3361** | **358** | **965** |
+
+Kalibrr memakai tombol "Load more" yang memanggil endpoint `/kjs/job_board/search`
+dengan filter `function=IT+and+Software` — ditemukan dengan merekam panggilan
+jaringan saat tombolnya diklik, bukan dengan menebak parameter URL. Playwright
+tidak diperlukan: yang dijalankan tombol itu hanyalah satu permintaan HTTP.
+Rincian di [PRD-04 §14](./PRD-04-katalog-publik.md).
 
 ## Referensi Proyek Sebelumnya
 

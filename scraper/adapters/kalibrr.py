@@ -19,11 +19,14 @@ deskripsi pada PRD-03 lewat ``core/skills.py`` — bukan di adapter ini.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import datetime, timezone
 from html import unescape
 
 from .base import BaseAdapter, RawJob
+
+logger = logging.getLogger(__name__)
 
 NEXT_DATA_RE = re.compile(
     r'<script[^>]*\bid="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S
@@ -231,26 +234,153 @@ def parse_detail(html: str) -> dict | None:
     return job if isinstance(job, dict) else None
 
 
+def parse_kjs_item(item: dict, source: str = "kalibrr") -> RawJob | None:
+    """Urai satu objek lowongan dari endpoint ``/kjs/job_board/search``.
+
+    Endpoint ini memakai **snake_case** (``company_info``, ``salary_interval``),
+    berbeda dari ``__NEXT_DATA__`` yang memakai camelCase. ``parse_item`` tetap
+    dipakai untuk fixture HTML lama; fungsi ini untuk jalur API.
+    """
+    if not isinstance(item, dict):
+        return None
+    return parse_item(_kjs_ke_camel(item), source=source)
+
+
+def _kjs_ke_camel(item: dict) -> dict:
+    """Petakan kunci snake_case kjs ke bentuk yang dibaca ``parse_item``.
+
+    Hanya kunci yang benar-benar dipakai ``parse_item`` yang dipetakan; sisanya
+    dibiarkan agar mudah ditelusuri saat menambah field.
+    """
+    peta = {
+        "company_name": "companyName",
+        "company_info": "companyInfo",
+        "base_salary": "baseSalary",
+        "maximum_salary": "maximumSalary",
+        "salary_currency": "salaryCurrency",
+        "salary_interval": "salaryInterval",
+        "created_at": "createdAt",
+        "google_location": "googleLocation",
+    }
+    hasil = dict(item)
+    for snake, camel in peta.items():
+        if snake in hasil and camel not in hasil:
+            hasil[camel] = hasil[snake]
+    return hasil
+
+
 class KalibrrAdapter(BaseAdapter):
-    """Adapter Kalibrr berbasis ``__NEXT_DATA__`` pada HTML."""
+    """Adapter Kalibrr memakai endpoint ``kjs`` yang dipakai tombol "Load more".
+
+    **Kenapa bukan halaman HTML.** Halaman ``/job-board`` hanya memuat 15
+    lowongan pertama; sisanya datang lewat tombol "Load more" yang memanggil
+    ``/kjs/job_board/search?limit=15&offset=15``. Nomor halaman diabaikan
+    server: diuji langsung, ``?page=2`` mengembalikan himpunan yang sama
+    sebagian, dan 26 lowongan adalah batas yang dapat dijangkau lewat HTML.
+
+    Dengan endpoint yang sama, ditambah ``limit=100`` dan filter ``function``,
+    Kalibrr memberi **254 lowongan IT** dari 2290 yang ada — bukan 26.
+
+    ``robots.txt`` Kalibrr hanya melarang ``/root`` dan ``/candidate/profile``,
+    sehingga ``/kjs/`` boleh diambil. Playwright tidak diperlukan: yang
+    dijalankan tombol itu hanyalah permintaan HTTP biasa.
+    """
 
     name = "kalibrr"
     base_url = "https://www.kalibrr.com"
     listing_path = "/job-board"
-    # Nomor halaman diterjemahkan menjadi offset; lihat `listing_url`.
     page_param = "offset"
-    per_page = PER_PAGE
+    # Batas yang dilayani endpoint; diuji, 100 bekerja.
+    per_page = 100
+    # Filter kategori IT milik Kalibrr sendiri — pernyataan platform, bukan
+    # tebakan dari judul.
+    it_function = "IT and Software"
 
     def listing_url(self, page: int = 1) -> str:
-        dasar = self.base_url.rstrip("/") + self.listing_path
+        """URL satu halaman, dengan filter kategori IT bila ``tech_only``.
+
+        ``function`` adalah filter milik Kalibrr sendiri. Diuji: dengan
+        ``function=IT+and+Software`` jumlahnya turun dari 2290 ke **254** dan
+        seluruh hasilnya memang "IT and Software" — jauh lebih andal daripada
+        menyaring judul setelah datanya terlanjur diambil.
+        """
+        from urllib.parse import quote
+
         offset = max(0, (page - 1) * self.per_page)
-        return f"{dasar}?limit={self.per_page}&offset={offset}"
+        url = (
+            f"{self.base_url}/kjs/job_board/search"
+            f"?limit={self.per_page}&offset={offset}"
+        )
+        if self.tech_only:
+            url += f"&function={quote(self.it_function)}"
+        return url
+
+    def is_allowed(self) -> bool:
+        """robots.txt diperiksa pada halaman HTML, bukan endpoint JSON."""
+        return self.http.is_allowed(f"{self.base_url}{self.listing_path}")
 
     def fetch(self, page: int = 1) -> list[dict]:
-        return parse_listing(self.http.get(self.listing_url(page)))
+        """Ambil satu halaman, dan berhenti saat filter kategori berhenti berlaku.
+
+        **Perilaku server yang harus dijaga di sini.** Setelah offset melewati
+        jumlah hasil yang benar-benar cocok (254 untuk "IT and Software"),
+        Kalibrr **mengabaikan filter ``function``** dan mulai mengembalikan
+        semua kategori. Diukur: offset 200 masih IT semua, offset 300 sudah
+        berisi "Accounting and Finance", "Sales and Marketing", dan seterusnya.
+
+        Tanpa penjagaan ini, "ambil sampai habis" akan terus menelan ribuan
+        lowongan non-IT sampai batas ``MAX_PAGES_ALL`` — dan itulah yang
+        membuat hitungan "disaring" melonjak dari 0 ke 1701.
+
+        Bila ``tech_only`` mati (mode periksa), filter memang tidak dikirim dan
+        tidak ada yang perlu dijaga.
+        """
+        import json as _json
+
+        teks = self.http.get(self.listing_url(page))
+        try:
+            data = _json.loads(teks)
+        except ValueError:
+            return []
+        if not isinstance(data, dict):
+            return []
+
+        jobs = data.get("jobs")
+        if not isinstance(jobs, list):
+            return []
+
+        if self.tech_only and jobs:
+            # Halaman dianggap habis bila isinya bukan kategori yang diminta.
+            fungsi = {
+                self.category_of(item)
+                for item in jobs
+                if isinstance(item, dict)
+            }
+            fungsi.discard(None)
+            if fungsi - {self.it_function}:
+                logger.info(
+                    "%s: filter kategori berhenti berlaku pada offset %d; "
+                    "pengambilan dihentikan.",
+                    self.name,
+                    max(0, (page - 1) * self.per_page),
+                )
+                return []
+
+        return jobs
 
     def parse(self, item: dict) -> RawJob | None:
-        return parse_item(item, source=self.name)
+        return parse_kjs_item(item, source=self.name)
+
+    def category_of(self, item: dict) -> str | None:
+        """``function`` Kalibrr, mis. "IT and Software".
+
+        Ini sinyal kategori paling andal dari ketiga sumber: diisi pemasang
+        iklan, bukan diturunkan dari judul.
+        """
+        fungsi = item.get("function")
+        if isinstance(fungsi, dict):
+            return _clean(fungsi.get("name") or fungsi.get("label"))
+        return _clean(fungsi)
 
     def detail_url(self, job: RawJob) -> str | None:
         """Halaman detail lowongan.

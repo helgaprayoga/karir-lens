@@ -199,7 +199,8 @@ Tidak ada proyek referensi yang melakukan deduplikasi lintas sumber. Yang tersed
 | `scraper/pipeline/__init__.py` | Menyambungkan `normalize` + `dedup` ke `persist_run` |
 | `scraper/runner.py` | Hitungan `inserted`/`updated`/`duplicate` per sumber |
 | `migrations/003_dedup_marker.sql` | Kolom `duplicate_of` dan `dedup_source` |
-| `tests/unit/test_normalize.py` | 22 test untuk §7.1 |
+| `migrations/004_skill_origin.sql` | Kolom `skills_source` (`declared`/`inferred`) |
+| `tests/unit/test_normalize.py` | 29 test untuk §7.1 dan asal skill |
 
 ### 12.2 Keputusan
 
@@ -263,4 +264,30 @@ Total tetap **49 baris** setelah run kedua. Isi database:
 Remotive yang memang tidak mencantumkan tipe kerja pada kartunya — bukan bug
 pemetaan.
 
-Total test setelah task ini: **349 lulus**.
+Total test setelah task ini: **391 lulus**.
+
+### 12.5 Inferensi Skill untuk Sumber Tanpa Field Skill
+
+Dealls menyatakan skill-nya sendiri (`candidatePreference.skills`); Kalibrr dan
+Remotive hanya punya prosa. Sebelum bagian ini, `core/skills.py` sudah ada dan
+diuji tetapi **tidak pernah dipanggil**, sehingga 32 dari 49 lowongan tampil
+tanpa satu pun skill di kartunya sementara kartu Dealls penuh.
+
+`normalize()` sekarang memutuskan asalnya lewat
+`normalize_skills_with_origin()`:
+
+| Kondisi | `skills` | `skills_source` |
+|---|---|---|
+| Sumber menyatakan skill | hasil normalisasi | `declared` |
+| Sumber hanya punya prosa | hasil `infer_skills()` | `inferred` |
+| Tidak ada yang ditemukan | `[]` | `None` |
+
+`infer_skills()` memakai tiga tingkat presisi (judul → bagian syarat → kalimat
+ber-penanda), dan membuang dua sumber salah cocok yang terukur pada data nyata:
+*boilerplate* perekrut di atas syarat sebenarnya, serta syarat perangkat
+("smartphone (Android 5.0, iOS 14 or higher)"). Alias kamus `rest` dan `dl`
+dihapus karena keduanya kata biasa dalam prosa Inggris.
+
+Hasil terukur: 19 `declared`, 8 `inferred`, 27 kosong dari 54 baris. Rincian
+dan alasan memilih presisi di atas cakupan ada di
+[TEMUAN-sumber-skill.md](./TEMUAN-sumber-skill.md).

@@ -176,6 +176,129 @@ def test_posted_at_normalized_to_utc() -> None:
     assert normalize.normalize(_job(posted_at=None))["posted_at"] is None
 
 
+# --- Asal skill: declared vs inferred ------------------------------------
+
+def test_declared_skills_win() -> None:
+    """Skill dari sumber sendiri berlabel ``declared`` (R-03-06 lanjutan)."""
+    hasil = normalize.normalize(
+        _job(skills=["Python", "SQL"], description="Experience with Python and SQL.")
+    )
+    assert hasil["skills_source"] == "declared"
+    assert hasil["skills"] == ["python", "sql"]
+
+
+def test_inferred_skills_for_source_without_field() -> None:
+    """Sumber tanpa field skill mendapat ``inferred``, bukan kosong.
+
+    Dealls menyatakan skill-nya; Kalibrr dan Remotive hanya punya prosa. Tanpa
+    inferensi, 32 dari 49 lowongan tampil tanpa satu pun skill di kartunya.
+    """
+    hasil = normalize.normalize(
+        _job(
+            title="Backend Software Engineer",
+            skills=[],
+            description=(
+                "Requirements:\n"
+                "Proficient in at least one programming language such as Golang, "
+                "C++, C, or Python.\n"
+                "Strong understanding of SQL and NoSQL databases."
+            ),
+        )
+    )
+    assert hasil["skills_source"] == "inferred"
+    assert "python" in hasil["skills"]
+    assert "sql" in hasil["skills"]
+
+
+def test_no_skills_has_no_origin() -> None:
+    """Tanpa skill sama sekali, asalnya ``None`` — bukan ``inferred`` kosong."""
+    hasil = normalize.normalize(
+        _job(title="Community Officer", skills=[], description="melayani pelanggan")
+    )
+    assert hasil["skills"] == []
+    assert hasil["skills_source"] is None
+
+
+def test_inferred_ignores_recruiter_boilerplate() -> None:
+    """Skill tidak diambil dari bagian promosi di atas syarat sebenarnya.
+
+    Terukur pada data nyata: Lemon.io menulis "New roles for Senior React
+    Full-stack Engineers come in all the time" di bagian promosi, sehingga
+    "Senior Data Engineer" mendapat ``react`` bila seluruh deskripsi dibaca.
+    """
+    hasil = normalize.normalize(
+        _job(
+            title="Senior Data Engineer",
+            skills=[],
+            description=(
+                "Lemon.io helps companies hire experienced engineers.\n"
+                "New roles for Senior React Full-stack Engineers come in all the time.\n"
+                "Who we're looking for\n"
+                "Experience with Apache Airflow and Snowflake, or Python and SQL, is required\n"
+                "Experience with AWS, GCP, or Microsoft Azure is mandatory\n"
+                "NOT YOUR TECH STACK?\n"
+                "We place React, Golang, and Ruby developers."
+            ),
+        )
+    )
+    assert hasil["skills_source"] == "inferred"
+    assert "react" not in hasil["skills"], "boilerplate tidak boleh jadi skill"
+    assert "python" in hasil["skills"]
+    assert "airflow" in hasil["skills"]
+
+
+def test_inferred_skips_device_requirements() -> None:
+    """Syarat perangkat keras bukan skill.
+
+    "Content Reviewer" menyebut "a reliable computer and a smartphone
+    (Android 5.0, iOS 14 or higher)"; itu spesifikasi perangkat, bukan
+    kemampuan yang diminta, sehingga ``android``/``ios`` tidak boleh muncul.
+    """
+    from core.skills import infer_skills
+
+    hasil = infer_skills(
+        "Content Reviewer",
+        "Qualifications to succeed in this project:\n"
+        "Professional fluency in English\n"
+        "Access to a stable broadband internet, a reliable computer and a "
+        "smartphone (Android 5.0, iOS 14 or higher)\n"
+        "Experience with content moderation.",
+    )
+    assert "android" not in hasil, f"perangkat bukan skill: {hasil}"
+    assert "ios" not in hasil, f"perangkat bukan skill: {hasil}"
+
+
+def test_rest_is_not_rest_api() -> None:
+    """Prosa "the rest of our content team" bukan REST API.
+
+    Alias ``rest`` -> ``rest api`` dulu membuat kata biasa di prosa menjadi
+    skill. Alias itu dihapus dari kamus.
+    """
+    from core.skills import match_skills
+
+    assert match_skills("the rest of our content management team") == []
+    assert match_skills("Restaurants Contracting") == []
+    # Bentuk yang memang menyebut REST tetap dikenali.
+    assert "rest api" in match_skills("Build REST APIs with Django")
+
+
+def test_requirement_section_extraction() -> None:
+    """Hanya isi di bawah heading syarat yang diambil."""
+    from core.skills import requirement_section
+
+    teks = (
+        "About us\nWe are great.\n"
+        "Requirements\nPython and SQL.\n"
+        "Benefits\nFree lunch and React conference tickets."
+    )
+    bagian = requirement_section(teks)
+
+    assert bagian is not None
+    assert "python" in bagian.lower()
+    assert "react" not in (bagian or "").lower(), "bagian Benefits tidak ikut"
+    assert "free lunch" not in (bagian or "").lower()
+
+
 # --- R-03-11: data tidak lengkap -----------------------------------------
 
 def test_incomplete_data_saved() -> None:

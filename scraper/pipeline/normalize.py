@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from core import text as core_text
-from core.skills import normalize_skills
+from core.skills import infer_skills, normalize_skills
 
 # Panjang maksimum deskripsi (R-03-05). Dealls memuat 7.220 karakter pada
 # lowongan terpanjangnya, jadi batas ini tidak memotong data yang wajar.
@@ -135,6 +135,31 @@ def normalize_posted_at(value) -> str | None:
     return waktu.astimezone(timezone.utc).isoformat()
 
 
+def normalize_skills_with_origin(
+    skills: list, title: str | None, description: str | None
+) -> tuple[list[str], str | None]:
+    """Skill beserta asalnya: ``(skills, "declared" | "inferred" | None)``.
+
+    Sumber yang menyatakan skill sendiri (Dealls lewat
+    ``candidatePreference.skills``) menghasilkan ``declared``. Sumber yang hanya
+    punya prosa (Kalibrr, Remotive) menghasilkan ``inferred`` dari
+    :func:`core.skills.infer_skills`.
+
+    Pembedaan ini wajib: tanpa penanda, skill hasil kamus akan tampil sama
+    yakannya dengan pernyataan rekruter. Bila tidak ada skill sama sekali,
+    asalnya ``None`` — bukan ``inferred`` kosong yang menyiratkan sudah dicoba
+    dan berhasil.
+    """
+    tertanam = normalize_skills(skills or [])
+    if tertanam:
+        return tertanam, "declared"
+
+    disimpulkan = infer_skills(title, description)
+    if disimpulkan:
+        return disimpulkan, "inferred"
+    return [], None
+
+
 def normalize(raw_job) -> dict:
     """``RawJob`` -> dict siap disimpan dengan format seragam.
 
@@ -153,6 +178,10 @@ def normalize(raw_job) -> dict:
     deskripsi = core_text.clean_multiline(data.get("description"), MAX_DESCRIPTION)
     lokasi = core_text.clean_text(data.get("location"))
 
+    skills, asal_skill = normalize_skills_with_origin(
+        data.get("skills") or [], judul, deskripsi
+    )
+
     return {
         "title": judul,
         "company_name": _none_if_empty(perusahaan),
@@ -160,7 +189,8 @@ def normalize(raw_job) -> dict:
         "location": _none_if_empty(lokasi),
         "employment_type": normalize_employment_type(data.get("employment_type")),
         "description": _none_if_empty(deskripsi),
-        "skills": normalize_skills(data.get("skills") or []),
+        "skills": skills,
+        "skills_source": asal_skill,
         **normalize_salary(
             data.get("salary_min"),
             data.get("salary_max"),

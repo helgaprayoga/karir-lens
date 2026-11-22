@@ -107,26 +107,54 @@ def parse_salary(teks: str | None) -> tuple[float | None, float | None, str | No
     return nilai[0], None, mata_uang, periode
 
 
+def _judul_dan_perusahaan(li) -> tuple[str | None, str | None]:
+    """Ambil judul dan perusahaan dari kartu, tanpa bergantung pada satu kelas.
+
+    Sebagian kartu memakai ``span.remotive-bold``, sebagian lagi hanya teks
+    biasa di dalam ``<a>``. Diukur pada halaman kategori
+    ``/remote-jobs/software-development``: dari 29 kartu, **13 kartu tidak
+    punya** ``span.remotive-bold`` sama sekali — versi lama karena itu hanya
+    membaca 16 dari 35 lowongan dan diam-diam kehilangan sisanya.
+
+    Struktur yang dipakai (stabil antar varian):
+
+        <a>Judul</a> • <a>Perusahaan</a>
+
+    Teks lengkapnya "Judul • Perusahaan Perusahaan" (perusahaan tergambar dua
+    kali untuk layar kecil), jadi dipisah pada "•" dan bagian kanan didedup.
+    """
+    wadah = li.select_one(".job-tile-title")
+    if wadah is None:
+        return None, None
+
+    teks = " ".join(wadah.get_text(" ", strip=True).split())
+    if not teks:
+        return None, None
+
+    if "•" in teks:
+        kiri, kanan = teks.split("•", 1)
+        judul = kiri.strip() or None
+        perusahaan = kanan.strip() or None
+        if perusahaan:
+            # "Nama Nama" -> "Nama".
+            kata = perusahaan.split()
+            separuh = len(kata) // 2
+            if len(kata) % 2 == 0 and kata[:separuh] == kata[separuh:]:
+                perusahaan = " ".join(kata[:separuh])
+        return judul, perusahaan
+
+    return teks or None, None
+
+
 def parse_card(li, source: str = "remotive") -> RawJob | None:
     """Urai satu ``<li data-joburl>`` dari halaman daftar."""
     url = _url_absolut(li.get("data-joburl"))
     if not url:
         return None
 
-    judul_el = li.select_one(".job-tile-title span.remotive-bold")
-    judul = _clean(judul_el.get_text(" ", strip=True) if judul_el else None)
+    judul, perusahaan = _judul_dan_perusahaan(li)
     if not judul:
         return None
-
-    # Perusahaan: span kedua setelah pemisah "•". Di layar kecil ada salinan
-    # kedua tanpa kelas md:tw-block, jadi ambil yang pertama saja.
-    perusahaan = None
-    spans = li.select(".job-tile-title span.remotive-bold")
-    for s in spans[1:]:
-        teks = _clean(s.get_text(" ", strip=True))
-        if teks and teks != "•":
-            perusahaan = teks
-            break
 
     # Baris meta: tipe kerja, level, gaji, lokasi — semuanya tautan/div.
     tipe = None
@@ -227,26 +255,75 @@ def _teks(html_mentah: str | None) -> str | None:
     return hasil or None
 
 
+# Kategori Remotive yang berisi lowongan IT. Diambil dari halaman daftar
+# mereka sendiri, bukan dikarang: kategori non-IT (writing, sales,
+# customer-service) sengaja tidak diambil sama sekali.
+IT_CATEGORIES = (
+    "software-development",
+    "information-technology",
+    "data",
+    "devops",
+    "engineering",
+    "artificial-intelligence",
+    "qa",
+)
+
+
 class RemotiveAdapter(BaseAdapter):
-    """Adapter Remotive berbasis HTML (API dilarang robots.txt)."""
+    """Adapter Remotive berbasis HTML (API dilarang robots.txt).
+
+    **Paginasi.** Remotive tidak mendukung `?page=N` — diuji langsung, halaman
+    dua identik dengan halaman satu. Yang tersedia adalah halaman kategori,
+    masing-masing memuat ±20 kartu. Karena itu "mengambil semua" di sini berarti
+    mengambil **seluruh kategori IT**, bukan menelusuri nomor halaman.
+    """
 
     name = "remotive"
     base_url = "https://remotive.com"
     listing_path = "/remote-jobs"
-    # Halaman daftar Remotive tidak memakai nomor halaman pada URL yang
-    # diizinkan; satu permintaan sudah memuat puluhan lowongan teratas.
     page_param = None
 
+    def listing_url(self, page: int = 1) -> str:
+        """Halaman kategori ke-``page``; halaman 1 berarti daftar umum."""
+        dasar = self.base_url.rstrip("/") + self.listing_path
+        if page <= 1:
+            return dasar
+        if page - 2 < len(IT_CATEGORIES):
+            return f"{dasar}/{IT_CATEGORIES[page - 2]}"
+        return dasar
+
     def fetch(self, page: int = 1) -> list[dict]:
-        if page > 1:
+        # Halaman 1 = daftar umum (semua kategori), lalu satu halaman per
+        # kategori IT. Total `1 + len(IT_CATEGORIES)` halaman.
+        if page > 1 + len(IT_CATEGORIES):
             return []
-        return parse_listing(self.http.get(self.listing_url(1)))
+        return parse_listing(self.http.get(self.listing_url(page)))
+
+    @property
+    def page_count(self) -> int:
+        return 1 + len(IT_CATEGORIES)
 
     def parse(self, item: dict) -> RawJob | None:
         node = item.get("node")
         if node is None:
             return None
         return parse_card(node, source=self.name)
+
+    def category_of(self, item: dict) -> str | None:
+        """Kategori dari segmen URL: ``/remote-jobs/software-development/...``.
+
+        Segmen pertama setelah `/remote-jobs/` adalah kategori. Segmen yang
+        diawali ``et-``/``cl-`` adalah tipe kerja dan level, bukan kategori,
+        sehingga diabaikan.
+        """
+        url = _clean(item.get("url")) or ""
+        bagian = url.split("/remote-jobs/", 1)
+        if len(bagian) != 2:
+            return None
+        segmen = bagian[1].split("/", 1)[0].strip().lower()
+        if not segmen or segmen.startswith(("et-", "cl-")):
+            return None
+        return segmen
 
     def detail_url(self, job: RawJob) -> str | None:
         """Halaman detail sudah menjadi ``source_url``; jangan diambil dua kali."""

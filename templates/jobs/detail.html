@@ -50,6 +50,15 @@
 
       {%- if job.skills -%}
         <div class="tags detail-tags">{{ skill_tags(job.skills, limit=99) }}</div>
+        {%- if job.skills_source == "inferred" -%}
+          {# Sumber ini tidak punya field skill, jadi daftar di atas disimpulkan
+             dari judul dan deskripsi oleh kamus—bukan pernyataan rekruter.
+             Tanpa keterangan ini pembaca mengira sumbernya menyebutkannya. #}
+          <p class="field-hint skill-origin">
+            Skill disimpulkan dari judul dan deskripsi lowongan, bukan daftar
+            resmi dari {{ job.source|capitalize }}.
+          </p>
+        {%- endif -%}
       {%- endif -%}
 
       <div class="detail-body">

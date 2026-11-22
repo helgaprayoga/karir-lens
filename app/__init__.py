@@ -112,9 +112,15 @@ def _register_security_headers(app: Flask) -> None:
 def _register_context(app: Flask) -> None:
     """Variabel template yang dipakai semua halaman (pola context processor)."""
     from .navigation import header_hrefs, nav_links
+    from .templating import install as install_templating
     from .template_filters import FILTERS
 
     app.jinja_env.filters.update(FILTERS)
+
+    # Template katalog menautkan endpoint pratinjau; di produksi endpoint itu
+    # tidak terdaftar. Penerjemah ini membuat template yang sama bekerja di dua
+    # track tanpa mengubah template (R-04-11).
+    install_templating(app)
 
     # ``preview_ui`` ditentukan dari endpoint yang benar-benar terdaftar, bukan
     # dari flag konfigurasi. Alasannya sama dengan navigation.py: memanggil
