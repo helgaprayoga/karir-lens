@@ -12,7 +12,7 @@ on:
     # 00:00 UTC = 07:00 WIB. Cron GitHub SELALU dalam UTC.
     # Catat: jadwal tidak dijamin tepat; GitHub dapat menunda beberapa menit
     # sampai puluhan menit saat antrean padat.
-    - cron: "0 0 * * *"
+    - cron: "30 0 * * *"
   # Tombol "Run workflow" untuk menguji tanpa menunggu jadwal.
   workflow_dispatch: {}
 
