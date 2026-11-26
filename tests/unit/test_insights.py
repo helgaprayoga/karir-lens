@@ -281,20 +281,24 @@ def test_unknown_period_not_labelled_monthly(insights, monkeypatch) -> None:
     Terukur pada data nyata: 6 lowongan USD punya sampel cukup tetapi tanpa
     periode. Template lama memakai "bulanan" sebagai nilai cadangan — klaim
     yang tidak dimiliki data.
+
+    Statistik kini dikelompokkan per kategori, jadi barisnya perlu
+    ``cluster_id`` dan cluster-nya perlu label.
     """
     from app.insights import repository
 
     jobs = [
-        _job(i, salary_currency="USD", salary_period=None,
+        _job(i, salary_currency="USD", salary_period=None, cluster_id=1,
              salary_min=4_000, salary_max=6_000)
         for i in range(1, 7)
     ]
-    monkeypatch.setattr(repository, "_client", lambda: FakeDB(jobs, [], SUMBER))
+    clusters = [{"id": 1, "label": "Backend", "keywords": ["python"]}]
+    monkeypatch.setattr(repository, "_client", lambda: FakeDB(jobs, clusters, SUMBER))
 
     body = insights.get("/insights").get_data(as_text=True)
 
-    assert "periode tidak disebutkan" in body
-    assert "Gaji bulanan · USD" not in body
+    assert "tidak menyebut periodenya" in body
+    assert "bulanan" not in body.lower()
 
 
 def test_company_page_renders(insights) -> None:

@@ -95,42 +95,42 @@
     {# ── Gaji ─────────────────────────────────────────────────────────── #}
     <div class="section-head insight-head">
       <h2>Statistik gaji</h2>
-      <span class="sub">Per mata uang, tidak digabung</span>
+      <span class="sub">Rata-rata per kategori, tidak dicampur mata uang</span>
     </div>
 
-    {%- if not salary.sample_sufficient -%}
+    {%- if not salary.by_category -%}
       {# R-F05-03: pesan jelas, bukan grafik kosong atau angka nol. #}
       {{ alert_banner(
            "<b>Data gaji belum dapat ditampilkan.</b> Sampel minimal " ~ (salary.minimum_sample or 5)
-           ~ " lowongan per mata uang. Menampilkan angka dari sampel lebih kecil akan menyesatkan.",
+           ~ " lowongan per kategori dan mata uang. Menampilkan angka dari sampel lebih kecil akan menyesatkan.",
            "warning", html=true) }}
-    {%- elif salary.groups -%}
-      {# R-F05-04: satu kartu per mata uang. Tidak pernah digabung dalam satu
-         grafik karena Rp 9.000.000 dan USD 4.200 tidak sebanding. #}
+    {%- else -%}
+      {# Satu kartu per kategori. Mata uang dan periode tetap dipisah: Rp
+         9.000.000/bulan dan USD 4.200/bulan tidak sebanding, jadi
+         menggabungkannya menghasilkan angka yang tidak berarti apa pun. #}
       <div class="salary-grid">
         {%- set PERIODE = {"month": "bulanan", "year": "tahunan", "day": "harian", "hour": "per jam", "project": "per proyek"} -%}
-        {%- for grup in salary.groups -%}
-          {# Nama periode dipetakan ke bahasa manusia. "Gaji Month · IDR" adalah
-             nilai enum mentah dan dilarang (§2 butir 4).
-
-             Periode yang tidak disebut sumbernya menjadi `None`. Sebelumnya
-             template memakai "bulanan" sebagai nilai cadangan — klaim yang
-             tidak dimiliki data, dan pada data nyata 6 lowongan USD memang
-             tidak menyebut periode. Untuk kasus itu judulnya menyebut apa
-             adanya: gaji tanpa periode yang disebutkan. #}
+        {%- for grup in salary.by_category -%}
           {%- set nama_periode = PERIODE.get(grup.period) -%}
           <section class="panel salary-card">
             <div class="panel-head">
+              {# Mata uang dan periode masuk ke judul karena satu kategori dapat
+                 punya beberapa kelompok sekaligus (USD/tahun dan IDR/bulan).
+                 Tanpa itu, tiga kartu berjudul sama terbaca sebagai data
+                 ganda, padahal itu tiga mata uang berbeda. #}
               <h4>
-                {%- if nama_periode -%}
-                  Gaji {{ nama_periode }} · {{ grup.currency or "mata uang tidak disebut" }}
-                {%- else -%}
-                  Gaji · {{ grup.currency or "mata uang tidak disebut" }} (periode tidak disebutkan)
-                {%- endif -%}
+                {{ grup.label }}
+                <span class="sub">· {{ grup.currency or "mata uang tidak disebut" }}
+                  {%- if nama_periode %} {{ nama_periode }}{% endif -%}
+                </span>
               </h4>
               <span class="sub">{{ grup.sample }} sampel</span>
             </div>
             <dl class="salary-stats">
+              <div>
+                <dt>Rata-rata</dt>
+                <dd>{{ grup.average|angka }} <span>{{ grup.currency or "" }}</span></dd>
+              </div>
               <div>
                 <dt>Median</dt>
                 <dd>{{ grup.median|angka }} <span>{{ grup.currency or "" }}</span></dd>
@@ -145,14 +145,15 @@
               </div>
             </dl>
             <p class="foot-note">
-              Separuh lowongan berada antara P25 dan P75. Angka ini dari data yang
-              terkumpul, bukan perkiraan.
+              {%- if not nama_periode -%}
+                Sumber tidak menyebut periodenya, jadi angkanya tidak disamakan
+                dengan periode lain.
+              {%- endif -%}
+              Median lebih tahan terhadap gaji ekstrem daripada rata-rata.
             </p>
           </section>
         {%- endfor -%}
       </div>
-    {%- else -%}
-      {{ empty_state("Belum ada data gaji", "Lowongan yang menyebut gaji belum cukup untuk dihitung.") }}
     {%- endif -%}
   </main>
 

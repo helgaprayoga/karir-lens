@@ -141,7 +141,9 @@ def test_cv_states_rendered(uiClient) -> None:
     assert "Belum ada skill terkonfirmasi" in kosong
 
     siap = _html(uiClient.get("/preview/cv?state=ready"))
-    assert 'class="job-card"' in siap
+    # Halaman CV berhenti setelah skillnya tersimpan; kartu lowongan tinggal
+    # di /jobs. Lihat test_recommendations_not_on_cv_page untuk alasannya.
+    assert 'class="job-card"' not in siap
     assert 'class="empty"' not in siap
 
 
@@ -161,25 +163,47 @@ def test_no_skills_guidance(uiClient) -> None:
     assert 'class="job-card"' not in body
 
 
-def test_recommendation_has_reason(uiClient) -> None:
-    """Setiap MatchBadge disertai alasan tekstual (R-F04-08)."""
+def test_ready_state_points_to_jobs(uiClient) -> None:
+    """Keadaan siap menaut ke katalog, bukan menyalin kartu lowongannya.
+
+    Sebelumnya halaman ini merender sepuluh kartu yang sama dengan beranda dan
+    katalog. Sekarang ia menunjukkan jalan ke sana.
+    """
     body = _html(uiClient.get("/preview/cv?state=ready"))
 
-    badge = body.count('class="match ')
-    alasan = body.count('class="match-reason"')
-    assert badge > 0
-    assert badge == alasan, f"{badge} badge tapi {alasan} alasan"
+    assert "skill terkonfirmasi" in body
+    assert "Lihat lowongan yang cocok" in body
+    assert "/jobs" in body
 
 
 def test_low_score_not_danger_color(uiClient) -> None:
-    """Skor rendah memakai abu-abu, bukan merah (R-F04-09)."""
-    body = _html(uiClient.get("/preview/cv?state=ready"))
+    """Skor rendah memakai abu-abu, bukan merah (R-F04-09).
 
-    # Fixture memuat skor 47, yaitu tier rendah.
-    assert "47% cocok" in body
-    assert "match-low" in body
-    assert "match-danger" not in body
-    assert "banner-error" not in body
+    Badge kini dirender di /jobs?sort=relevance, jadi aturan warnanya diperiksa
+    di partial kartu — tempat yang sama dengan yang merendernya.
+    """
+    from app import create_app
+
+    app = create_app("testing")
+    with app.app_context():
+        template = app.jinja_env.from_string(
+            '{% from "components/job_card.html" import job_card %}'
+            "{{ job_card(job, show_match=True) }}"
+        )
+        html = template.render(
+            job={
+                "id": 1, "title": "Uji", "company_name": "PT", "source": "dealls",
+                "location": "Jakarta", "employment_type": "full-time",
+                "skills": [], "salary_min": None, "salary_max": None,
+                "salary_currency": None, "salary_period": None,
+                "posted_at": None, "description": None, "is_saved": False,
+                "match": {"score": 47, "reasons": ["Cocok pada 1 skill: python"]},
+            }
+        )
+
+    assert "47% cocok" in html
+    assert "match-low" in html
+    assert "match-danger" not in html
 
     css = open("static/css/components.css", encoding="utf-8").read()
     rendah = css.split(".match-low {")[1].split("}")[0]

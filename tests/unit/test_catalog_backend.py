@@ -549,7 +549,7 @@ def test_service_matches_template_contract(catalog) -> None:
 
     assert set(service.search_jobs()) == {"items", "meta", "filters", "options"}
     assert set(service.get_job(1)) == {"job", "similar"}
-    assert set(service.get_home()) >= {"stats", "latest", "categories"}
+    assert set(service.get_home()) >= {"stats", "categories"}
 
     item = service.search_jobs()["items"][0]
     for kunci in (

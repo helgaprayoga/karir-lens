@@ -31,6 +31,7 @@ def index():
             "sample_sufficient": False,
             "minimum_sample": gaji["minimum_sample"],
             "groups": [],
+            "by_category": [],
         }
 
     return render_template(

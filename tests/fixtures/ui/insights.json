@@ -20,6 +20,14 @@
     "groups": [
       { "currency": "IDR", "period": "month", "sample": 42, "median": 9000000, "p25": 7000000, "p75": 12000000 },
       { "currency": "USD", "period": "month", "sample": 11, "median": 4200, "p25": 3500, "p75": 5600 }
+    ],
+    "by_category": [
+      { "cluster_id": 1, "label": "Backend & Data", "currency": "IDR", "period": "month",
+        "sample": 42, "average": 10400000, "median": 9000000, "p25": 7000000, "p75": 12000000 },
+      { "cluster_id": 1, "label": "Backend & Data", "currency": "USD", "period": "month",
+        "sample": 11, "average": 4400, "median": 4200, "p25": 3500, "p75": 5600 },
+      { "cluster_id": 3, "label": "Infrastruktur", "currency": "IDR", "period": "month",
+        "sample": 9, "average": 13800000, "median": 13500000, "p25": 11000000, "p75": 16000000 }
     ]
   },
   "summary": {

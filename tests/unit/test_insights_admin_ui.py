@@ -149,7 +149,8 @@ def test_salary_period_not_raw_enum(uiClient) -> None:
     """
     body = _html(uiClient.get("/preview/insights"))
 
-    assert "Gaji bulanan" in body
+    assert "bulanan" in body
+    assert ">month<" not in body
     assert "Gaji Month" not in body
 
 
@@ -350,17 +351,20 @@ def test_nav_marks_one_active_for_new_pages(ui, monkeypatch) -> None:
 
     harapan = {
         "/preview/insights": "Insight",
-        "/preview/admin": "Admin",
-        "/preview/admin/jobs": "Admin",
-        "/preview/admin/users": "Admin",
-        "/preview/admin/runs": "Admin",
-        "/preview/admin/clusters": "Admin",
+        # Halaman admin tidak lagi punya menu di navpill: tautannya tinggal
+        # di menu pengguna pojok kanan atas (PRD-F06 §6, satu pintu per
+        # tujuan). Yang diperiksa: tidak ada menu penjelajahan yang menyala.
+        "/preview/admin": None,
+        "/preview/admin/jobs": None,
+        "/preview/admin/users": None,
+        "/preview/admin/runs": None,
+        "/preview/admin/clusters": None,
     }
     for path, menu in harapan.items():
         body = _html(client.get(path))
         nav = re.search(r'<ul class="nav-pill">(.*?)</ul>', body, re.S).group(1)
         aktif = re.findall(r'<a[^>]*aria-current="page"[^>]*>\s*([A-Za-z]+)\s*</a>', nav)
-        assert aktif == [menu], f"{path} menyorot {aktif}, seharusnya {[menu]}"
+        assert aktif == ([menu] if menu else []), f"{path} menyorot {aktif}"
 
 
 def test_admin_tabs_mark_one_active(uiClient) -> None:

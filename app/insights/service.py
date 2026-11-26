@@ -73,8 +73,16 @@ def get_salary_stats(currency: str | None = None, period: str | None = None) -> 
     Seluruh aturan tinggal di ``salary.py``: titik tengah rentang, ambang lima
     sampel, pemisahan mata uang dan periode, serta kuartil. Service hanya
     menyediakan barisnya.
+
+    ``by_category`` berisi rata-rata per kategori, dihitung dari baris yang sama
+    sehingga dua bagian halaman tidak pernah berbeda angka.
     """
-    return salary.salary_stats(repository.find_jobs_with_salary(currency, period))
+    baris = repository.find_jobs_with_salary(currency, period)
+    total = salary.salary_stats(baris)
+
+    labels = {row["cluster_id"]: row.get("label") for row in repository.find_clusters()}
+    total["by_category"] = salary.group_salaries_by_cluster(baris, labels)
+    return total
 
 
 # --- Ringkasan halaman ---------------------------------------------------

@@ -277,7 +277,11 @@ def get_job(job_id: int, user_id: int | None = None) -> dict:
 
 
 def get_home(user_id: int | None = None) -> dict:
-    """Beranda: ``stats``, ``latest``, ``categories``, dan ``sparkline``.
+    """Beranda: ``stats``, ``categories``, dan ``sparkline``.
+
+    ``latest`` sengaja tidak ada: beranda tidak lagi menampilkan kartu lowongan
+    (itu tugas ``/jobs``), dan mengambil enam baris untuk sesuatu yang tidak
+    dirender hanya menambah satu perjalanan ke database.
 
     ``categories`` diambil dari ``app.insights.service``, bukan dihitung ulang
     di sini: kategori adalah hasil clustering, dan menghitungnya di dua tempat
@@ -289,7 +293,6 @@ def get_home(user_id: int | None = None) -> dict:
 
     return {
         "stats": repository.totals(),
-        "latest": _tandai_tersimpan(repository.newest(limit=6), user_id),
         "categories": insights_service.get_categories(),
         "sparkline": repository.posted_sparkline(days=7),
     }

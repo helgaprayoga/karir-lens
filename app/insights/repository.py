@@ -97,13 +97,17 @@ def find_all_jobs() -> list[dict]:
 
 
 def find_jobs_with_salary(currency: str | None = None, period: str | None = None) -> list[dict]:
-    """Lowongan yang mencantumkan gaji (R-05-08).
+    """Lowongan yang mencantumkan gaji, beserta ``cluster_id`` (R-05-08).
+
+    ``cluster_id`` ikut diambil karena statistik per kategori dihitung dari
+    baris yang sama: dua query terpisah dapat menghasilkan angka yang berbeda
+    bila data berubah di antara keduanya.
 
     Filter mata uang/periode di sini hanya mempercepat; aturan sebenarnya ada
     di ``salary.py`` yang tetap memisahkan dan membuang sampel kecil.
     """
     query = _client().table(TABLE).select(
-        "salary_min,salary_max,salary_currency,salary_period"
+        "salary_min,salary_max,salary_currency,salary_period,cluster_id"
     )
     if currency:
         query = query.eq("salary_currency", currency)

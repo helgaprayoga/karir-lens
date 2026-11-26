@@ -280,6 +280,15 @@ def _shape(job: dict, sumber: dict, disimpan: set[int]) -> dict:
     }
 
 
+def confirmed_skills(user_id: int) -> list[dict]:
+    """Skill terkonfirmasi milik pengguna, tanpa menghitung rekomendasi.
+
+    Dipakai halaman ``/cv``, yang berhenti setelah skill tersimpan. Skor
+    rekomendasi dihitung di ``/jobs`` (``?sort=relevance``), bukan di sini.
+    """
+    return repository.find_confirmed_skills(user_id)
+
+
 def get_recommendations(user_id: int, limit: int = 10) -> dict:
     """Rekomendasi berbasis skill terkonfirmasi, tanpa AI per permintaan (R-07-09..R-07-11).
 

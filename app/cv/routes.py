@@ -22,17 +22,16 @@ def _state(user_id: int) -> dict:
 
     Empat keadaan ini yang dikenal template (PRD-F04 §4.1); memilihnya di satu
     tempat mencegah route dan template berbeda pendapat.
-    """
-    data = service.get_recommendations(user_id)
-    skills = data["skills"]
 
+    Hanya skill yang dibaca di sini. Skor rekomendasi **tidak** dihitung:
+    halaman ini berhenti setelah skill tersimpan, dan lowongan tampil di
+    ``/jobs`` (``?sort=relevance``). Menghitung 200 kandidat untuk kartu yang
+    tidak dirender hanya membebani setiap kunjungan.
+    """
+    skills = service.confirmed_skills(user_id)
     if not skills:
-        return {"state": "no_skills", "skills": [], "recommendations": []}
-    return {
-        "state": "ready",
-        "skills": skills,
-        "recommendations": data["recommendations"],
-    }
+        return {"state": "no_skills", "skills": []}
+    return {"state": "ready", "skills": skills}
 
 
 @bp.get("")
@@ -64,7 +63,6 @@ def index():
             suggested_skills=skills,
             ambiguous=ambigu,
             confirmed_skills=data["skills"],
-            recommendations=[],
             max_size_mb=service.MAX_SIZE_BYTES // 1048576,
             accepted_types=list(service.ALLOWED_EXTENSIONS),
         )
@@ -75,7 +73,6 @@ def index():
         suggested_skills=[],
         ambiguous=[],
         confirmed_skills=data["skills"],
-        recommendations=data["recommendations"],
         max_size_mb=service.MAX_SIZE_BYTES // 1048576,
         accepted_types=list(service.ALLOWED_EXTENSIONS),
     )

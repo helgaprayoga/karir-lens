@@ -401,16 +401,22 @@ def test_recommendations_need_skills(db) -> None:
     assert "Belum ada skill terkonfirmasi" in body
 
 
-def test_recommendations_rendered(db) -> None:
-    """Dengan skill terkonfirmasi, rekomendasi muncul beserta skornya."""
+def test_recommendations_not_on_cv_page(db) -> None:
+    """Halaman /cv menampilkan skill, bukan kartu lowongan.
+
+    Rekomendasi dipindah ke /jobs?sort=relevance supaya isi yang sama tidak
+    muncul di tiga halaman (beranda, katalog, dan CV). Halaman ini berhenti
+    setelah skill tersimpan.
+    """
     client = _app().test_client()
     _login(client)
     client.post("/cv/confirm", data={"skills": ["python"]})
 
     body = client.get("/cv").get_data(as_text=True)
 
-    assert "Rekomendasi" in body
-    assert 'class="job-card"' in body
+    assert "skill terkonfirmasi" in body
+    assert 'class="job-card"' not in body
+    assert 'href="/jobs/?sort=relevance"' in body
     assert "cocok" in body.lower()
 
 

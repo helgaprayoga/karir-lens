@@ -142,3 +142,69 @@ def salary_stats(rows: list[dict]) -> dict:
         "minimum_sample": MIN_SALARY_SAMPLE,
         "groups": grup,
     }
+
+
+def group_salaries_by_cluster(rows: list[dict], labels: dict) -> list[dict]:
+    """Rata-rata gaji **per kategori**, terpisah per mata uang dan periode.
+
+    Pertanyaan yang dijawab: "kategori ini rata-ratanya berapa". Karena itu
+    pengelompokannya tiga tingkat — kategori, mata uang, periode — dan bukan
+    menggabungkan mata uang: Rp 9.000.000/bulan dan USD 4.200/bulan tidak
+    sebanding, dan angka gabungannya tidak berarti apa pun.
+
+    ``median`` memakai nama kunci yang sama dengan ``group_salaries`` supaya
+    template tidak perlu tahu bedanya. ``average`` ikut ditampilkan karena itu
+    yang diminta; median tetap ada karena satu gaji ekstrem bisa menarik
+    rata-rata jauh dari kenyataan.
+
+    ``labels`` memetakan ``cluster_id`` -> label. Kategori tanpa label dilewati:
+    lowongan yang belum pernah ikut clustering tidak punya kategori, dan
+    menampilkannya sebagai "tanpa kategori" hanya menambah baris kosong.
+    """
+    kelompok: dict[tuple, list[float]] = {}
+
+    for row in rows or []:
+        cid = row.get("cluster_id")
+        if cid is None or cid not in labels:
+            continue
+        nilai = midpoint(row)
+        if nilai is None:
+            continue
+
+        mata_uang = (row.get("salary_currency") or "").strip().upper() or None
+        periode = (row.get("salary_period") or "").strip().lower() or None
+        if periode not in PERIODS:
+            periode = None
+
+        kelompok.setdefault((cid, mata_uang, periode), []).append(nilai)
+
+    hasil = []
+    for (cid, mata_uang, periode), nilai in kelompok.items():
+        if len(nilai) < MIN_SALARY_SAMPLE:
+            continue
+
+        hasil.append(
+            {
+                "cluster_id": cid,
+                "label": labels[cid],
+                "currency": mata_uang,
+                "period": periode,
+                "sample": len(nilai),
+                "average": round(sum(nilai) / len(nilai)),
+                "median": round(_persentil(nilai, 0.5)),
+                "p25": round(_persentil(nilai, 0.25)),
+                "p75": round(_persentil(nilai, 0.75)),
+            }
+        )
+
+    # Kategori dengan sampel terbanyak lebih dulu: itu yang paling dapat
+    # dipercaya, dan pembaca menemukannya tanpa menggulir.
+    hasil.sort(
+        key=lambda g: (
+            g["label"],
+            -g["sample"],
+            g["currency"] or "zzz",
+            _PERIOD_ORDER.get(g["period"], len(PERIODS)),
+        )
+    )
+    return hasil

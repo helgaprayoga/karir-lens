@@ -933,6 +933,38 @@ a.tag:hover {
   background: var(--sunken);
 }
 
+/* Modal filter. Memakai <dialog> native seperti .confirm, tetapi lebih lebar
+   karena berisi beberapa fieldset berdampingan. `max-height` + gulir menjaga
+   tombol "Terapkan" tetap terjangkau pada layar pendek. */
+.filter-modal {
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(80vh, 720px);
+  overflow-y: auto;
+  padding: var(--pad-card-y) var(--pad-card-x);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: var(--shadow-toast);
+}
+
+.filter-modal::backdrop {
+  background: rgb(17 24 39 / 0.42);
+}
+
+.filter-modal .panel-head {
+  position: sticky;
+  top: calc(-1 * var(--pad-card-y));
+  background: var(--sheet);
+  padding-block: var(--space-2);
+  z-index: 1;
+}
+
+.filter-modal .panel-head h2 {
+  font-size: var(--text-section);
+  margin: 0;
+}
+
 .filter-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
@@ -995,6 +1027,32 @@ a.tag:hover {
 /* Chip filter yang sedang aktif, dipisah dari baris kontrol. */
 .active-filters {
   margin-bottom: var(--space-3);
+}
+
+/* Pintasan di beranda: pengganti daftar lowongan yang dulu diulang di sana. */
+.home-paths {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.home-path {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: var(--pad-card-y) var(--pad-card-x);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.home-path:hover,
+.home-path:focus-visible {
+  border-color: var(--action);
+  box-shadow: var(--shadow-toast);
+}
+
+.home-path h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-card);
 }
 
 @media (max-width: 480px) {

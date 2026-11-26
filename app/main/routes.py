@@ -29,10 +29,10 @@ def healthz():
 
 @bp.get("/")
 def index():
-    """``/`` — beranda dengan angka ringkasan dari database.
+    """``/`` — beranda: angka ringkasan dan pintasan kategori.
 
-    ``categories`` diisi PRD-05. Kategori kosong tetap diserahkan ke template
-    yang menyembunyikan bagiannya, bukan diisi daftar karangan.
+    Daftar lowongan **tidak** diambil di sini. Beranda bukan katalog kedua;
+    kartu lowongan tampil di ``/jobs``, tempat filternya ada.
     """
     from app.jobs import service as jobs_service
     from app.insights import service as insights_service
@@ -43,6 +43,5 @@ def index():
     return render_template(
         "main/index.html",
         stats=data["stats"],
-        latest=data["latest"],
         categories=insights_service.get_categories(),
     )

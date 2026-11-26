@@ -35,17 +35,23 @@
     </div>
 
     {# ── Panel filter ──────────────────────────────────────────────────────
-       Panel ini berisi opsi yang benar-benar ada di database: kota diambil dari
-       kolom `location` yang terisi, sumber dari tabel `sources`, dan tipe kerja
-       dari nilai yang dipakai data. Sebelumnya tombol "Filter" hanya dekorasi —
-       `aria-controls` menunjuk elemen yang tidak ada dan tidak ada yang terjadi
-       saat diklik.
+       Modal `<dialog>` native: Escape, jebakan fokus, dan lapisan latar
+       ditangani peramban tanpa pustaka (§9). Sebelumnya ini panel tersembunyi
+       yang hanya membuka aria-expanded — pengguna tidak melihat halaman
+       "berpindah konteks", dan pada layar sempit panelnya mendorong hasil ke
+       bawah.
 
-       Setiap kotak adalah tautan yang men-toggle satu nilai di URL, sehingga
-       beberapa nilai dapat dipilih sekaligus dan statusnya tetap dapat di-bookmark. #}
-    <div class="filter-panel" id="filter-panel" hidden>
+       Isinya opsi yang benar-benar ada di database: kota dari kolom `location`,
+       sumber dari tabel `sources`, tipe kerja dari nilai yang dipakai data. #}
+    <dialog class="filter-modal" id="filter-panel" aria-labelledby="filter-judul">
       <form class="filter-form" method="get" action="{{ url_for('jobs.index') }}" role="search"
             aria-label="Filter lowongan">
+        <div class="panel-head">
+          <h2 id="filter-judul">Filter lowongan</h2>
+          <button type="button" class="btn btn-ghost btn-sm" data-filter-close
+                  aria-label="Tutup filter">Tutup</button>
+        </div>
+
         {%- if filters.q %}
           <input type="hidden" name="q" value="{{ filters.q }}">
         {%- endif %}
@@ -121,7 +127,7 @@
           {%- endif -%}
         </div>
       </form>
-    </div>
+    </dialog>
 
     {# ── Filter yang sedang aktif ──────────────────────────────────────────
        Hanya chip aktif yang ditampilkan di sini; sisanya ada di panel. Tanpa
@@ -281,45 +287,34 @@
   });
 })();
 
-/* Buka/tutup panel filter.
-   Tanpa JavaScript panel tetap dapat dipakai: `hidden` dilepas oleh skrip ini,
-   dan bila skrip gagal panel tetap tertutup — tetapi tautan chip di luar panel
-   masih berfungsi. `aria-expanded` dijaga sinkron karena pembaca layar
-   mengandalkannya, bukan pada perubahan visual. */
+/* Buka/tutup modal filter.
+   `<dialog>` menangani Escape, jebakan fokus, dan latar sendiri. Tanpa
+   JavaScript panel tetap tidak dapat dibuka, tetapi chip filter aktif di luar
+   modal masih berfungsi — jadi tidak ada jalan buntu. */
 (function () {
   "use strict";
   var tombol = document.querySelector("[data-filter-toggle]");
   var panel = document.getElementById("filter-panel");
-  if (!tombol || !panel) return;
-
-  function setBuka(buka) {
-    panel.hidden = !buka;
-    tombol.setAttribute("aria-expanded", buka ? "true" : "false");
-    if (buka) {
-      var pertama = panel.querySelector("input, button, a");
-      if (pertama) pertama.focus();
-    }
-  }
+  if (!tombol || !panel || typeof panel.showModal !== "function") return;
 
   tombol.addEventListener("click", function () {
-    setBuka(panel.hidden);
+    panel.showModal();
+    tombol.setAttribute("aria-expanded", "true");
   });
 
-  /* Esc menutup panel dan mengembalikan fokus ke tombol, supaya pengguna
-     keyboard tidak terjebak di dalam panel yang tidak terlihat. */
-  panel.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") {
-      setBuka(false);
-      tombol.focus();
-    }
+  panel.addEventListener("close", function () {
+    tombol.setAttribute("aria-expanded", "false");
+    tombol.focus();
   });
 
-  /* Panel dibuka otomatis bila ada filter aktif, agar filter yang sedang
-     berlaku langsung terlihat. */
-  var jumlahAktif = parseInt(
-    (tombol.querySelector(".count") || {}).textContent || "0", 10
-  );
-  if (jumlahAktif > 0) setBuka(true);
+  var tutup = panel.querySelector("[data-filter-close]");
+  if (tutup) tutup.addEventListener("click", function () { panel.close(); });
+
+  /* Klik pada latar (di luar kotak form) menutup modal, seperti perilaku
+     dialog pada umumnya. */
+  panel.addEventListener("click", function (event) {
+    if (event.target === panel) panel.close();
+  });
 })();
 </script>
 {% endblock %}

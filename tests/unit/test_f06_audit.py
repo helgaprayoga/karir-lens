@@ -133,7 +133,9 @@ def test_no_raw_enum_values(ui) -> None:
 def test_salary_period_enum_translated(ui) -> None:
     """Periode gaji tampil sebagai kata, bukan `month`/`year`."""
     body = _rendered(["/preview/insights"], ui)["/preview/insights"]
-    assert "Gaji bulanan" in body
+
+    assert "bulanan" in body or "tahunan" in body
+    assert ">month<" not in body and " month<" not in body
     assert "Gaji Month" not in body
 
 

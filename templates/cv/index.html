@@ -2,7 +2,6 @@
 
 {% from "components/upload_zone.html" import upload_zone %}
 {% from "components/skill_confirm_list.html" import skill_confirm_list %}
-{% from "components/job_card.html" import job_card %}
 {% from "components/empty_state.html" import empty_state %}
 {% from "components/icons.html" import icon_verified %}
 
@@ -72,22 +71,37 @@
     {%- elif state == "no_skills" -%}
       {{ empty_state(
            "Belum ada skill terkonfirmasi",
-           "Rekomendasi dihitung dari skill yang Anda konfirmasi. Unggah CV di atas untuk mendeteksi skill, atau tambahkan sendiri dari halaman profil.",
-           "Tambahkan skill manual",
+           "Unggah CV di atas untuk mendeteksi skill, atau tambahkan sendiri dari halaman profil.",
+           "Kelola skill di profil",
            url_for('profile.index')) }}
 
     {%- elif state == "ready" -%}
+      {# Rekomendasi lowongan TIDAK ditampilkan di sini.
+         Halaman ini satu tugas: membaca CV dan menyimpan skill. Sebelumnya ia
+         juga menampilkan sepuluh kartu lowongan, sehingga hasil yang sama
+         muncul di beranda, di katalog, dan di sini — tiga tempat untuk satu
+         isi. Lowongan kini hidup di /jobs; halaman ini berhenti setelah
+         skillnya tersimpan. #}
       <div class="section-head cv-rec-head">
-        <h2>{{ recommendations|length }} Rekomendasi</h2>
-        <span class="sub">Dihitung dari skill yang Anda konfirmasi</span>
+        <h2>{{ confirmed_skills|length }} skill terkonfirmasi</h2>
+        <span class="sub">Dipakai untuk menilai kecocokan lowongan</span>
       </div>
-      <div class="cards">
-        {%- for job in recommendations -%}
-          {# R-F04-08: MatchBadge selalu disertai alasan lewat partial kartu. #}
-          {{ job_card(job, show_match=True,
-                      href=url_for("jobs.detail", job_id=job.id)) }}
-        {%- endfor -%}
-      </div>
+
+      <section class="panel">
+        <div class="tags">
+          {%- for skill in confirmed_skills -%}
+            <span class="tag">{{ skill.skill }}</span>
+          {%- endfor -%}
+        </div>
+        <p class="profile-links">
+          <a class="btn btn-primary" href="{{ url_for('jobs.index', sort='relevance') }}">
+            Lihat lowongan yang cocok
+          </a>
+          <a class="btn btn-ghost" href="{{ url_for('profile.index') }}">
+            Kelola skill
+          </a>
+        </p>
+      </section>
     {%- endif -%}
   </main>
 

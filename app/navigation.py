@@ -16,14 +16,16 @@ PUBLIC_LINKS = (
     ("insights.index", "Insight"),
 )
 
-USER_LINKS = (
-    ("profile.index", "Profil"),
-    ("profile.saved", "Tersimpan"),
-    ("cv.index", "CV"),
-    ("assistant.index", "Asisten"),
-)
+# Navpill hanya berisi penjelajahan publik: Beranda, Lowongan, Insight.
+#
+# Semua yang bersifat akun tinggal di menu pengguna pojok kanan atas (Profil,
+# Tersimpan, CV, Admin) atau tombol "Asisten AI" di header. Sebelumnya empat
+# tautan itu muncul di sini juga, sehingga setiap tujuan punya dua pintu dengan
+# nama berbeda — dan navpill yang seharusnya untuk menjelajah berubah menjadi
+# daftar menu akun.
+USER_LINKS: tuple[tuple[str, str], ...] = ()
 
-ADMIN_LINKS = (("admin.index", "Admin"),)
+ADMIN_LINKS: tuple[tuple[str, str], ...] = ()
 
 # Penjelajahan publik pada Track A.
 #
@@ -37,18 +39,9 @@ PREVIEW_LINKS = (
     ("preview.insights", "Insight"),
 )
 
-# Tautan yang hanya masuk akal setelah pengguna punya akun. Tamu tidak melihat
-# "Tersimpan", "CV", atau "Admin" — sebelumnya ketiganya ikut tampil karena
-# seluruh daftar pratinjau dipasang tanpa memandang status sesi.
-#
-# "Admin" sengaja di sini tanpa memeriksa peran: pada Track A belum ada kolom
-# `users.role`, jadi seluruh pengguna pratinjau memang melihatnya. PRD-09 yang
-# menambahkan pengecekan peran sungguhan.
-PREVIEW_USER_LINKS = (
-    ("preview.saved", "Tersimpan"),
-    ("preview.cv", "CV"),
-    ("preview.admin_index", "Admin"),
-)
+# Tautan akun pada Track A. Kosong dengan alasan yang sama seperti USER_LINKS:
+# halaman-halaman ini tinggal di menu pengguna, bukan di navpill.
+PREVIEW_USER_LINKS: tuple[tuple[str, str], ...] = ()
 
 # Endpoint yang bukan menu, tetapi tetap milik sebuah menu. Halaman detail dan
 # perusahaan tidak punya tautan sendiri di navpill, jadi tanpa peta ini keduanya

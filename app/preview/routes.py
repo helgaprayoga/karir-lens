@@ -245,7 +245,6 @@ def cv():
         suggested_skills=data.get("suggested_skills", []) if keadaan != "idle" else [],
         ambiguous=data.get("ambiguous", []) if keadaan == "extracted" else [],
         confirmed_skills=terkonfirmasi,
-        recommendations=data.get("recommendations", []) if keadaan == "ready" else [],
         max_size_mb=data.get("max_size_mb", 5),
         accepted_types=data.get("accepted_types", [".pdf", ".docx"]),
     )
@@ -309,7 +308,12 @@ def insights():
     if request.args.get("sample") == "low":
         # Keadaan sampel kurang: kelompok dikosongkan, bukan diisi angka nol.
         minimum = salary.get("minimum_sample", 5)
-        salary = {"sample_sufficient": False, "minimum_sample": minimum, "groups": []}
+        salary = {
+            "sample_sufficient": False,
+            "minimum_sample": minimum,
+            "groups": [],
+            "by_category": [],
+        }
 
     return render_template(
         "insights/index.html",

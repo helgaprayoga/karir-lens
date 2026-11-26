@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 
-{% from "components/job_card.html" import job_card %}
 {% from "components/icons.html" import icon_search %}
-{% from "components/empty_state.html" import empty_state %}
 
 {% block title %}KarirLens — Lowongan dari tiga sumber, satu pencarian{% endblock %}
 
@@ -35,30 +33,6 @@
       </div>
     </div>
 
-    {%- if latest -%}
-      <div class="section-head home-section">
-        <h2>Lowongan terbaru</h2>
-        <a class="sub" href="{{ url_for('jobs.index') }}">Lihat semua</a>
-      </div>
-      <div class="cards">
-        {%- for job in latest -%}
-          {{ job_card(job, href=url_for("jobs.detail", job_id=job.id)) }}
-        {%- endfor -%}
-      </div>
-    {%- else -%}
-      {{ empty_state(
-           "Belum ada lowongan",
-           "Data lowongan belum masuk. Jalankan pengambilan data lebih dulu.",
-           "Lihat lowongan",
-           url_for("jobs.index")) }}
-    {%- endif -%}
-
-    {# ── Pintasan kategori ────────────────────────────────────────────────
-       Kategori adalah hasil clustering (PRD-05) dan diwajibkan ada di beranda
-       (PRD-F02 §3). Tautannya memakai `?category=<cluster_id>`, bukan
-       `?q=<label>`: label berbentuk "Data & Ai & Python" dan tidak akan cocok
-       sebagai kata kunci pencarian — kartu yang menaut ke pencarian kosong
-       lebih buruk daripada tidak ada kartu. #}
     {%- if categories -%}
       <div class="section-head home-section">
         <h2>Pintasan kategori</h2>
@@ -74,6 +48,39 @@
         {%- endfor -%}
       </div>
     {%- endif -%}
+
+    {# Daftar lowongan sengaja tidak diulang di sini. Sebelumnya beranda,
+       /jobs, dan /cv sama-sama menampilkan kartu lowongan yang sama; beranda
+       berubah menjadi katalog kedua yang tidak punya filter. Beranda sekarang
+       menjawab "ini apa dan mulai dari mana", bukan "ini daftarnya". #}
+    <div class="section-head home-section">
+      <h2>Mulai dari sini</h2>
+    </div>
+    <div class="cards home-paths">
+      <a class="panel home-path" href="{{ url_for('jobs.index') }}">
+        <h3>Cari lowongan</h3>
+        <p class="field-hint">
+          {{ stats.total_jobs|angka }} lowongan dari tiga sumber. Saring
+          berdasarkan kota, tipe kerja, sumber, dan kategori.
+        </p>
+      </a>
+      <a class="panel home-path" href="{{ url_for('insights.index') }}">
+        <h3>Lihat insight</h3>
+        <p class="field-hint">
+          Skill paling banyak diminta, sebaran kategori, dan rata-rata gaji
+          per kategori.
+        </p>
+      </a>
+      {%- if not current_user.is_authenticated -%}
+        <a class="panel home-path" href="{{ url_for('auth.register') }}">
+          <h3>Buat akun</h3>
+          <p class="field-hint">
+            Simpan lowongan, unggah CV, dan nilai kecocokan dari skill yang
+            Anda konfirmasi.
+          </p>
+        </a>
+      {%- endif -%}
+    </div>
   </main>
 
   <aside class="rail" aria-label="Ringkasan">
