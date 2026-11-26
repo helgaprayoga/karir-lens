@@ -294,20 +294,20 @@ def test_data_table_has_caption(uiClient) -> None:
         assert "<caption" in body, f"{path} tabel tanpa caption"
 
 
-def test_admin_routes_not_in_production() -> None:
-    """Halaman admin masih hanya ada di blueprint preview.
+def test_admin_routes_are_production_since_prd09() -> None:
+    """Halaman admin kini punya route produksi (PRD-09).
 
-    ``/insights`` sudah punya route produksi sejak PRD-05, jadi ia tidak lagi
-    termasuk daftar ini — sebelumnya test memeriksanya karena backend-nya belum
-    ada. Panel admin tetap di pratinjau sampai PRD-09.
+    Sebelum PRD-09 test ini memastikan ``/admin*`` **tidak** terdaftar di
+    produksi, karena datanya belum ada. Sekarang route-nya ada; yang harus
+    dijaga adalah bahwa tamu tetap tidak bisa memakainya — itu diuji di
+    ``tests/unit/test_admin.py``.
     """
     jalur = {rule.rule for rule in create_app("testing").url_map.iter_rules()}
 
-    for path in ("/admin", "/admin/jobs", "/admin/runs", "/admin/users"):
-        assert path not in jalur, f"{path} bocor ke produksi"
+    for path in ("/admin", "/admin/jobs", "/admin/runs", "/admin/users", "/admin/clusters"):
+        assert path in jalur, f"{path} belum terdaftar di produksi"
 
-    # Insight sudah produksi, dan itu disengaja.
-    assert "/insights" in jalur, "/insights seharusnya sudah tersedia"
+    assert "/insights" in jalur
 
 
 def test_nav_marks_one_active_for_new_pages(ui, monkeypatch) -> None:

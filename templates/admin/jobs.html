@@ -121,11 +121,26 @@
   });
 
   dialog.addEventListener("close", function () {
-    /* Hapus hanya terjadi setelah pengguna menekan "Hapus".
-       Pada Track A barisnya dilepas dari DOM; PRD-09 yang memanggil API. */
+    /* Hapus hanya terjadi setelah pengguna menekan "Hapus" (R-F05-15).
+       PRD-09: baris baru dilepas setelah server membenarkan penghapusan —
+       melepasnya lebih dulu akan menyembunyikan kegagalan. */
     if (dialog.returnValue === "hapus" && terpilih) {
       var baris = terpilih.closest("tr");
-      if (baris) baris.remove();
+      var id = terpilih.getAttribute("data-hapus-id");
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      // Pola URL diambil dari endpoint Flask, bukan disusun dengan string:
+      // mengubah `url_prefix` blueprint tidak boleh mematahkan tombol ini.
+      var pola = "{{ url_for('admin.delete_job', job_id=0) }}";
+      fetch(pola.replace("/0/", "/" + id + "/"), {
+        method: "POST",
+        headers: { "X-CSRFToken": meta ? meta.getAttribute("content") : "" },
+        credentials: "same-origin"
+      }).then(function (respons) {
+        if (respons.ok && baris) baris.remove();
+        else window.location.reload();
+      }).catch(function () {
+        window.location.reload();
+      });
       terpilih = null;
     }
     tombolKonfirmasi.blur();

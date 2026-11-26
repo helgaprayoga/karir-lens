@@ -9,7 +9,7 @@
 | Milestone | M7 AI, admin, API (2 hari) |
 | Dependensi | PRD-04, PRD-05, PRD-06, PRD-07, PRD-08, PRD-F05 |
 | Task yang bergantung | PRD-10 |
-| Status | Belum dimulai |
+| Status | Selesai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 | Frontend pasangan | [PRD-F05](./PRD-F05-insight-admin.md) |
 

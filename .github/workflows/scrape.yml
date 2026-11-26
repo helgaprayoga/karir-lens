@@ -9,7 +9,7 @@ name: Scrape harian
 
 on:
   schedule:
-    # 00:00 UTC = 07:00 WIB. Cron GitHub SELALU dalam UTC.
+    # 00:30 UTC = 07:30 WIB. Cron GitHub SELALU dalam UTC.
     # Catat: jadwal tidak dijamin tepat; GitHub dapat menunda beberapa menit
     # sampai puluhan menit saat antrean padat.
     - cron: "30 0 * * *"

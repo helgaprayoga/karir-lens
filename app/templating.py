@@ -34,6 +34,12 @@ ALIASES = {
     "preview.cv": "cv.index",
     # Asisten punya route produksi sejak PRD-08.
     "preview.assistant": "assistant.index",
+    # Panel admin punya route produksi sejak PRD-09.
+    "preview.admin_index": "admin.index",
+    "preview.admin_jobs": "admin.jobs",
+    "preview.admin_users": "admin.users",
+    "preview.admin_runs": "admin.runs",
+    "preview.admin_clusters": "admin.clusters",
 }
 
 # Kebalikannya, dibangun sekali dari ALIASES.
