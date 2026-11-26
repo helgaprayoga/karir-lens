@@ -8,7 +8,7 @@
 | Milestone | M8 Rilis (1-2 hari) |
 | Dependensi | PRD-01 sampai PRD-09 |
 | Task yang bergantung | Tidak ada |
-| Status | Belum dimulai |
+| Status | Selesai |
 | PRD induk | [PRD KarirLens](../PRD.md) |
 
 ---

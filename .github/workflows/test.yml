@@ -1,0 +1,52 @@
+name: Test
+
+# R-10-07: seluruh test utama lulus di CI. R-10-16: test Track A tetap lulus
+# setelah Track B terpasang, membuktikan template tidak rusak oleh perubahan
+# service.
+#
+# Semua test berjalan tanpa jaringan dan tanpa Supabase: `tests/conftest.py`
+# mengganti client database dan DeepSeek dengan stub. Karena itu job ini tidak
+# memerlukan satu pun secret.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+# Push berturut-turut pada branch yang sama membatalkan run lama: yang
+# dibutuhkan hanya hasil commit terakhir.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+          cache: pip
+
+      - name: Pasang dependensi
+        run: pip install -r requirements.txt
+
+      # Dipisah agar kegagalan terlihat jelas: bila parser rusak, langkah
+      # pertama merah dan penyebabnya tidak terkubur di 600 test lain.
+      - name: Test inti pipeline dan aturan bisnis
+        run: >
+          python -m pytest
+          tests/unit/test_normalize.py
+          tests/unit/test_salary.py
+          tests/unit/test_insights.py
+          tests/unit/test_replace.py
+          tests/unit/test_deepseek.py
+          -q
+
+      - name: Seluruh test
+        run: python -m pytest -q

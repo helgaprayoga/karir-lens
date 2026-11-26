@@ -6,12 +6,8 @@ Mata kuliah Praktik Aplikasi Web — Helga Arya Prayoga.
 
 ## Status
 
-Pengerjaan dibagi dua track: **seluruh antarmuka lebih dulu** (Track A), baru logika backend (Track B).
-
-| Track | Keadaan |
-|---|---|
-| A — Frontend (PRD-F01..F06) | PRD-F01, F02 selesai; PRD-F03 s.d. F06 belum dimulai |
-| B — Backend (PRD-01..PRD-10) | PRD-01 selesai; PRD-02 s.d. PRD-10 belum dimulai |
+Seluruh task selesai: **Track A** (PRD-F01..F06, antarmuka) dan **Track B**
+(PRD-01..PRD-10, backend) terpasang, dan aplikasi berjalan di Render.
 
 | Lapisan | Keadaan |
 |---|---|
@@ -22,9 +18,10 @@ Pengerjaan dibagi dua track: **seluruh antarmuka lebih dulu** (Track A), baru lo
 | Registrasi, login, logout, CSRF, cookie aman | Selesai |
 | Logging tanpa data sensitif | Selesai |
 | Design system lengkap, `/styleguide`, preview blueprint | Selesai (PRD-F01) |
-| Halaman katalog, profil, CV, asisten, insight, admin | Katalog selesai (PRD-F02); sisanya PRD-F03..F05 |
-| Modul `jobs`, `insights`, `profile`, `cv`, `assistant`, `admin`, `api` | Kerangka, diisi per PRD |
-| Pipeline `scraper` (adapter, normalisasi, dedup, clustering) | Kerangka, diisi per PRD |
+| Katalog, insight, profil, CV, asisten, admin | Selesai |
+| Pipeline `scraper` (adapter, normalisasi, dedup, clustering) | Selesai |
+| REST API (`/api/*`) | Selesai (PRD-09) |
+| GitHub Actions: pembaruan data terjadwal + test | Selesai (PRD-10) |
 
 ## Dokumentasi
 
@@ -33,6 +30,8 @@ Pengerjaan dibagi dua track: **seluruh antarmuka lebih dulu** (Track A), baru lo
 | [PRD KarirLens](docs/PRD.md) | Acuan produk dan teknis tingkat tinggi |
 | [PRD per Task](docs/tasks/README.md) | Pemecahan pekerjaan menjadi dua track: frontend lalu backend |
 | [Arsitektur Kode](docs/ARCHITECTURE.md) | Struktur, lapisan, arah dependensi, penempatan kode |
+| [REST API](docs/API.md) | Endpoint, parameter, pagination, format error |
+| [Catatan Implementasi](docs/IMPLEMENTASI.md) | Keputusan, batasan, dan hasil uji akhir |
 | [Design System](docs/design-system.md) | Token visual, komponen, state, aksesibilitas |
 | [Panduan Setup Supabase](docs/SUPABASE-SETUP.md) | Membuat project, menjalankan migrasi, memverifikasi skema |
 
@@ -140,7 +139,30 @@ python -m scraper run --source dealls   # satu sumber saja
 python -m scraper cluster               # hitung ulang clustering dan insight
 ```
 
-Keduanya belum berisi implementasi; masing-masing mengisi `NotImplementedError` sampai PRD-02 dan PRD-05 dikerjakan.
+Keduanya sudah berisi implementasi penuh. `--pages 0` berarti ambil sampai daftar habis; `--detail` wajib bila deskripsi dan skill ingin diperbarui; `--replace` mengganti data lama dan **dibatalkan** bila hasil hari itu kurang dari 60% isi database — supaya satu kegagalan jaringan tidak mengosongkan katalog.
+
+Pembaruan berjalan otomatis lewat `.github/workflows/scrape.yml`.
+
+## Deployment
+
+| Berkas | Fungsi |
+|---|---|
+| `Procfile` | Perintah `gunicorn` yang dipakai Render |
+| `.python-version` | Versi Python (Render tidak lagi membaca `runtime.txt`) |
+| `.github/workflows/scrape.yml` | Pembaruan data terjadwal + clustering |
+| `.github/workflows/test.yml` | Seluruh test pada setiap push dan pull request |
+
+Variabel environment diisi di dashboard Render, **bukan** di repository:
+
+| Variabel | Nilai produksi |
+|---|---|
+| `SECRET_KEY` | String acak 64 karakter hex |
+| `SUPABASE_URL`, `SUPABASE_KEY` | Dari Settings → API |
+| `SESSION_COOKIE_SECURE` | `true` |
+| `PREVIEW_UI` | **jangan diisi** — blueprint pratinjau tidak boleh aktif |
+| `DEEPSEEK_API_KEY` | Hanya bila fitur asisten dipakai |
+
+Render Free tidur setelah 15 menit tanpa trafik dan butuh ±60 detik untuk bangun. Karena itu pembaruan data berada di GitHub Actions, bukan di container.
 
 ## Pengujian
 
@@ -164,24 +186,26 @@ tests/        unit dan integration
 docs/         PRD, arsitektur, design system, PRD per task
 ```
 
-## Halaman yang Sudah Ada
+## Halaman
 
-| Route | Keterangan |
-|---|---|
-| `/` | Beranda |
-| `/auth/register` | Registrasi |
-| `/auth/login` | Login |
-| `/auth/logout` | Logout (POST) |
-| `/preview/` | Daftar halaman preview (hanya `PREVIEW_UI=true`) |
-| `/preview/styleguide` | Audit seluruh komponen design system (hanya `PREVIEW_UI=true`) |
-| `/preview/home` | Beranda katalog dengan data contoh |
-| `/preview/jobs` | Katalog: pencarian, filter, urutan, pagination |
-| `/preview/jobs/<id>` | Detail lowongan dan lowongan serupa |
-| `/preview/companies/<slug>` | Halaman perusahaan dari data lowongan |
+| Route | Akses | Keterangan |
+|---|---|---|
+| `/` | Publik | Beranda: statistik, lowongan terbaru, kategori |
+| `/jobs` | Publik | Katalog: pencarian, filter, urutan, pagination |
+| `/jobs/<id>` | Publik | Detail lowongan dan lowongan serupa |
+| `/companies/<slug>` | Publik | Halaman perusahaan dari data lowongan |
+| `/insights` | Publik | Kategori, skill populer, statistik gaji |
+| `/healthz` | Publik | Pemeriksaan hidup, tanpa akses database |
+| `/auth/register`, `/auth/login` | Publik | Registrasi dan login |
+| `/auth/logout` | POST | Logout |
+| `/profile` | Pengguna | Nama dan skill terkonfirmasi |
+| `/saved` | Pengguna | Lowongan tersimpan |
+| `/cv` | Pengguna | Unggah CV dan rekomendasi |
+| `/assistant` | Pengguna | Asisten AI |
+| `/admin`, `/admin/jobs`, `/admin/users`, `/admin/runs`, `/admin/clusters` | Admin | Panel admin |
+| `/api/*` | Lihat [API.md](docs/API.md) | REST API |
 
-Halaman `/preview/*` hanya terdaftar bila `PREVIEW_UI=true`. Ketika flag itu mati, route-nya tidak ada sama sekali sehingga mengembalikan 404, bukan 403.
-
-Route katalog, insight, profil, CV, asisten, dan admin ditambahkan pada PRD berikutnya. Navigasi otomatis hanya menampilkan tautan yang endpoint-nya sudah terdaftar.
+Halaman `/preview/*` hanya terdaftar bila `PREVIEW_UI=true`, dan **tidak boleh aktif di produksi**. Ketika flag itu mati, route-nya tidak ada sama sekali sehingga mengembalikan 404, bukan 403.
 
 ## Batasan
 
