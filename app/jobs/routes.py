@@ -13,7 +13,7 @@ from flask_login import current_user
 
 from . import bp, service
 
-FILTER_KEYS = ("q", "city", "employment_type", "source", "category", "sort")
+FILTER_KEYS = ("q", "city", "employment_type", "source", "category", "sort", "smart")
 
 
 def _params(filters: dict, **timpa) -> dict[str, str]:
@@ -32,7 +32,11 @@ def _params(filters: dict, **timpa) -> dict[str, str]:
         # Nilai filter dapat berupa list (multipilih) atau string. `category`
         # berisi `cluster_id` berupa int, jadi setiap elemen dijadikan str
         # sebelum digabung — `",".join()` menolak int.
-        gabung[kunci] = ",".join(str(v) for v in nilai) if isinstance(nilai, list) else nilai
+        if isinstance(nilai, bool):
+            nilai = "1" if nilai else ""
+        elif isinstance(nilai, list):
+            nilai = ",".join(str(v) for v in nilai)
+        gabung[kunci] = nilai
     gabung.update(timpa)
     return {
         kunci: nilai
@@ -105,6 +109,7 @@ def index():
         source=request.args.getlist("source"),
         category=request.args.getlist("category"),
         sort=request.args.get("sort"),
+        smart=request.args.get("smart"),
         page=request.args.get("page"),
         per_page=request.args.get("per_page"),
         # Pengguna login melihat tombol simpan yang mencerminkan keadaan
@@ -113,6 +118,16 @@ def index():
     )
 
     filters = data["filters"]
+
+    # Skill terkonfirmasi dipakai dua hal: panel kanan, dan tombol "Cocokkan
+    # otomatis" yang hanya ditawarkan bila ada skill untuk dicocokkan.
+    # Diurutkan karena `skill_panel` mengirisnya seperti list — set tidak dapat
+    # diiris, dan urutan set berubah antar proses.
+    current_skills = sorted(
+        service.skill_terkonfirmasi(
+            current_user.id if current_user.is_authenticated else None
+        )
+    )
 
     # `active_count` menghitung nilai yang terpilih, bukan dimensi: memilih dua
     # kota berarti dua filter aktif, sama seperti yang dilakukan pengguna.
@@ -137,6 +152,7 @@ def index():
         stats={},
         sparkline=[],
         categories=[],
+        current_skills=current_skills,
     )
 
 

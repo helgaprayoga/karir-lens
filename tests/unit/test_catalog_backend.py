@@ -384,9 +384,14 @@ def test_chip_toggle_keeps_other_values(catalog) -> None:
 
 
 def test_active_count_counts_values(catalog) -> None:
-    """Penghitung filter menghitung nilai terpilih, bukan dimensi."""
+    """Penghitung filter menghitung nilai terpilih, bukan dimensi.
+
+    Angkanya kini menempel pada tombol dropdown masing-masing, bukan pada satu
+    tombol "Filter": dua kota + satu sumber = "Kota · 2" dan "Sumber · 1".
+    """
     body = _html(catalog.get("/jobs?city=Bandung,Yogyakarta&source=dealls"))
-    assert '<span class="count">3</span>' in body
+    assert "Kota · 2" in body
+    assert "Sumber · 1" in body
 
 
 def test_invalid_filter_keeps_page_normal(catalog) -> None:
@@ -696,7 +701,8 @@ def test_category_filter_combines_with_others(catalog) -> None:
 def test_active_count_includes_category(catalog) -> None:
     """Penghitung filter ikut menghitung kategori."""
     body = _html(catalog.get("/jobs?category=11&city=Bandung"))
-    assert '<span class="count">2</span>' in body
+    assert "Kota · 1" in body
+    assert "Kategori · 1" in body
 
 
 # --- Beranda: pintasan kategori -----------------------------------------

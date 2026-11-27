@@ -922,69 +922,113 @@ a.tag:hover {
 }
 
 /* --- Panel filter -------------------------------------------------------
-   Panel yang dibuka tombol "Filter". Isinya opsi sungguhan dari database,
-   disusun sebagai fieldset + kotak centang agar beberapa nilai dapat dipilih
-   sekaligus. Grid dua kolom pada layar lebar, satu kolom pada 480px. */
-.filter-panel {
+   Bar filter berisi satu tombol per dimensi; pilihannya muncul sebagai
+   dropdown di bawah tombol itu. */
+
+/* Bar filter: satu tombol per dimensi, dropdown berisi pilihan (pola Dealls).
+   <details> native, jadi buka-tutup dan Escape ditangani peramban. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   margin-bottom: var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-3);
   border: 1px solid var(--line-2);
   border-radius: var(--r-md);
   background: var(--sunken);
 }
 
-/* Modal filter. Memakai <dialog> native seperti .confirm, tetapi lebih lebar
-   karena berisi beberapa fieldset berdampingan. `max-height` + gulir menjaga
-   tombol "Terapkan" tetap terjangkau pada layar pendek. */
-.filter-modal {
-  width: min(880px, calc(100vw - 32px));
-  max-height: min(80vh, 720px);
-  overflow-y: auto;
-  padding: var(--pad-card-y) var(--pad-card-x);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
+.filter-drop {
+  position: relative;
+}
+
+.filter-drop > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-chip);
   background: var(--sheet);
+  font-size: var(--text-label);
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+
+/* Caret bawaan peramban dibuang; ditambahkan sebagai pseudo-elemen agar
+   posisinya konsisten di semua peramban. */
+.filter-drop > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-drop > summary::after {
+  content: "▾";
+  font-size: 0.75em;
+  color: var(--ink-3);
+}
+
+.filter-drop[open] > summary {
+  border-color: var(--action);
   color: var(--ink);
+}
+
+.filter-drop[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.filter-drop > summary:hover {
+  border-color: var(--line-4);
+}
+
+/* Panel menempel pada tombolnya, bukan di tengah layar: pengguna melihat
+   pilihan tepat di bawah tombol yang ditekan. */
+.filter-drop-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--sheet);
   box-shadow: var(--shadow-toast);
 }
 
-.filter-modal::backdrop {
-  background: rgb(17 24 39 / 0.42);
+/* Dropdown urutan berisi control yang lebih lebar. */
+.filter-drop-sort .filter-drop-panel {
+  min-width: 280px;
+  max-height: none;
 }
 
-.filter-modal .panel-head {
-  position: sticky;
-  top: calc(-1 * var(--pad-card-y));
-  background: var(--sheet);
-  padding-block: var(--space-2);
-  z-index: 1;
-}
-
-.filter-modal .panel-head h2 {
-  font-size: var(--text-section);
-  margin: 0;
-}
-
-.filter-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.filter-group {
+.filter-bar .filter-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  padding: 0;
   border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
 }
 
-.filter-group legend {
-  padding: 0;
-  margin-bottom: var(--space-2);
-  font-size: var(--text-label);
-  font-weight: 600;
-  color: var(--ink-2);
+@media (max-width: 640px) {
+  .filter-bar {
+    gap: var(--space-1, 4px);
+  }
+
+  /* Pada layar sempit, panel menjadi selebar layar agar tidak terpotong. */
+  .filter-drop-panel {
+    position: fixed;
+    left: var(--space-4);
+    right: var(--space-4);
+    min-width: 0;
+    width: auto;
+  }
 }
 
 .filter-option {
@@ -1007,21 +1051,10 @@ a.tag:hover {
   cursor: pointer;
 }
 
-/* Daftar kota panjang: batasi tinggi agar panel tidak mendorong hasil keluar
-   layar, dan tetap dapat digulir. */
-.filter-group:first-of-type {
-  max-height: 264px;
-  overflow-y: auto;
-  padding-right: var(--space-2);
-}
-
 .filter-actions {
   display: flex;
   gap: var(--space-2);
   align-items: center;
-  grid-column: 1 / -1;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--line);
 }
 
 /* Chip filter yang sedang aktif, dipisah dari baris kontrol. */
@@ -1053,16 +1086,6 @@ a.tag:hover {
 .home-path h3 {
   margin: 0 0 var(--space-2);
   font-size: var(--text-card);
-}
-
-@media (max-width: 480px) {
-  .filter-form {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-group:first-of-type {
-    max-height: 200px;
-  }
 }
 
 .chip {
@@ -2860,21 +2883,25 @@ a.insight:hover {
   text-align: left;
 }
 
-/* Gaji: satu kartu per mata uang, tidak pernah digabung (R-F05-04). */
+/* Gaji: satu kartu per kategori × mata uang (R-F05-04). */
 .salary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: var(--gap-card);
 }
 
+/* Dua kolom, bukan empat: empat sel di kartu selebar ~226px menyisakan ~44px
+   per sel, sedangkan "145.024" butuh ~60px pada 13px. Dengan 2×2 angkanya
+   mendapat dua kali lebar dan tidak ada yang terpotong. */
 .salary-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
 }
 
 .salary-stats div {
+  min-width: 0;
   padding: 9px 10px;
   border-radius: var(--r-sm);
   background: var(--sunken);
@@ -2888,19 +2915,40 @@ a.insight:hover {
   letter-spacing: 0.04em;
 }
 
+/* `clamp` mengecilkan angka saat selnya sempit, alih-alih membiarkannya
+   meluber keluar kotak. `overflow-wrap` menjaga angka yang sangat panjang
+   (gaji tahunan dalam Rupiah) tetap di dalam sel. */
 .salary-stats dd {
   margin: 3px 0 0;
-  font-size: var(--text-label);
+  font-size: clamp(11px, 8.4cqi, var(--text-label));
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
-.salary-stats dd span {
-  font-size: var(--text-micro);
-  font-weight: 500;
-  color: var(--ink-3);
+/* Kartu gaji menjadi container query agar `cqi` di atas mengikuti lebar
+   kartunya sendiri, bukan lebar viewport. */
+.salary-card {
+  container-type: inline-size;
+}
+
+/* Judul kartu: label kategori cukup panjang ("Business & Manager & Sales")
+   dan tidak boleh mendorong jumlah sampel keluar kartu. */
+.salary-card .panel-head {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.salary-card .panel-head h4 {
+  min-width: 0;
+  font-size: var(--text-body);
+  overflow-wrap: anywhere;
+}
+
+.salary-card .panel-head .sub {
+  white-space: nowrap;
 }
 
 /* --- Admin (PRD-F05) ---------------------------------------------------- */

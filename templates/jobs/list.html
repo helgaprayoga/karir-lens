@@ -13,7 +13,7 @@
 {% from "components/pagination.html" import pagination %}
 {% from "components/empty_state.html" import empty_state %}
 {% from "components/skeleton_card.html" import skeleton_card %}
-{% from "components/icons.html" import icon_filter, icon_arrow_out %}
+{% from "components/icons.html" import icon_arrow_out %}
 {% from "components/skill_panel.html" import skill_panel %}
 {% from "components/alert_banner.html" import alert_banner %}
 
@@ -27,40 +27,34 @@
       <div class="page-actions">
         {{ search_field(name="q", value=filters.q, action=url_for("jobs.index"),
                         placeholder="Posisi, perusahaan, skill...") }}
-        <button class="btn btn-primary" type="button" aria-expanded="false"
-                aria-controls="filter-panel" data-filter-toggle>
-          {{ icon_filter() }} Filter <span class="count">{{ active_count }}</span>
-        </button>
       </div>
     </div>
 
-    {# ── Panel filter ──────────────────────────────────────────────────────
-       Modal `<dialog>` native: Escape, jebakan fokus, dan lapisan latar
-       ditangani peramban tanpa pustaka (§9). Sebelumnya ini panel tersembunyi
-       yang hanya membuka aria-expanded — pengguna tidak melihat halaman
-       "berpindah konteks", dan pada layar sempit panelnya mendorong hasil ke
-       bawah.
+    {# ── Bar filter ────────────────────────────────────────────────────────
+       Satu tombol per dimensi, membuka dropdown berisi pilihan (pola Dealls).
+       Memakai <details>/<summary> native: buka-tutup, Escape, dan fokus
+       ditangani peramban tanpa JavaScript. Sebelumnya satu modal berisi semua
+       fieldset, sehingga pengguna harus membuka jendela hanya untuk melihat
+       satu pilihan.
 
        Isinya opsi yang benar-benar ada di database: kota dari kolom `location`,
        sumber dari tabel `sources`, tipe kerja dari nilai yang dipakai data. #}
-    <dialog class="filter-modal" id="filter-panel" aria-labelledby="filter-judul">
-      <form class="filter-form" method="get" action="{{ url_for('jobs.index') }}" role="search"
-            aria-label="Filter lowongan">
-        <div class="panel-head">
-          <h2 id="filter-judul">Filter lowongan</h2>
-          <button type="button" class="btn btn-ghost btn-sm" data-filter-close
-                  aria-label="Tutup filter">Tutup</button>
-        </div>
+    <form class="filter-bar" id="filter-panel" method="get" action="{{ url_for('jobs.index') }}"
+          role="search" aria-label="Filter lowongan">
+      {%- if filters.q %}
+        <input type="hidden" name="q" value="{{ filters.q }}">
+      {%- endif %}
 
-        {%- if filters.q %}
-          <input type="hidden" name="q" value="{{ filters.q }}">
-        {%- endif %}
-        {%- if filters.sort != 'posted_desc' %}
-          <input type="hidden" name="sort" value="{{ filters.sort }}">
-        {%- endif %}
+      {%- set jumlah = {
+        "city": filters.city|length,
+        "employment_type": filters.employment_type|length,
+        "source": filters.source|length,
+        "category": filters.category|length,
+      } -%}
 
-        <fieldset class="filter-group">
-          <legend>Kota</legend>
+      <details class="filter-drop">
+        <summary>Kota{% if jumlah.city %} · {{ jumlah.city }}{% endif %}</summary>
+        <div class="filter-drop-panel">
           {%- if options.cities -%}
             {%- for chip in options.cities -%}
               <label class="filter-option">
@@ -72,10 +66,12 @@
           {%- else -%}
             <p class="field-hint">Belum ada data lokasi.</p>
           {%- endif -%}
-        </fieldset>
+        </div>
+      </details>
 
-        <fieldset class="filter-group">
-          <legend>Tipe kerja</legend>
+      <details class="filter-drop">
+        <summary>Tipe kerja{% if jumlah.employment_type %} · {{ jumlah.employment_type }}{% endif %}</summary>
+        <div class="filter-drop-panel">
           {%- for chip in options.employment_types -%}
             <label class="filter-option">
               <input type="checkbox" name="employment_type" value="{{ chip.value }}"
@@ -83,10 +79,12 @@
               <span>{{ chip.label }}</span>
             </label>
           {%- endfor -%}
-        </fieldset>
+        </div>
+      </details>
 
-        <fieldset class="filter-group">
-          <legend>Sumber</legend>
+      <details class="filter-drop">
+        <summary>Sumber{% if jumlah.source %} · {{ jumlah.source }}{% endif %}</summary>
+        <div class="filter-drop-panel">
           {%- for chip in options.sources -%}
             <label class="filter-option">
               <input type="checkbox" name="source" value="{{ chip.value }}"
@@ -94,14 +92,16 @@
               <span>{{ chip.label }}</span>
             </label>
           {%- endfor -%}
-        </fieldset>
+        </div>
+      </details>
 
-        {%- if options.categories -%}
-          {# Kategori adalah hasil clustering (PRD-05). Nilainya `cluster_id`,
-             bukan label: label seperti "Data & Ai & Python" tidak akan cocok
-             sebagai kata kunci pencarian. #}
-          <fieldset class="filter-group">
-            <legend>Kategori</legend>
+      {%- if options.categories -%}
+        {# Kategori adalah hasil clustering (PRD-05). Nilainya `cluster_id`,
+           bukan label: label seperti "Data & Ai & Python" tidak akan cocok
+           sebagai kata kunci pencarian. #}
+        <details class="filter-drop">
+          <summary>Kategori{% if jumlah.category %} · {{ jumlah.category }}{% endif %}</summary>
+          <div class="filter-drop-panel">
             {%- for chip in options.categories -%}
               <label class="filter-option">
                 <input type="checkbox" name="category" value="{{ chip.value }}"
@@ -109,25 +109,36 @@
                 <span>{{ chip.label }} <span class="sub">({{ chip.job_count }})</span></span>
               </label>
             {%- endfor -%}
-          </fieldset>
-        {%- endif -%}
+          </div>
+        </details>
+      {%- endif -%}
 
-        {# Urutan ikut di dalam form yang sama: satu tombol "Terapkan" untuk
-           filter dan urutan sekaligus, bukan dua form terpisah dengan dua
-           tombol yang membingungkan. #}
-        <fieldset class="filter-group">
-          <legend>Urutkan</legend>
-          {{ sort_control(sort=filters.sort, smart=True) }}
-        </fieldset>
-
-        <div class="filter-actions">
-          <button class="btn btn-primary" type="submit">Terapkan</button>
-          {%- if active_count -%}
-            <a class="btn btn-ghost" href="{{ url_for('jobs.index') }}">Hapus semua</a>
+      <details class="filter-drop filter-drop-sort">
+        <summary>Urutkan</summary>
+        <div class="filter-drop-panel">
+          {{ sort_control(sort=filters.sort, smart=False) }}
+          {# "Cocokkan otomatis": urutkan menurut kecocokan dengan skill yang
+             Anda konfirmasi, bukan menurut kata kunci. Tanpa skill
+             terkonfirmasi, pilihannya tidak ditawarkan — menampilkannya hanya
+             menjanjikan hasil yang tidak dapat dihitung. #}
+          {%- if current_skills -%}
+            <label class="switch" for="smart-match">
+              <input type="checkbox" id="smart-match" name="smart" value="1"
+                     {%- if filters.smart %} checked{% endif %}>
+              <span class="track" aria-hidden="true"></span>
+              Cocokkan otomatis
+            </label>
           {%- endif -%}
         </div>
-      </form>
-    </dialog>
+      </details>
+
+      <div class="filter-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Terapkan</button>
+        {%- if active_count -%}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('jobs.index') }}">Hapus semua</a>
+        {%- endif -%}
+      </div>
+    </form>
 
     {# ── Filter yang sedang aktif ──────────────────────────────────────────
        Hanya chip aktif yang ditampilkan di sini; sisanya ada di panel. Tanpa
@@ -185,7 +196,10 @@
     {%- elif items -%}
       <div class="cards">
         {%- for job in items -%}
-          {{ job_card(job, href=url_for("preview.job_detail", job_id=job.id)) }}
+          {# Badge kecocokan hanya dirender saat "cocokkan otomatis" aktif;
+             tanpa itu `job.match` tidak ada dan badge akan tampil kosong. #}
+          {{ job_card(job, show_match=filters.smart,
+                      href=url_for("preview.job_detail", job_id=job.id)) }}
         {%- endfor -%}
       </div>
       {{ pagination(meta, "preview.jobs", params=url_params) }}
@@ -255,20 +269,21 @@
       </section>
     {%- endif -%}
 
-    {# ── SkillPanel: katalog publik tidak punya pengguna login, jadi yang
-       dirender adalah keadaan "belum masuk". Menampilkan skill karangan akan
-       melanggar prinsip jujur terhadap data (§2 butir 3). ───────────────── #}
+    {# ── SkillPanel: pengguna login melihat skill terkonfirmasinya sendiri;
+       tamu melihat keadaan "belum masuk" (menampilkan skill karangan akan
+       melanggar prinsip jujur terhadap data, §2 butir 3). ────────────────── #}
     {%- if current_user.is_authenticated -%}
       {{ skill_panel(
            {"name": current_user.display_name, "role": "Skill terkonfirmasi Anda"},
            current_skills,
            action_label="Kelola skill dari CV",
-           action_href=url_for("auth.login")) }}
+           action_href=url_for("cv.index")) }}
     {%- else -%}
       {{ skill_panel(
            None,
            [],
            action_label="Masuk untuk mengelola skill",
+           action_href=url_for("auth.login"),
            note="Rekomendasi dihitung dari skill yang Anda konfirmasi.") }}
     {%- endif -%}
   </aside>
@@ -284,36 +299,6 @@
   document.querySelectorAll(".spark i[data-height]").forEach(function (bar) {
     var tinggi = parseInt(bar.getAttribute("data-height"), 10);
     if (!isNaN(tinggi)) bar.style.height = tinggi + "px";
-  });
-})();
-
-/* Buka/tutup modal filter.
-   `<dialog>` menangani Escape, jebakan fokus, dan latar sendiri. Tanpa
-   JavaScript panel tetap tidak dapat dibuka, tetapi chip filter aktif di luar
-   modal masih berfungsi — jadi tidak ada jalan buntu. */
-(function () {
-  "use strict";
-  var tombol = document.querySelector("[data-filter-toggle]");
-  var panel = document.getElementById("filter-panel");
-  if (!tombol || !panel || typeof panel.showModal !== "function") return;
-
-  tombol.addEventListener("click", function () {
-    panel.showModal();
-    tombol.setAttribute("aria-expanded", "true");
-  });
-
-  panel.addEventListener("close", function () {
-    tombol.setAttribute("aria-expanded", "false");
-    tombol.focus();
-  });
-
-  var tutup = panel.querySelector("[data-filter-close]");
-  if (tutup) tutup.addEventListener("click", function () { panel.close(); });
-
-  /* Klik pada latar (di luar kotak form) menutup modal, seperti perilaku
-     dialog pada umumnya. */
-  panel.addEventListener("click", function (event) {
-    if (event.target === panel) panel.close();
   });
 })();
 </script>

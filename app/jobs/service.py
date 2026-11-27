@@ -123,6 +123,51 @@ def _tandai_tersimpan(items: list[dict], user_id: int | None) -> list[dict]:
     return items
 
 
+def _skor_cocok(job: dict, skills: set[str], kategori_terkuat: int | None) -> tuple[int, list[str]]:
+    """Skor kecocokan 0..100 dan alasannya, untuk "cocokkan otomatis".
+
+    Memakai aturan yang **sama** dengan rekomendasi CV (``app/cv/recommender``),
+    bukan rumus kedua: dua rumus akan memberi peringkat berbeda untuk lowongan
+    yang sama, dan pengguna melihat keduanya di aplikasi yang sama.
+    """
+    from app.cv import recommender
+
+    return recommender.score(job, skills, kategori_terkuat)
+
+
+def skill_terkonfirmasi(user_id: int | None) -> set[str]:
+    """Skill terkonfirmasi pengguna, atau himpunan kosong untuk tamu."""
+    if not user_id:
+        return set()
+    # Lewat service pemiliknya, bukan repository-nya (ARCHITECTURE §4 aturan 2).
+    from app.profile import service as profile_service
+
+    return {
+        str(row.get("skill") or "").lower()
+        for row in profile_service.list_confirmed_skills(user_id)
+        if row.get("skill")
+    }
+
+
+def _kategori_terkuat(jobs: list[dict], skills: set[str]) -> int | None:
+    """Kategori dengan jumlah lowongan cocok terbanyak.
+
+    Sama dengan aturan ``app/cv/service.get_recommendations``: kategori dipilih
+    dari data, bukan ditebak dari satu skill, karena cluster tidak punya jarak
+    bermakna antar label.
+    """
+    from collections import Counter
+
+    from app.cv import recommender
+
+    hitung: Counter[int] = Counter()
+    for job in jobs:
+        cid = job.get("cluster_id")
+        if cid is not None and recommender.skill_overlap(job.get("skills"), skills):
+            hitung[cid] += 1
+    return hitung.most_common(1)[0][0] if hitung else None
+
+
 def search_jobs(
     *,
     q: str | None = None,
@@ -131,9 +176,10 @@ def search_jobs(
     source: str | None = None,
     category: str | int | None = None,
     sort: str | None = None,
+    smart: object = None,
+    user_id: int | None = None,
     page: str | int | None = None,
     per_page: str | int | None = None,
-    user_id: int | None = None,
 ) -> dict:
     """Cari lowongan dan kembalikan ``{items, meta, filters, options}`` (R-04-01..R-04-05).
 
@@ -146,6 +192,11 @@ def search_jobs(
     Menyaring kategori lewat pencarian kata tidak mungkin: label cluster
     berbentuk "Data & Ai & Python", gabungan kata pembeda yang tidak muncul
     sebagai satu frasa di judul mana pun.
+
+    ``smart`` mengurutkan menurut kecocokan dengan skill terkonfirmasi pengguna.
+    Sebelumnya nilai ini diterima template tetapi tidak pernah dibaca, sehingga
+    tombolnya tidak melakukan apa pun. Butuh ``user_id`` bertipe skill; tamu
+    yang mengirim ``smart=1`` mendapat urutan biasa, bukan hasil kosong.
 
     Nilai di luar himpunan baku dibuang, bukan menghasilkan error (R-04-02).
     Ini yang membuat ``?employment_type=ngawur`` tetap menampilkan halaman normal.
@@ -170,6 +221,8 @@ def search_jobs(
         "source": sumber_terpilih,
         "category": kategori,
         "sort": _clean_text(sort) or DEFAULT_SORT,
+        # `smart` hanya bermakna bila checkbox dikirim; "0"/None berarti mati.
+        "smart": str(smart or "").lower() in {"1", "true", "on", "yes"},
     }
 
     if susunan["sort"] not in VALID_SORTS:
@@ -189,7 +242,31 @@ def search_jobs(
     sumber = repository.list_sources()
     peta = {row["id"]: row["name"] for row in sumber}
 
-    if susunan["sort"] == "relevance":
+    skill = skill_terkonfirmasi(user_id) if susunan["smart"] else set()
+
+    if susunan["smart"] and not skill:
+        # Tamu atau pengguna tanpa skill: jangan beri urutan kosong. Meminta
+        # "cocokkan otomatis" tanpa data untuk dicocokkan bukan alasan
+        # menyembunyikan lowongan.
+        susunan["smart"] = False
+
+    if susunan["smart"]:
+        semua = repository.find_all(kriteria, limit=RELEVANCE_POOL, sumber=peta)
+        kategori = _kategori_terkuat(semua, skill)
+        skor = {}
+        for job in semua:
+            nilai, alasan = _skor_cocok(job, skill, kategori)
+            skor[job["id"]] = (nilai, alasan)
+        semua.sort(
+            key=lambda j: (skor[j["id"]][0], str(j.get("posted_at") or "")),
+            reverse=True,
+        )
+        total = len(semua)
+        items = semua[offset : offset + per_halaman]
+        for job in items:
+            nilai, alasan = skor[job["id"]]
+            job["match"] = {"score": nilai, "reasons": alasan}
+    elif susunan["sort"] == "relevance":
         semua = repository.find_all(kriteria, limit=RELEVANCE_POOL, sumber=peta)
         semua.sort(key=lambda job: _score(job, susunan["q"]), reverse=True)
         total = len(semua)

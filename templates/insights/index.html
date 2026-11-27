@@ -127,21 +127,25 @@
               <span class="sub">{{ grup.sample }} sampel</span>
             </div>
             <dl class="salary-stats">
+              {# Mata uang TIDAK diulang di setiap sel: judul kartu sudah
+                 menyebutnya, dan mengulanginya empat kali memakan lebar yang
+                 dibutuhkan angkanya — di kartu selebar ~226px, "145.024 USD"
+                 meluber keluar sel. #}
               <div>
                 <dt>Rata-rata</dt>
-                <dd>{{ grup.average|angka }} <span>{{ grup.currency or "" }}</span></dd>
+                <dd>{{ grup.average|angka }}</dd>
               </div>
               <div>
                 <dt>Median</dt>
-                <dd>{{ grup.median|angka }} <span>{{ grup.currency or "" }}</span></dd>
+                <dd>{{ grup.median|angka }}</dd>
               </div>
               <div>
                 <dt>P25</dt>
-                <dd>{{ grup.p25|angka }} <span>{{ grup.currency or "" }}</span></dd>
+                <dd>{{ grup.p25|angka }}</dd>
               </div>
               <div>
                 <dt>P75</dt>
-                <dd>{{ grup.p75|angka }} <span>{{ grup.currency or "" }}</span></dd>
+                <dd>{{ grup.p75|angka }}</dd>
               </div>
             </dl>
             <p class="foot-note">
