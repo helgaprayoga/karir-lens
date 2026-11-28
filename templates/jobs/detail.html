@@ -62,8 +62,32 @@
       {%- endif -%}
 
       <div class="detail-body">
-        <h2>Deskripsi pekerjaan</h2>
-        <p>{{ job.description }}</p>
+        {# Setiap sumber punya bentuk deskripsi sendiri, dan meratakannya
+           menjadi satu paragraf membuang struktur yang sudah ada di data.
+           `description_blocks` memecahnya menjadi blok berjudul + butir,
+           dikenali dari bentuk teksnya, bukan dari nama sumbernya — jadi
+           sumber baru tidak perlu kode tambahan. #}
+        {%- set blok_deskripsi = job.description|description_blocks -%}
+        {%- if blok_deskripsi -%}
+          <h2>Deskripsi pekerjaan</h2>
+          {%- for blok in blok_deskripsi -%}
+            {%- if blok.title -%}
+              <h3 class="detail-section-title">{{ blok.title }}</h3>
+            {%- endif -%}
+            {%- if blok.butir -%}
+              <ul class="detail-list">
+                {%- for butir in blok.butir -%}
+                  <li>{{ butir }}</li>
+                {%- endfor -%}
+              </ul>
+            {%- else -%}
+              <p>{{ blok.text }}</p>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- else -%}
+          <h2>Deskripsi pekerjaan</h2>
+          <p>Deskripsi tidak tersedia. Buka lowongan di {{ job.source|capitalize }} untuk keterangan lengkapnya.</p>
+        {%- endif -%}
       </div>
 
       <div class="detail-actions">

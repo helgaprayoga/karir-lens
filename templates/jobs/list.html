@@ -26,7 +26,8 @@
       <h1>Cari Lowongan</h1>
       <div class="page-actions">
         {{ search_field(name="q", value=filters.q, action=url_for("jobs.index"),
-                        placeholder="Posisi, perusahaan, skill...") }}
+                        placeholder="Posisi, perusahaan, skill...",
+                        submit_label="Cari") }}
       </div>
     </div>
 
@@ -116,21 +117,32 @@
       <details class="filter-drop filter-drop-sort">
         <summary>Urutkan</summary>
         <div class="filter-drop-panel">
-          {{ sort_control(sort=filters.sort, smart=False) }}
-          {# "Cocokkan otomatis": urutkan menurut kecocokan dengan skill yang
-             Anda konfirmasi, bukan menurut kata kunci. Tanpa skill
-             terkonfirmasi, pilihannya tidak ditawarkan — menampilkannya hanya
-             menjanjikan hasil yang tidak dapat dihitung. #}
-          {%- if current_skills -%}
-            <label class="switch" for="smart-match">
-              <input type="checkbox" id="smart-match" name="smart" value="1"
-                     {%- if filters.smart %} checked{% endif %}>
-              <span class="track" aria-hidden="true"></span>
-              Cocokkan otomatis
-            </label>
-          {%- endif -%}
+          {# Opsi langsung, tanpa label "Urutkan" kedua: dropdown-nya sendiri
+             sudah berjudul Urutkan, dan label di dalamnya membuat dua judul
+             untuk satu kontrol. #}
+          <label class="sr-only" for="sort">Urutkan hasil</label>
+          <select id="sort" name="sort" class="select select-block">
+            <option value="posted_desc" {% if filters.sort == "posted_desc" %}selected{% endif %}>Terbaru</option>
+            <option value="posted_asc" {% if filters.sort == "posted_asc" %}selected{% endif %}>Terlama</option>
+            <option value="relevance" {% if filters.sort == "relevance" %}selected{% endif %}>Relevansi</option>
+          </select>
         </div>
       </details>
+
+      {# "Cocokkan otomatis" berdiri SENDIRI di samping dropdown, bukan di
+         dalamnya: ia tidak mengurutkan berdasarkan pilihan di dropdown, ia
+         menggantinya. Menaruhnya di dalam panel membuat pengguna mengira ia
+         sub-opsi dari "Terbaru". Tanpa skill terkonfirmasi, pilihannya tidak
+         ditawarkan — menampilkannya hanya menjanjikan hasil yang tidak dapat
+         dihitung. #}
+      {%- if current_skills -%}
+        <label class="switch filter-switch" for="smart-match">
+          <input type="checkbox" id="smart-match" name="smart" value="1"
+                 {%- if filters.smart %} checked{% endif %}>
+          <span class="track" aria-hidden="true"></span>
+          Cocokkan otomatis
+        </label>
+      {%- endif -%}
 
       <div class="filter-actions">
         <button class="btn btn-primary btn-sm" type="submit">Terapkan</button>
@@ -299,6 +311,44 @@
   document.querySelectorAll(".spark i[data-height]").forEach(function (bar) {
     var tinggi = parseInt(bar.getAttribute("data-height"), 10);
     if (!isNaN(tinggi)) bar.style.height = tinggi + "px";
+  });
+})();
+
+/* Satu dropdown terbuka pada satu waktu.
+   `<details>` tidak saling menutup sendiri, sehingga membuka "Tipe kerja"
+   meninggalkan panel "Kota" tetap terbuka dan saling menimpa. Skrip ini
+   menutup yang lain saat satu dibuka. Tanpa JavaScript dropdown tetap
+   berfungsi — hanya boleh terbuka bersamaan. */
+(function () {
+  "use strict";
+  var semua = Array.prototype.slice.call(document.querySelectorAll(".filter-drop"));
+  if (!semua.length) return;
+
+  semua.forEach(function (drop) {
+    drop.addEventListener("toggle", function () {
+      if (!drop.open) return;
+      semua.forEach(function (lain) {
+        if (lain !== drop) lain.open = false;
+      });
+    });
+  });
+
+  /* Klik di luar menutup dropdown yang terbuka, dan Escape mengembalikan
+     fokus ke tombolnya — perilaku yang diharapkan dari menu. */
+  document.addEventListener("click", function (event) {
+    semua.forEach(function (drop) {
+      if (drop.open && !drop.contains(event.target)) drop.open = false;
+    });
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    semua.forEach(function (drop) {
+      if (!drop.open) return;
+      drop.open = false;
+      var tombol = drop.querySelector("summary");
+      if (tombol) tombol.focus();
+    });
   });
 })();
 </script>

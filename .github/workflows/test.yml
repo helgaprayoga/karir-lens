@@ -36,6 +36,16 @@ jobs:
       - name: Pasang dependensi
         run: pip install -r requirements.txt
 
+      # Runner tidak punya `.env` (di-ignore). Test yang diam-diam bergantung
+      # padanya akan hijau di mesin pengembang dan merah di sini — persis yang
+      # terjadi pada test_deploy. Langkah ini memastikan suite memang mandiri.
+      - name: Pastikan tidak ada .env
+        run: |
+          if [ -f .env ]; then
+            echo "::error::.env ada di checkout; test bisa lulus karena berkas itu."
+            exit 1
+          fi
+
       # Dipisah agar kegagalan terlihat jelas: bila parser rusak, langkah
       # pertama merah dan penyebabnya tidak terkubur di 600 test lain.
       - name: Test inti pipeline dan aturan bisnis

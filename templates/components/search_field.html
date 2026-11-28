@@ -1,9 +1,16 @@
 {#
   SearchField — design system §4, R-04-01.
 
-  Satu kontrol pencarian untuk header dan halaman katalog. Ikon dan pintasan
-  keyboard berada di dalam bingkai, sehingga input memakai padding kiri/kanan
-  yang tetap (lihat .search-field di components.css).
+  Satu kontrol pencarian untuk header dan halaman katalog. Ikon berada di dalam
+  bingkai, sehingga input memakai padding kiri yang tetap (lihat .search-field
+  di components.css).
+
+  Bila `action` diisi (dibungkus <form>), tombol "Cari" ikut dirender: pengguna
+  ponsel tidak punya tombol Enter yang jelas, dan pintasan keyboard tidak
+  berguna tanpa papan ketik fisik.
+
+  Pintasan `Ctrl K` (⌘K di macOS) benar-benar memfokuskan input lewat
+  `assets/js/search.js`; sebelumnya hanya teks dekorasi.
 
   Parameter:
     name         string  atribut name, default "q"
@@ -12,16 +19,25 @@
     label        string  aria-label
     shortcut     string|null  teks kbd, mis. "Ctrl K"; None menyembunyikan
     action       string|null  bila diisi, dibungkus <form method="get">
+    submit_label string|null  teks tombol; None menyembunyikan tombol
 #}
 
 {% from "components/icons.html" import icon_search %}
 
-{% macro search_field(name="q", value=None, placeholder="Cari...", label="Cari lowongan", shortcut="Ctrl K", action=None, autofocus=False) -%}
-  {%- if action -%}<form class="search-field" method="get" action="{{ action }}" role="search">{%- else -%}<div class="search-field">{%- endif -%}
+{% macro search_field(name="q", value=None, placeholder="Cari...", label="Cari lowongan", shortcut="Ctrl K", action=None, autofocus=False, submit_label=None) -%}
+  {%- if action -%}
+    <form class="search-field" method="get" action="{{ action }}" role="search" data-search-form>
+  {%- else -%}
+    <div class="search-field">
+  {%- endif -%}
     {{ icon_search() }}
     <input type="search" name="{{ name }}" value="{{ value or '' }}"
            placeholder="{{ placeholder }}" aria-label="{{ label }}"
+           data-search-input
            {%- if autofocus %} autofocus{% endif %}>
     {%- if shortcut -%}<kbd>{{ shortcut }}</kbd>{%- endif -%}
+    {%- if action and submit_label -%}
+      <button type="submit" class="btn btn-primary btn-sm search-submit">{{ submit_label }}</button>
+    {%- endif -%}
   {%- if action -%}</form>{%- else -%}</div>{%- endif -%}
 {%- endmacro %}

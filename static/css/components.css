@@ -960,25 +960,21 @@ a.tag:hover {
   white-space: nowrap;
 }
 
-/* Caret bawaan peramban dibuang; ditambahkan sebagai pseudo-elemen agar
-   posisinya konsisten di semua peramban. */
-.filter-drop > summary::-webkit-details-marker {
-  display: none;
-}
-
-.filter-drop > summary::after {
-  content: "▾";
-  font-size: 0.75em;
-  color: var(--ink-3);
+/* Caret bawaan peramban dibuang; diganti chevron SVG sebagai background agar
+   ukurannya tetap dan tidak bergantung font. Sebelumnya pseudo-elemen "▾"
+   memakai font-size 0.75em sehingga nyaris tak terlihat. */
+.filter-drop > summary {
+  padding-right: calc(var(--space-3) + 14px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5 10 12.5 15 7.5' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .filter-drop[open] > summary {
   border-color: var(--action);
   color: var(--ink);
-}
-
-.filter-drop[open] > summary::after {
-  transform: rotate(180deg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 12.5 10 7.5 15 12.5' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .filter-drop > summary:hover {
@@ -1014,6 +1010,28 @@ a.tag:hover {
   margin-left: auto;
   padding: 0;
   border: 0;
+}
+
+/* Select di dalam dropdown mengisi panelnya, bukan menyusut selebar teks. */
+.select-block {
+  width: 100%;
+  min-width: 180px;
+}
+
+/* "Cocokkan otomatis" berdiri sendiri di samping dropdown, dengan pemisah
+   tipis agar terbaca sebagai kontrol terpisah, bukan bagian dari "Urutkan". */
+.filter-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--line-2);
+  font-size: var(--text-label);
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 @media (max-width: 640px) {
@@ -1249,6 +1267,26 @@ button.chip:hover {
   font-size: var(--text-body);
   color: var(--ink);
   transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* Tombol "Cari" menempel di dalam bingkai, di kanan. Input diberi ruang
+   ekstra agar teks tidak tertutup tombol. */
+.search-field:has(.search-submit) input {
+  padding-right: 132px;
+}
+
+.search-submit {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: calc(var(--control-h) - 10px);
+}
+
+/* Petunjuk pintasan bergeser ke kiri tombol, bukan disembunyikan: Ctrl K tetap
+   berfungsi dan pengguna masih perlu tahu. */
+.search-field:has(.search-submit) kbd {
+  right: 74px;
 }
 
 .search-field input::placeholder {
@@ -2883,6 +2921,33 @@ a.insight:hover {
   text-align: left;
 }
 
+/* Kepala kartu gaji: tiga baris bertumpuk dengan urutan tetap — kategori,
+   mata uang + periode, jumlah sampel. Semua kartu jadi identik tingginya,
+   tidak bergantung panjang label kategori. */
+.salary-head {
+  margin-bottom: var(--space-3);
+}
+
+.salary-category {
+  margin: 0;
+  font-size: var(--text-card);
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.salary-currency {
+  margin: 2px 0 0;
+  font-size: var(--text-label);
+  color: var(--ink-2);
+}
+
+.salary-sample {
+  margin: 2px 0 0;
+  font-size: var(--text-micro);
+  color: var(--ink-3);
+}
+
 /* Gaji: satu kartu per kategori × mata uang (R-F05-04). */
 .salary-grid {
   display: grid;
@@ -2932,23 +2997,6 @@ a.insight:hover {
    kartunya sendiri, bukan lebar viewport. */
 .salary-card {
   container-type: inline-size;
-}
-
-/* Judul kartu: label kategori cukup panjang ("Business & Manager & Sales")
-   dan tidak boleh mendorong jumlah sampel keluar kartu. */
-.salary-card .panel-head {
-  flex-wrap: wrap;
-  row-gap: 2px;
-}
-
-.salary-card .panel-head h4 {
-  min-width: 0;
-  font-size: var(--text-body);
-  overflow-wrap: anywhere;
-}
-
-.salary-card .panel-head .sub {
-  white-space: nowrap;
 }
 
 /* --- Admin (PRD-F05) ---------------------------------------------------- */
@@ -3250,6 +3298,37 @@ a.insight:hover {
   color: var(--ink-2);
   line-height: 1.6;
   margin: 0;
+}
+
+/* Subjudul bagian deskripsi ("Responsibilities", "Qualifications"). Sumber
+   menuliskannya sebagai baris pendek; template mengangkatnya menjadi heading
+   agar strukturnya terbaca, bukan tenggelam di paragraf. */
+.detail-section-title {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-card);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detail-section-title:first-child {
+  margin-top: 0;
+}
+
+/* Butir deskripsi. Ditandai titik kecil, bukan angka, karena penomoran asli
+   sumber ("1. Planning") sudah dipakai sebagai judul bagian. */
+.detail-list {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.15em;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.detail-list li {
+  margin-bottom: var(--space-1);
+}
+
+.detail-list li::marker {
+  color: var(--ink-3);
 }
 
 .detail-actions {

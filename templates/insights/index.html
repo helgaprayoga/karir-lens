@@ -113,18 +113,18 @@
         {%- for grup in salary.by_category -%}
           {%- set nama_periode = PERIODE.get(grup.period) -%}
           <section class="panel salary-card">
-            <div class="panel-head">
-              {# Mata uang dan periode masuk ke judul karena satu kategori dapat
-                 punya beberapa kelompok sekaligus (USD/tahun dan IDR/bulan).
-                 Tanpa itu, tiga kartu berjudul sama terbaca sebagai data
-                 ganda, padahal itu tiga mata uang berbeda. #}
-              <h4>
-                {{ grup.label }}
-                <span class="sub">· {{ grup.currency or "mata uang tidak disebut" }}
-                  {%- if nama_periode %} {{ nama_periode }}{% endif -%}
-                </span>
-              </h4>
-              <span class="sub">{{ grup.sample }} sampel</span>
+            {# Tiga baris tetap, urutannya sama di semua kartu: kategori, lalu
+               mata uang + periode, lalu jumlah sampel. Sebelumnya sampel
+               menempel di kanan judul sehingga posisinya bergeser mengikuti
+               panjang label kategori — kartu tidak lagi identik satu sama
+               lain. #}
+            <div class="salary-head">
+              <h4 class="salary-category">{{ grup.label }}</h4>
+              <p class="salary-currency">
+                {{ grup.currency or "mata uang tidak disebut" }}
+                {%- if nama_periode %} · {{ nama_periode }}{% endif -%}
+              </p>
+              <p class="salary-sample">{{ grup.sample }} sampel</p>
             </div>
             <dl class="salary-stats">
               {# Mata uang TIDAK diulang di setiap sel: judul kartu sudah

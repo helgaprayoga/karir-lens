@@ -61,10 +61,22 @@ def _clean(text) -> str | None:
 
 
 def _teks(html: str | None) -> str | None:
-    """Buang tag dan entitas dari HTML; kembalikan teks atau ``None``."""
+    """Buang tag dan entitas dari HTML; kembalikan teks atau ``None``.
+
+    Baris dipertahankan: deskripsi Kalibrr berisi butir dan subjudul
+    ("About this Position", "Responsibilities"), dan meratakannya menjadi satu
+    paragraf menghilangkan struktur yang justru dibutuhkan halaman detail.
+    """
     if not isinstance(html, str) or not html.strip():
         return None
-    return _clean(unescape(TAG_RE.sub(" ", html)))
+
+    teks = re.sub(r"(?i)<br\s*/?>", "\n", html)
+    teks = re.sub(r"(?i)</(p|li|h[1-6]|div|ul|ol)>", "\n", teks)
+    teks = re.sub(r"<[^>]+>", " ", teks)
+    teks = unescape(teks)
+    baris = [" ".join(b.split()) for b in teks.splitlines()]
+    hasil = "\n".join(b for b in baris if b)
+    return hasil or None
 
 
 def _waktu(nilai) -> str | None:

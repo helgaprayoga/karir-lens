@@ -7,10 +7,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Kredensial palsu untuk subprocess. `wsgi` memakai konfigurasi **production**
+# yang memang menolak start tanpa SECRET_KEY/SUPABASE_*, dan perilaku itu benar.
+# Tanpa nilai ini, test hanya lulus di mesin yang punya `.env` dan gagal di CI —
+# persis yang terjadi: tiga test hijau lokal, merah di runner.
+#
+# Nilainya sengaja bukan bentuk kunci asli, dan `load_dotenv()` tidak menimpa
+# variabel yang sudah ada di environment, jadi `.env` lokal tidak berpengaruh.
+KREDENSIAL_UJI = {
+    "SECRET_KEY": "uji-bukan-secret-key-asli-0123456789abcdef",
+    "SUPABASE_URL": "https://uji.supabase.co",
+    "SUPABASE_KEY": "uji-bukan-kunci-asli",
+}
+
 
 def _jalankan(kode: str, env: dict | None = None) -> tuple[int, str]:
     """Jalankan potongan Python di proses baru, dengan cwd root proyek."""
-    lingkungan = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    lingkungan = {**os.environ, "PYTHONIOENCODING": "utf-8", **KREDENSIAL_UJI}
     lingkungan.pop("FLASK_ENV", None)
     lingkungan.update(env or {})
     hasil = subprocess.run(

@@ -251,6 +251,34 @@
         if (label && submit.tagName === "INPUT") submit.value = label;
       });
     });
+
+    /* --- Pintasan pencarian: Ctrl K / ⌘K -------------------------------- */
+    /* Petunjuk `kbd` di kolom pencarian sebelumnya hanya teks: menampilkan
+       tombol yang tidak melakukan apa pun adalah state yang menipu. Skrip ini
+       benar-benar memfokuskan (dan menyeleksi) isi kolom pencarian.
+
+       `metaKey` dipakai di macOS, `ctrlKey` di Windows/Linux. `/` juga
+       diterima karena itu kebiasaan umum situs pencarian, tetapi hanya bila
+       pengguna tidak sedang mengetik di kolom lain. */
+    document.addEventListener("keydown", function (event) {
+      var ketik = event.target;
+      var sedangMengetik = ketik && (
+        ketik.tagName === "INPUT" || ketik.tagName === "TEXTAREA" ||
+        ketik.tagName === "SELECT" || ketik.isContentEditable
+      );
+
+      var ctrlK = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
+      var garisMiring = event.key === "/" && !sedangMengetik;
+
+      if (!ctrlK && !garisMiring) return;
+
+      var input = document.querySelector("[data-search-input]");
+      if (!input) return;
+
+      event.preventDefault();
+      input.focus();
+      input.select();
+    });
   })();
   </script>
 
